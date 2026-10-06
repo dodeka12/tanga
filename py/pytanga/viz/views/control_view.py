@@ -20,14 +20,16 @@ class ControlView(View, Generic[C]):
     The control ``id`` is the WebSocket event key (``control_id``) and must be
     unique across the app.  Each subclass wraps a
     :class:`~pytanga.viz._controls.Control` (``self.control``) which is the
-    single source of truth for the control's fields; reads of those fields
-    delegate to it via :meth:`__getattr__`.
+    single source of truth for the control's fields.  Shared reads are
+    forwarded explicitly through typed :class:`property` accessors on this
+    base; each concrete view adds typed forwarders for its kind-specific
+    fields.
 
     Parameterised by the concrete control kind, so a subclass declares
     ``class SliderView(ControlView[Slider])`` and ``self.control`` is a
     :class:`Slider`.  ``control`` is assigned by each concrete view's
-    ``__init__``; the base leaves it unset, so reading it before then falls
-    through to :meth:`__getattr__`'s ``AttributeError``.
+    ``__init__``; the base leaves it unset, so reading it before then raises
+    :class:`AttributeError`.
     """
 
     control: C
@@ -63,11 +65,24 @@ class ControlView(View, Generic[C]):
         self._push = None  # callback slot injected at mount (LogView pattern)
         self._push_state = None  # state callback slot injected at mount
 
-    def __getattr__(self, name: str) -> Any:
-        ctrl = self.__dict__.get("control")
-        if ctrl is not None and hasattr(ctrl, name):
-            return getattr(ctrl, name)
-        raise AttributeError(f"{type(self).__name__} object has no attribute {name!r}")
+    @property
+    def enabled(self) -> bool:
+        """Whether the control is interactive (greyed out when ``False``)."""
+        return self.control.enabled
+
+    @property
+    def visible(self) -> bool:
+        """Whether the control is rendered at all."""
+        return self.control.visible
+
+    @property
+    def selected(self) -> bool:
+        """Whether the control renders in its active/selected state."""
+        return self.control.selected
+
+    def get_value(self) -> Any:
+        """Return this control's current value (see :meth:`set_value`)."""
+        return self.control.get_value()
 
     def set_value(self, value: Any) -> None:
         """Set this control's value and push ``control_update`` to the browser.

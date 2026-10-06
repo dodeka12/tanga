@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Iterator, cast
 
-from ._base import View
+from ._base import HasChildren, HasOverlay, HasScene, View
 from .._controls import (
     Button,
     Checkbox,
@@ -215,14 +215,15 @@ def iter_scene_names(root: View) -> list[str]:
     seen: set[str] = set()
 
     def _visit(view: View) -> None:
-        scene = getattr(view, "scene", None)
-        if isinstance(scene, str) and scene not in seen:
-            seen.add(scene)
-            names.append(scene)
-        for child in getattr(view, "children", None) or ():
-            _visit(child)
-        for child in getattr(view, "overlay", None) or ():
-            _visit(child)
+        if isinstance(view, HasScene) and view.scene not in seen:
+            seen.add(view.scene)
+            names.append(view.scene)
+        if isinstance(view, HasChildren):
+            for child in view.children:
+                _visit(child)
+        if isinstance(view, HasOverlay):
+            for child in view.overlay:
+                _visit(child)
 
     _visit(root)
     return names
@@ -234,10 +235,12 @@ def iter_scene_views(root: View) -> Iterator[SceneView]:
     def _visit(view: View) -> Iterator[SceneView]:
         if isinstance(view, SceneView):
             yield view
-        for child in getattr(view, "children", None) or ():
-            yield from _visit(child)
-        for child in getattr(view, "overlay", None) or ():
-            yield from _visit(child)
+        if isinstance(view, HasChildren):
+            for child in view.children:
+                yield from _visit(child)
+        if isinstance(view, HasOverlay):
+            for child in view.overlay:
+                yield from _visit(child)
 
     yield from _visit(root)
 
@@ -248,10 +251,12 @@ def iter_control_views(root: View) -> Iterator[ControlView[Any]]:
     def _visit(view: View) -> Iterator[ControlView[Any]]:
         if isinstance(view, ControlView):
             yield view
-        for child in getattr(view, "children", None) or ():
-            yield from _visit(child)
-        for child in getattr(view, "overlay", None) or ():
-            yield from _visit(child)
+        if isinstance(view, HasChildren):
+            for child in view.children:
+                yield from _visit(child)
+        if isinstance(view, HasOverlay):
+            for child in view.overlay:
+                yield from _visit(child)
 
     yield from _visit(root)
 
@@ -262,10 +267,12 @@ def iter_log_views(root: View) -> Iterator[LogView]:
     def _visit(view: View) -> Iterator[LogView]:
         if isinstance(view, LogView):
             yield view
-        for child in getattr(view, "children", None) or ():
-            yield from _visit(child)
-        for child in getattr(view, "overlay", None) or ():
-            yield from _visit(child)
+        if isinstance(view, HasChildren):
+            for child in view.children:
+                yield from _visit(child)
+        if isinstance(view, HasOverlay):
+            for child in view.overlay:
+                yield from _visit(child)
 
     yield from _visit(root)
 
@@ -276,9 +283,11 @@ def iter_group_views(root: View) -> Iterator[GroupView]:
     def _visit(view: View) -> Iterator[GroupView]:
         if isinstance(view, GroupView):
             yield view
-        for child in getattr(view, "children", None) or ():
-            yield from _visit(child)
-        for child in getattr(view, "overlay", None) or ():
-            yield from _visit(child)
+        if isinstance(view, HasChildren):
+            for child in view.children:
+                yield from _visit(child)
+        if isinstance(view, HasOverlay):
+            for child in view.overlay:
+                yield from _visit(child)
 
     yield from _visit(root)

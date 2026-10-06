@@ -18,18 +18,18 @@ Lock in the explicit-forwarder behavior with tests, update the developer docs
 
 ## Steps
 
-- [ ] **4.1 — tests (`test_views.py`)**
+- [x] **4.1 — tests (`test_views.py`)**
   - Add a test that a `SliderView` exposes `min`/`max`/`step`/`value`/`variant`
     as typed properties (no `__getattr__`), that `dir(view)` lists them, and
     that an unknown attribute raises `AttributeError` (not silently `None`).
   - Add a `menu_view` `_apply_menu_variant` test if not already covered.
 
-- [ ] **4.2 — architecture docs**
+- [x] **4.2 — architecture docs**
   - `viz-controls-and-interactions.md`: in the "Adding a new control kind"
     recipe (currently documents `ControlView.__getattr__` forwarding), replace
     with "explicit typed forwarders on the `*View`" guidance.
 
-- [ ] **4.3 — changelog**
+- [x] **4.3 — changelog**
   - Append a `## Refactor` bullet to `docs/changelog/2026/10/DD_fix-small-bugs.md`
     per `dev/workflows/changelog.md`.
 

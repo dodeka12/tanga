@@ -41,10 +41,11 @@ Three orthogonal concerns, one model:
    views, banners, dialogs, editors, and interactions all register here.
 3. **One control model.** Each `*View` wraps a `pytanga.viz._controls.Control`
    (exposed as `view.control`) and serializes its fields from it via
-   `Control.serialize` (`_fields()` per kind).  `ControlView.__getattr__`
-   forwards attribute reads *and* `set_value`/`get_value`/`undo`/`redo`/
-   `can_undo`/`can_redo` to the control, so value and history live on the
-   control, not on a host.  Two handler shapes share that one registry,
+   `Control.serialize` (`_fields()` per kind).  `ControlView` and each concrete
+   `*View` expose explicit typed forwarders — `@property` reads plus
+   `set_value`/`get_value`/`undo`/`redo`/`can_undo`/`can_redo` methods — so
+   value and history live on the control, not on a host.  Two handler shapes
+   share that one registry,
    distinguished by the stored `HandlerOrigin`: `ControlHandler`
    (`async def h(value, event: ControlEvent)`) for controls, and
    `InteractionHandler` (`async def h(event)`) for interactive objects.  Every
@@ -287,7 +288,9 @@ envelope, targeting a backend-only `ClientLog` control (`_controls.py`, id
 2. **Layout view** — add a `*View(ControlView)` in `py/pytanga/viz/views.py`
    whose `__init__` builds `self.control = <Control>(...)` (keep the constructor
    signature); the base `ControlView._serialize` emits the fields from
-   `self.control`, and `ControlView.__getattr__` forwards `set_value`/`undo`/…
+   `self.control`, and the view exposes its kind-specific fields through
+   explicit typed `@property` forwarders (read-only) plus explicit
+   `set_value`/`undo`/`redo`/… methods.
    Handler registration is automatic: the `on_*` constructor kwargs are
    dataclass fields on the control, and `Control.register_handlers` maps each
    `on_<event>` to its `(id, event)` registry entry at mount time.

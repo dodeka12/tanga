@@ -85,6 +85,46 @@ class SliderView(ControlView[Slider]):
             on_release=on_release,
         )
 
+    @property
+    def variant(self) -> EControlVariant:
+        """The control's visual variant (``DEFAULT`` / ``MENU`` / ``TOOLBAR``)."""
+        return self.control.variant
+
+    @property
+    def min(self) -> float:
+        """The slider's minimum bound."""
+        return self.control.min
+
+    @property
+    def max(self) -> float:
+        """The slider's maximum bound."""
+        return self.control.max
+
+    @property
+    def step(self) -> float:
+        """The slider's increment step."""
+        return self.control.step
+
+    @property
+    def value(self) -> float:
+        """The slider's current value."""
+        return self.control.value
+
+    @property
+    def on_change(self) -> ControlHandler | None:
+        """The ``change`` event handler."""
+        return self.control.on_change
+
+    @property
+    def on_press(self) -> ControlHandler | None:
+        """The ``press`` (drag-start) event handler."""
+        return self.control.on_press
+
+    @property
+    def on_release(self) -> ControlHandler | None:
+        """The ``release`` (drag-end) event handler."""
+        return self.control.on_release
+
     def set_min(self, value: float) -> None:
         """Set the slider's minimum bound and push it (clamping the value)."""
         self.set_range(min=value)
@@ -171,6 +211,26 @@ class ButtonView(ControlView[Button]):
             on_click=on_click,
         )
 
+    @property
+    def variant(self) -> EControlVariant:
+        """The control's visual variant (``DEFAULT`` / ``MENU`` / ``TOOLBAR``)."""
+        return self.control.variant
+
+    @property
+    def icon(self) -> Icon | None:
+        """The optional icon id (``family:name``)."""
+        return self.control.icon
+
+    @property
+    def icon_only(self) -> bool:
+        """Whether the button renders only its icon."""
+        return self.control.icon_only
+
+    @property
+    def on_click(self) -> ControlHandler | None:
+        """The ``click`` event handler."""
+        return self.control.on_click
+
 
 class DropdownView(ControlView[Dropdown]):
     """A dropdown/select control as a view."""
@@ -216,6 +276,26 @@ class DropdownView(ControlView[Dropdown]):
             value=value,
             on_change=on_change,
         )
+
+    @property
+    def variant(self) -> EControlVariant:
+        """The control's visual variant (``DEFAULT`` / ``MENU`` / ``TOOLBAR``)."""
+        return self.control.variant
+
+    @property
+    def options(self) -> list[str]:
+        """The fixed set of selectable options."""
+        return self.control.options
+
+    @property
+    def value(self) -> str:
+        """The currently selected option."""
+        return self.control.value
+
+    @property
+    def on_change(self) -> ControlHandler | None:
+        """The ``change`` event handler."""
+        return self.control.on_change
 
 
 class FileChooserView(ControlView[FileChooser]):
@@ -276,6 +356,41 @@ class FileChooserView(ControlView[FileChooser]):
             on_change=on_change,
         )
 
+    @property
+    def value(self) -> str:
+        """The current file path."""
+        return self.control.value
+
+    @property
+    def placeholder(self) -> str:
+        """The placeholder text for the path field."""
+        return self.control.placeholder
+
+    @property
+    def root(self) -> str | None:
+        """The directory the browser is rooted at (``None`` = cwd)."""
+        return self.control.root
+
+    @property
+    def file_filter(self) -> str:
+        """The filename filter for the listing."""
+        return self.control.file_filter
+
+    @property
+    def folders_only(self) -> bool:
+        """Whether the listing shows folders only."""
+        return self.control.folders_only
+
+    @property
+    def existing_only(self) -> bool:
+        """Whether the listing shows existing paths only."""
+        return self.control.existing_only
+
+    @property
+    def on_change(self) -> ControlHandler | None:
+        """The ``change`` event handler."""
+        return self.control.on_change
+
 
 class TextFieldView(ControlView[TextField]):
     """A single-line text input control as a view."""
@@ -319,6 +434,21 @@ class TextFieldView(ControlView[TextField]):
             placeholder=placeholder,
             on_change=on_change,
         )
+
+    @property
+    def value(self) -> str:
+        """The current text."""
+        return self.control.value
+
+    @property
+    def placeholder(self) -> str:
+        """The placeholder text."""
+        return self.control.placeholder
+
+    @property
+    def on_change(self) -> ControlHandler | None:
+        """The ``change`` event handler."""
+        return self.control.on_change
 
 
 class TextAreaView(ControlView[TextArea]):
@@ -366,6 +496,26 @@ class TextAreaView(ControlView[TextArea]):
             on_change=on_change,
         )
 
+    @property
+    def value(self) -> str:
+        """The current text."""
+        return self.control.value
+
+    @property
+    def placeholder(self) -> str:
+        """The placeholder text."""
+        return self.control.placeholder
+
+    @property
+    def rows(self) -> int:
+        """The number of visible rows."""
+        return self.control.rows
+
+    @property
+    def on_change(self) -> ControlHandler | None:
+        """The ``change`` event handler."""
+        return self.control.on_change
+
 
 class ColorPickerView(ControlView[ColorPicker]):
     """A color picker control as a view."""
@@ -407,6 +557,16 @@ class ColorPickerView(ControlView[ColorPicker]):
             value=value,
             on_change=on_change,
         )
+
+    @property
+    def value(self) -> str:
+        """The current color as a hex string."""
+        return self.control.value
+
+    @property
+    def on_change(self) -> ControlHandler | None:
+        """The ``change`` event handler."""
+        return self.control.on_change
 
 
 class CheckboxView(ControlView[Checkbox]):
@@ -451,6 +611,21 @@ class CheckboxView(ControlView[Checkbox]):
             value=value,
             on_change=on_change,
         )
+
+    @property
+    def variant(self) -> EControlVariant:
+        """The control's visual variant (``DEFAULT`` / ``MENU`` / ``TOOLBAR``)."""
+        return self.control.variant
+
+    @property
+    def value(self) -> bool:
+        """The checkbox's checked state."""
+        return self.control.value
+
+    @property
+    def on_change(self) -> ControlHandler | None:
+        """The ``change`` event handler."""
+        return self.control.on_change
 
 
 class ValueEditView(ControlView[ValueEdit]):
@@ -503,6 +678,41 @@ class ValueEditView(ControlView[ValueEdit]):
             editable=editable,
             on_change=on_change,
         )
+
+    @property
+    def min(self) -> float:
+        """The stepper's minimum bound."""
+        return self.control.min
+
+    @property
+    def max(self) -> float:
+        """The stepper's maximum bound."""
+        return self.control.max
+
+    @property
+    def step(self) -> float:
+        """The stepper's increment step."""
+        return self.control.step
+
+    @property
+    def digits(self) -> int:
+        """The number of decimal digits displayed."""
+        return self.control.digits
+
+    @property
+    def value(self) -> float:
+        """The stepper's current value."""
+        return self.control.value
+
+    @property
+    def editable(self) -> bool:
+        """Whether the value can be typed directly."""
+        return self.control.editable
+
+    @property
+    def on_change(self) -> ControlHandler | None:
+        """The ``change`` event handler."""
+        return self.control.on_change
 
     def set_min(self, value: float) -> None:
         """Set the stepper's minimum bound and push it (clamping the value)."""
@@ -575,6 +785,16 @@ class LabelView(ControlView[Label]):
             font_size=float(font_size),
         )
 
+    @property
+    def value(self) -> str:
+        """The label text."""
+        return self.control.value
+
+    @property
+    def font_size(self) -> float:
+        """The label's font size."""
+        return self.control.font_size
+
 
 class MarkdownView(ControlView[Markdown]):
     """A read-only rendered-markdown control (with KaTeX math) as a view."""
@@ -612,6 +832,11 @@ class MarkdownView(ControlView[Markdown]):
             tooltip=self.tooltip,
             value=value,
         )
+
+    @property
+    def value(self) -> str:
+        """The markdown source text."""
+        return self.control.value
 
 
 class ProgressBarView(ControlView[ProgressBar]):
@@ -663,6 +888,35 @@ class ProgressBarView(ControlView[ProgressBar]):
             indeterminate=bool(indeterminate),
             text=text,
         )
+
+    @property
+    def title(self) -> str:
+        """The title shown above the bar."""
+        return self.control.title
+
+    @property
+    def value(self) -> float:
+        """The current progress value."""
+        return self.control.value
+
+    @property
+    def total(self) -> int:
+        """The total step count."""
+        return self.control.total
+
+    @property
+    def indeterminate(self) -> bool:
+        """Whether the indeterminate animation is active."""
+        return self.control.indeterminate
+
+    @property
+    def text(self) -> str:
+        """The status line shown below the bar."""
+        return self.control.text
+
+    def get_value(self) -> dict[str, Any]:
+        """Return the full progress state for ``control_update``."""
+        return self.control.get_value()
 
     def _push_value(self) -> None:
         """Push the full progress state to the browser (if mounted)."""
@@ -806,6 +1060,71 @@ class TableView(ControlView[Table]):
                 self.control.from_json(json_path)
             else:
                 self.control._save()
+
+    @property
+    def columns(self) -> list[str]:
+        """The column headers."""
+        return self.control.columns
+
+    @property
+    def rows(self) -> list[list[Any]]:
+        """The row-major grid of cell values."""
+        return self.control.rows
+
+    @property
+    def column_types(self) -> list[Any] | None:
+        """The optional per-column type hints."""
+        return self.control.column_types
+
+    @property
+    def on_cell_change(self) -> ControlHandler | None:
+        """The ``cell_change`` event handler."""
+        return self.control.on_cell_change
+
+    @property
+    def on_row_add(self) -> ControlHandler | None:
+        """The ``row_add`` event handler."""
+        return self.control.on_row_add
+
+    @property
+    def on_column_add(self) -> ControlHandler | None:
+        """The ``column_add`` event handler."""
+        return self.control.on_column_add
+
+    @property
+    def on_row_delete(self) -> ControlHandler | None:
+        """The ``row_delete`` event handler."""
+        return self.control.on_row_delete
+
+    @property
+    def on_column_delete(self) -> ControlHandler | None:
+        """The ``column_delete`` event handler."""
+        return self.control.on_column_delete
+
+    @property
+    def on_column_title_change(self) -> ControlHandler | None:
+        """The ``column_title_change`` event handler."""
+        return self.control.on_column_title_change
+
+    @property
+    def on_column_type_change(self) -> ControlHandler | None:
+        """The ``column_type_change`` event handler."""
+        return self.control.on_column_type_change
+
+    @property
+    def on_cell_select(self) -> ControlHandler | None:
+        """The ``cell_select`` event handler."""
+        return self.control.on_cell_select
+
+    @property
+    def on_change(self) -> ControlHandler | None:
+        """The ``change`` (bulk) event handler."""
+        return self.control.on_change
+
+    @property
+    def on_enum_options(self) -> EnumOptionsHandler | None:
+        """The ``enum_options`` provider handler."""
+        return self.control.on_enum_options
 
     def undo(self) -> bool:
         """Undo the last edit of the wrapped ``Table`` and push the grid."""

@@ -8,23 +8,27 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from .._anchor import EAnchor
-from ._base import View
-from .._controls import EControlVariant
+from ._base import HasChildren, View
+from .._controls import EControlVariant, VariantControl
 from ._enums import EStackDirection
 from .._icons import Icon
 from .._size import SizeSpec
+from .control_view import ControlView
 
 
 def _apply_menu_variant(view: View) -> None:
     """Recursively force ``MENU`` onto eligible control views in a menu subtree."""
-    for child in getattr(view, "children", None) or ():
+    if not isinstance(view, HasChildren):
+        return
+    for child in view.children:
         if isinstance(child, MenuView):
             if child.override_variant:
                 _apply_menu_variant(child)
             continue
-        ctrl = getattr(child, "control", None)
-        if ctrl is not None and hasattr(ctrl, "variant"):
-            ctrl.variant = EControlVariant.MENU
+        if isinstance(child, ControlView):
+            ctrl = child.control
+            if isinstance(ctrl, VariantControl):
+                ctrl.variant = EControlVariant.MENU
         _apply_menu_variant(child)
 
 

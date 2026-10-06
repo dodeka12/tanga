@@ -7,8 +7,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from ._base import View
-from .._controls import EControlVariant
+from ._base import HasChildren, View
+from .control_view import ControlView
+from .._controls import EControlVariant, VariantControl
 from ._enums import EStackAlign, EStackDirection, EStackJustify
 from ._helpers import _size_dict
 from .._size import Size, SizeSpec
@@ -18,12 +19,15 @@ from .stack_view import StackView
 
 def _apply_toolbar_variant(view: View) -> None:
     """Recursively force ``TOOLBAR`` onto eligible control views in a toolbar."""
-    for child in getattr(view, "children", None) or ():
+    if not isinstance(view, HasChildren):
+        return
+    for child in view.children:
         if isinstance(child, MenuView):
             continue  # a nested menu keeps its own MENU styling
-        ctrl = getattr(child, "control", None)
-        if ctrl is not None and hasattr(ctrl, "variant"):
-            ctrl.variant = EControlVariant.TOOLBAR
+        if isinstance(child, ControlView):
+            ctrl = child.control
+            if isinstance(ctrl, VariantControl):
+                ctrl.variant = EControlVariant.TOOLBAR
         _apply_toolbar_variant(child)
 
 

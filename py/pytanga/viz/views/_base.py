@@ -5,8 +5,9 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
+from .._anchor import EAnchor
 from ._helpers import _size_dict, _view_counter
 from .._size import SizeSpec
 
@@ -76,3 +77,31 @@ class View:
             "preferred_width": _size_dict(self.preferred_width),
             "preferred_height": _size_dict(self.preferred_height),
         }
+
+
+@runtime_checkable
+class HasChildren(Protocol):
+    """Structural contract for view containers with a ``children`` list."""
+
+    children: list[View]
+
+
+@runtime_checkable
+class HasOverlay(Protocol):
+    """Structural contract for view panes with an ``overlay`` list."""
+
+    overlay: list[View]
+
+
+@runtime_checkable
+class HasScene(Protocol):
+    """Structural contract for view panes that reference a named scene."""
+
+    scene: str
+
+
+@runtime_checkable
+class Positionable(Protocol):
+    """Structural contract for views with a ``position`` anchor."""
+
+    position: EAnchor | str | None

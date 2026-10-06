@@ -161,9 +161,10 @@ re-serialization.
    (scalar controls) or `set_value`/`get_value` overrides (`Table`).  No
    central switch — `serialize()` merges `_fields()`.
 2. `*View(ControlView)` in `views.py` whose `__init__` builds
-   `self.control = <Control>(...)` (keep the constructor signature;
-   `ControlView.__getattr__` forwards reads and `set_value`/`undo`/`redo` to the
-   control; `ControlView.set_value` sets *and* pushes `control_update`).
+   `self.control = <Control>(...)` (keep the constructor signature; the views
+   expose explicit typed forwarders — `@property` reads plus
+   `set_value`/`undo`/`redo` methods; `ControlView.set_value` sets *and* pushes
+   `control_update`).
 3. `Control.handle_event(event, payload) -> Dispatch` for any new event or model
    mutation (see `Table.handle_event`).  The `on_*` fields *are* the handler
    declaration — `Control.register_handlers` maps `on_change` -> `"change"`, etc.
