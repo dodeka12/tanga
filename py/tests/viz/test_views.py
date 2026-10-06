@@ -13,6 +13,7 @@ from pytanga.viz.views import (
     CheckboxView,
     CameraView,
     ColorPickerView,
+    ControlView,
     DropdownView,
     EStackAlign,
     EStackDirection,
@@ -384,6 +385,15 @@ class TestMenuView:
         assert node["children"][0]["type"] == "menu"
         assert node["children"][0]["children"][0]["variant"] == "menu"
 
+    def test_override_variant_skips_non_variant_controls(self) -> None:
+        menu = MenuView(
+            "Menu",
+            [LabelView("l1", value="x"), TextFieldView("t1", value="a")],
+        )
+        node = serialize_layout(menu)["root"]
+        assert "variant" not in node["children"][0]
+        assert "variant" not in node["children"][1]
+
 
 class TestEAnchor:
     def test_anchor_values(self):  # noqa: ANN201
@@ -463,6 +473,19 @@ class TestControlViews:
 
     def test_slider_value_defaults_to_min(self):  # noqa: ANN201
         assert SliderView("s1", min=1.0, max=3.0).value == 1.0
+
+    def test_slider_exposes_typed_forwarders(self) -> None:
+        view = SliderView("s1", min=0.0, max=5.0, step=0.1, value=2.0)
+        assert view.min == 0.0
+        assert view.max == 5.0
+        assert view.step == 0.1
+        assert view.value == 2.0
+        assert view.variant == EControlVariant.DEFAULT
+        assert not hasattr(ControlView, "__getattr__")
+        for name in ("min", "max", "step", "value", "variant"):
+            assert name in dir(view)
+        with pytest.raises(AttributeError):
+            view.nonexistent_attribute
 
     def test_button_serialize(self):  # noqa: ANN201
         node = serialize_layout(ButtonView("b1", label="Go"))["root"]
@@ -850,6 +873,19 @@ class TestToolbarView:
         child = node["children"][0]
         assert child["type"] == "dropdown_view"
         assert child["variant"] == "toolbar"
+
+    def test_non_variant_child_not_forced_to_toolbar_variant(self) -> None:
+        node = serialize_layout(ToolbarView([LabelView("l1", value="hi")]))["root"]
+        child = node["children"][0]
+        assert child["type"] == "label_view"
+        assert "variant" not in child
+
+
+def test_iter_scene_names_traverses_overlay_and_children() -> None:
+    root = SceneView(
+        "main", overlay=[StackView(EStackDirection.VERTICAL, [SceneView("inner")])]
+    )
+    assert iter_scene_names(root) == ["main", "inner"]
 
 
 class TestSeparatorView:

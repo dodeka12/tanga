@@ -1,6 +1,6 @@
 # Viz control view forwarders (remove `__getattr__`) — Overview
 
-**Created:** 2026-10-05 | **Status:** Planned | **Branch:** `fix/small-bugs`
+**Created:** 2026-10-05 | **Status:** Done | **Branch:** `fix/viz-control-refactor`
 
 > **Architecture note — check the developer docs.** Before implementing, check
 > `docs/dev/` (especially `docs/dev/architecture/`) for the subsystem(s) this

@@ -18,14 +18,14 @@ binding-boundary `cast` in `functions.py::control_to_view`.
 
 ## Steps
 
-- [ ] **3.1 — `VariantControl` Protocol (`menu_view.py`)**
+- [x] **3.1 — `VariantControl` Protocol (`menu_view.py`)**
   - Add `class VariantControl(Protocol): variant: EControlVariant` (or an
     `isinstance` union over `Slider` / `Button` / `Checkbox` / `Dropdown`).
   - Rewrite `_apply_menu_variant` to recurse with `isinstance(child,
     ControlView)` and set `child.control.variant = EControlVariant.MENU` only
     when `isinstance(child.control, VariantControl)`.
 
-- [ ] **3.2 — re-verify `control_to_view` cast (`functions.py`)**
+- [x] **3.2 — re-verify `control_to_view` cast (`functions.py`)**
   - Confirm `cast("Any", view).control = ctrl` is still the only cast (binding
     boundary) and its comment stays accurate after the base/forwarder changes.
 

@@ -15,7 +15,7 @@ import numbers
 from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass, field, fields
 from enum import Enum, StrEnum
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, cast, runtime_checkable
 
 from ._icons import Icon
 
@@ -37,6 +37,13 @@ class EControlVariant(StrEnum):
     DEFAULT = "default"
     MENU = "menu"
     TOOLBAR = "toolbar"
+
+
+@runtime_checkable
+class VariantControl(Protocol):
+    """Structural contract for controls that carry a visual ``variant``."""
+
+    variant: EControlVariant
 
 
 # ── Control event dataclass ──────────────────────────────────
@@ -214,6 +221,14 @@ Takes a ``value`` argument (float for sliders, str for dropdowns / text /
 textarea / color pickers, bool for checkboxes, ``None`` for buttons / group
 toggles) and a :class:`ControlEvent`, and returns an awaitable.
 """
+
+
+@runtime_checkable
+class HasOnChange(Protocol):
+    """Structural contract for controls carrying an ``on_change`` handler."""
+
+    on_change: ControlHandler | None
+
 
 InteractionHandler = Callable[[Any], Coroutine[Any, Any, None]]
 """Async callback type for pointer-interaction handlers.

@@ -9,7 +9,9 @@ import asyncio
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from ._controls import Button, FileChooser, HasOnChange
 from ._ports import ServerState
+from .views._base import Positionable
 from .views import (
     EStackDirection,
     SceneView,
@@ -37,8 +39,8 @@ class OverlayContainer:
         self._sync = sync or (lambda: None)
         self._transport = transport
         self._layout = layout
-        self._global_overlay: list[Any] = []
-        self._scene_overlays: dict[str, list[Any]] = {}
+        self._global_overlay: list[View] = []
+        self._scene_overlays: dict[str, list[View]] = {}
         self._injected_overlay_ids: set[int] = set()
         self._banners: dict[str | None, dict[str, Any]] = {}
         self._banner_counter = 0
@@ -54,14 +56,14 @@ class OverlayContainer:
 
     # ── Mounting ───────────────────────────────────────
 
-    def add(self, view: Any, *, scene: str | None = None, anchor: Any = None) -> None:
+    def add(self, view: View, *, scene: str | None = None, anchor: Any = None) -> None:
         """Mount *view* into the overlay (global or per-scene) and re-sync.
 
         ``scene`` selects the per-scene overlay (``None``/``\"\"`` = the global
         overlay, floating above every pane).  ``anchor`` sets the view's
         ``position`` when it has one (e.g. a ``GroupView``/``MenuView``).
         """
-        if anchor is not None and hasattr(view, "position"):
+        if anchor is not None and isinstance(view, Positionable):
             view.position = anchor
         scene_name = scene if scene is not None else ""
         if scene_name != "":
@@ -92,16 +94,16 @@ class OverlayContainer:
         scene_name = scene if scene is not None else ""
         if scene_name != "":
             overlays = self._scene_overlays.get(scene_name, [])
-            remaining = [v for v in overlays if getattr(v, "id", None) != view_id]
+            remaining = [v for v in overlays if v.id != view_id]
             if len(remaining) != len(overlays):
                 for v in overlays:
-                    if getattr(v, "id", None) == view_id:
+                    if v.id == view_id:
                         self._injected_overlay_ids.discard(id(v))
                 self._scene_overlays[scene_name] = remaining
                 self._sync()
         else:
             for view in list(self._global_overlay):
-                if getattr(view, "id", None) == view_id:
+                if view.id == view_id:
                     self._global_overlay.remove(view)
                     self._layout._reserialize_overlays()
                     self._push_overlay_remove(view_id)
@@ -154,9 +156,9 @@ class OverlayContainer:
             on_close=on_close,
         )
         for ctrl in ctrl_list:
-            if getattr(ctrl, "on_click", None) is not None:
+            if isinstance(ctrl, Button) and ctrl.on_click is not None:
                 self._transport.register(ctrl.id, ctrl.on_click, event="click")
-            elif getattr(ctrl, "on_change", None) is not None:
+            elif isinstance(ctrl, HasOnChange) and ctrl.on_change is not None:
                 self._transport.register(ctrl.id, ctrl.on_change, event="change")
         if on_close is not None:
             self._transport.register(id, on_close, event="close")
@@ -1089,9 +1091,14 @@ class LayoutHostImpl:
         cid = payload.get("control_id")
         path = payload.get("path") or ""
         ctrl = self.resolve_control(cid) if cid else None
-        root = getattr(ctrl, "root", None) if ctrl is not None else None
-        file_filter = getattr(ctrl, "file_filter", "") or ""
-        folders_only = bool(getattr(ctrl, "folders_only", False))
+        if isinstance(ctrl, FileChooser):
+            root = ctrl.root
+            file_filter = ctrl.file_filter or ""
+            folders_only = ctrl.folders_only
+        else:
+            root = None
+            file_filter = ""
+            folders_only = False
         pattern = payload.get("pattern") or ""
         message = list_directory(
             path,

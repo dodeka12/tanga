@@ -17,14 +17,14 @@ and `view.get_value()` are explicit and type-checked.
 
 ## Steps
 
-- [ ] **1.1 — delete `__getattr__` (`control_view.py`)**
+- [x] **1.1 — delete `__getattr__` (`control_view.py`)**
   - Remove `ControlView.__getattr__` entirely.
 
-- [ ] **1.2 — typed `enabled` / `visible` / `selected` reads**
+- [x] **1.2 — typed `enabled` / `visible` / `selected` reads**
   - Add read-only `@property` `enabled -> bool`, `visible -> bool`,
     `selected -> bool` returning `self.control.<field>`.
 
-- [ ] **1.3 — typed `get_value`**
+- [x] **1.3 — typed `get_value`**
   - Add `def get_value(self) -> Any: return self.control.get_value()` on the
     base, mirroring the existing `set_value(self, value: Any)`.  `value` types
     differ per kind, so the base return is `Any` (the documented dynamic-value
