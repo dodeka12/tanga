@@ -10,7 +10,7 @@ import pytest
 
 from pytanga.geometry import Direction, Point
 from pytanga.viz._act_style import ActPointStyle
-from pytanga.viz._active import ActPoint, ClickBinding, DragBinding
+from pytanga.viz._active import ActiveObject, ActPoint, ClickBinding, DragBinding
 from pytanga.viz._interaction import (
     DragEvent,
     DragMode,
@@ -52,6 +52,8 @@ class _FakeSceneHandle:
         self.configs: list[tuple[str, object]] = []
         self.handlers: dict[InteractionEventType, object] = {}
         self.updates: list[tuple[str, Point]] = []
+        self.style_updates: list[tuple[str, object]] = []
+        self.visibility: list[tuple[str, bool]] = []
         self.flushes = 0
 
     def set_interaction(self, object_id: str, config: object) -> None:
@@ -64,6 +66,12 @@ class _FakeSceneHandle:
 
     def update_entity(self, object_id: str, entity: Point) -> None:
         self.updates.append((object_id, entity))
+
+    def update_style(self, object_id: str, style: object) -> None:
+        self.style_updates.append((object_id, style))
+
+    def set_visible(self, object_id: str, visible: bool) -> None:
+        self.visibility.append((object_id, visible))
 
     def flush(self) -> None:
         self.flushes += 1
@@ -291,6 +299,37 @@ class TestDragModeConstraint:
             DragMode.XZ_PLANE,
             DragMode.YZ_PLANE,
         }
+
+
+class TestDragModifiers:
+    def test_default_drag_trigger_is_unmodified(self):  # noqa: ANN201
+        ap, handle = _init_point(drag_mode=DragMode.XY_PLANE)
+        config = ap.interaction_config
+        assert config.triggers[0].modifiers == frozenset()
+
+    def test_set_drag_modifiers_gates_single_trigger(self):  # noqa: ANN201
+        ap, handle = _init_point(drag_mode=DragMode.XY_PLANE)
+        ap.set_drag_modifiers(ModifierKey.SHIFT)
+        config = ap.interaction_config
+        assert len(config.triggers) == 1
+        assert config.triggers[0].modifiers == frozenset({ModifierKey.SHIFT})
+
+    def test_set_drag_modifiers_no_args_resets(self):  # noqa: ANN201
+        ap, handle = _init_point(drag_mode=DragMode.XY_PLANE)
+        ap.set_drag_modifiers(ModifierKey.SHIFT)
+        ap.set_drag_modifiers()
+        config = ap.interaction_config
+        assert config.triggers[0].modifiers == frozenset()
+
+    def test_set_drag_modifiers_repushes_interaction(self):  # noqa: ANN201
+        ap, handle = _init_point(drag_mode=DragMode.XY_PLANE)
+        before = len(handle.configs)
+        ap.set_drag_modifiers(ModifierKey.CTRL)
+        assert len(handle.configs) == before + 1
+        assert handle.configs[-1][1].triggers[0].modifiers == frozenset(
+            {ModifierKey.CTRL}
+        )
+
 
 
 class TestActPointLabel:
@@ -573,4 +612,38 @@ class TestEnabled:
         ap.enable()
         assert ap._enabled is True
         assert handle.configs[-1][1].enabled is True
+
+
+class TestActiveObjectBase:
+    def test_act_point_is_active_object(self) -> None:
+        ap = ActPoint(1, 2, 3)
+        assert isinstance(ap, ActiveObject)
+
+    def test_act_point_reshape_handles_is_self(self) -> None:
+        ap, _ = _init_point()
+        assert ap._reshape_handles() == [ap]
+        assert ap._all_handles() == [ap]
+
+    def test_set_handles_enabled_disables_point(self) -> None:
+        ap, handle = _init_point()
+        ap.set_handles_enabled(False)
+        assert ap._enabled is False
+        assert handle.style_updates == []
+
+    def test_set_handles_enabled_swaps_style(self) -> None:
+        h = object()
+        s = object()
+        ap, handle = _init_point(handle_style=h, style=s)
+        ap.set_handles_enabled(False)
+        assert ap._enabled is False
+        assert ("pt1", s) in handle.style_updates
+        ap.set_handles_enabled(True)
+        assert ap._enabled is True
+        assert ("pt1", h) in handle.style_updates
+
+    def test_set_handles_visible_hides_and_disables_point(self) -> None:
+        ap, handle = _init_point()
+        ap.set_handles_visible(False)
+        assert ("pt1", False) in handle.visibility
+        assert ap._enabled is False
 

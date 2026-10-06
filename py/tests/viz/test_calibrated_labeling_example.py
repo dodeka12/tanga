@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -100,3 +101,98 @@ def test_labeler_pixel_scale_from_mapper() -> None:
     world = viz.scene("world")
     labeler = module._CalibratedLabeler(world, calib, 0.6)  # noqa: SLF001
     assert labeler._pixel_scale == pytest.approx(0.6 / calib.K.data[0, 0])  # noqa: SLF001
+
+
+def _load_example() -> Any:
+    import importlib.util
+
+    path = _REPO_ROOT / "py" / "examples" / "apps" / "calibrated_labeling_app.py"
+    spec = importlib.util.spec_from_file_location("calibrated_labeling_app", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _make_labeler(module: Any) -> Any:
+    viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
+    world = viz.scene("world")
+    return module._CalibratedLabeler(world, _calibration(), 0.6)  # noqa: SLF001
+
+
+def test_selection_is_exclusive() -> None:
+    module = _load_example()
+    labeler = _make_labeler(module)
+    rect = module.ActRectangle2D(center=module.Point(1.0, 1.0, 0.0), size=(1.0, 1.0))
+    circle = module.ActCircle(center=module.Point(2.0, 2.0, 0.0), radius=0.5)
+    labeler._add_shape(rect, module._style_for("rect", "#ff4444"))  # noqa: SLF001
+    labeler._add_shape(circle, module._style_for("circle", "#ff4444"))  # noqa: SLF001
+
+    labeler._select(rect)  # noqa: SLF001
+    assert labeler.selected is rect
+    labeler._select(circle)  # noqa: SLF001
+    assert labeler.selected is circle
+    labeler._deselect()  # noqa: SLF001
+    assert labeler.selected is None
+
+
+def test_handles_follow_active_type() -> None:
+    module = _load_example()
+    labeler = _make_labeler(module)
+    rect = module.ActRectangle2D(center=module.Point(1.0, 1.0, 0.0), size=(1.0, 1.0))
+    circle = module.ActCircle(center=module.Point(2.0, 2.0, 0.0), radius=0.5)
+    labeler._add_shape(rect, module._style_for("rect", "#ff4444"))  # noqa: SLF001
+    labeler._add_shape(circle, module._style_for("circle", "#ff4444"))  # noqa: SLF001
+
+    # No mode → every composite handle is disabled.
+    assert all(h._enabled is False for h in rect._all_handles())  # noqa: SLF001
+    assert all(h._enabled is False for h in circle._all_handles())  # noqa: SLF001
+
+    # Rect mode → only rectangle handles are enabled.
+    labeler.set_mode("rect")
+    assert all(h._enabled is True for h in rect._all_handles())  # noqa: SLF001
+    assert all(h._enabled is False for h in circle._all_handles())  # noqa: SLF001
+
+    # Circle mode → only circle handles are enabled.
+    labeler.set_mode("circle")
+    assert all(h._enabled is False for h in rect._all_handles())  # noqa: SLF001
+    assert all(h._enabled is True for h in circle._all_handles())  # noqa: SLF001
+
+
+def test_point_gated_by_point_mode() -> None:
+    module = _load_example()
+    labeler = _make_labeler(module)
+    point = module.ActPoint(module.Point(1.0, 1.0, 0.0))
+    labeler._add_shape(point, module._style_for("point", "#ff4444"))  # noqa: SLF001
+
+    # No mode → point disabled (but still visible).
+    assert point._enabled is False  # noqa: SLF001
+
+    # Point mode → point enabled.
+    labeler.set_mode("point")
+    assert point._enabled is True  # noqa: SLF001
+
+    # Rect mode → point disabled again.
+    labeler.set_mode("rect")
+    assert point._enabled is False  # noqa: SLF001
+
+
+def test_add_shape_applies_pixel_scale_before_spawning_handles() -> None:
+    module = _load_example()
+    labeler = _make_labeler(module)
+    ellipse = module.ActEllipse(
+        center=module.Point(0.0, 0.0, 0.0), radius_u=1.0, radius_v=0.5
+    )
+    labeler._add_shape(ellipse, module._style_for("ellipse", "#ff4444"))  # noqa: SLF001
+
+    # The rotate handle's offset uses the labeler's pixel scale, which must be
+    # applied *before* the handles are spawned — otherwise the icon is placed
+    # with the default 1.0 scale and only corrected after a later refresh.
+    assert ellipse._pixel_scale == labeler._pixel_scale  # noqa: SLF001
+    handle_pos = ellipse._rotate_handle.point  # noqa: SLF001
+    expected_pos = ellipse._rotate_handle_position()  # noqa: SLF001
+    assert (handle_pos.x, handle_pos.y, handle_pos.z) == (
+        expected_pos.x,
+        expected_pos.y,
+        expected_pos.z,
+    )

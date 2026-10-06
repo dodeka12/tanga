@@ -702,14 +702,6 @@ export class ThreeJsView extends View {
         return this._navigation === '2d' && !!this.camera && !!this.camera.userData._pinhole;
     }
 
-    /** True when an interaction drag is armed or in progress (navigation yields). */
-    _interactionActive() {
-        return (
-            !!this._interaction
-            && (this._interaction.hasArmedSurface() || this._interaction.isDragActive())
-        );
-    }
-
     /** Pointer position in pane-NDC: x right=+1, y bottom=+1 (image v-down). */
     _screenNdc(e) {
         const rect = this.renderer.domElement.getBoundingClientRect();
@@ -728,7 +720,11 @@ export class ThreeJsView extends View {
 
     _onViewportPointerDown(e) {
         if (!this._viewportInputEnabled()) return;
-        if (this._interactionActive()) return;
+        // A drag already in progress (e.g. started mid-pan) stops panning.
+        if (this._interaction && this._interaction.isDragActive()) return;
+        // Yield to the surface only for the button+modifier combos it claims;
+        // every other combo passes through to the viewport pan.
+        if (this._interaction && this._interaction.surfaceClaimsPointer(e)) return;
         // Pan on the pan mouse buttons (left / right), matching the nav-2d mapping.
         if (e.button !== 0 && e.button !== 2) return;
         const [nx, ny] = this._screenNdc(e);
@@ -738,8 +734,8 @@ export class ThreeJsView extends View {
 
     _onViewportPointerMove(e) {
         if (!this._viewportDrag || e.pointerId !== this._viewportDrag.pointerId) return;
-        if (this._interactionActive()) {
-            // An interaction drag started mid-pan — stop the pan.
+        // An interaction drag started mid-pan — stop the pan.
+        if (this._interaction && this._interaction.isDragActive()) {
             this._viewportDrag = null;
             return;
         }

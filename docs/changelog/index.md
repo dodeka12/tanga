@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.16.1] — 2026-10-06
+- Unified `ActiveObject` handle API (enable/visible/drag modifiers) · `ActPoint` as an active object with content/handle styling · new shapes selected on creation · fixed rotate-handle positioning
+→ [Details](2026/10/06_8aaed0550.md)
+
 ## [Since 2.15.0 (2.16.0-rc1)] — 2026-10-06
 - Typed `ControlView` forwarders (replacing `__getattr__`) · runtime-checkable structural `Protocol`s for the view/control tree (replacing `getattr`/`hasattr` duck-typing)
 → [Details](2026/10/06_5859697fd.md)

@@ -41,6 +41,7 @@ class _FakeHandle:
         self.added: list[tuple[str, object]] = []
         self.updates: list[tuple[str, object]] = []
         self.removed: list[str] = []
+        self.visibility: list[tuple[str, bool]] = []
         self.flushes = 0
         self._counter = 0
 
@@ -67,6 +68,9 @@ class _FakeHandle:
 
     def remove(self, object_id: str) -> None:
         self.removed.append(object_id)
+
+    def set_visible(self, object_id: str, visible: bool) -> None:
+        self.visibility.append((object_id, visible))
 
 
 def _polygon(points: list[Point] | None = None, **kwargs: Any):  # noqa: ANN202
@@ -375,4 +379,26 @@ class TestCloseTolerance:
         assert poly._effective_close_tolerance() == pytest.approx(12.0)
         poly.set_pixel_scale(1e-3)
         assert poly._effective_close_tolerance() == pytest.approx(0.012)
+
+
+class TestHandleControls:
+    def test_set_handles_enabled_disables_all(self) -> None:
+        poly, handle = _polygon()
+        poly.set_handles_enabled(False)
+        assert all(h._enabled is False for h in poly._all_handles())
+
+    def test_set_handles_visible_hides_and_disables_all(self) -> None:
+        poly, handle = _polygon()
+        poly.set_handles_visible(False)
+        for h in poly._all_handles():
+            assert (h.entity_id, False) in handle.visibility
+            assert h._enabled is False
+
+    def test_set_drag_modifiers_gates_all(self) -> None:
+        poly, handle = _polygon()
+        poly.set_drag_modifiers(ModifierKey.SHIFT)
+        assert all(
+            h._required_drag_modifiers == frozenset({ModifierKey.SHIFT})
+            for h in poly._all_handles()
+        )
 
