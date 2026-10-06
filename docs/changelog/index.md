@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.15.0 (2.16.0-rc1)] — 2026-10-06
+- Typed `ControlView` forwarders (replacing `__getattr__`) · runtime-checkable structural `Protocol`s for the view/control tree (replacing `getattr`/`hasattr` duck-typing)
+→ [Details](2026/10/06_5859697fd.md)
+
 ## [Since 2.15.0] — 2026-10-06
 - `image_codec` export option (JPEG/zlib/raw, auto-select) · animated + static HTML image export fixes · offline export works on Linux
 - Bug fixes: `storeImageFrame`/`applyOrthoFrustum` bridge · compressed-animation decompression race · node-transform on in-place reconcile
