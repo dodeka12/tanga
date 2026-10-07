@@ -29,7 +29,7 @@ import os
 from typing import Any, Callable
 
 import numpy as np
-from pytanga.geometry import Circle, Direction, Ellipse, Line, Point, Rectangle2D
+from pytanga.geometry import Circle, Ellipse, Line, Point, Rectangle2D
 from pytanga.viz import (
     ActiveObject,
     ActCircle,
@@ -65,6 +65,7 @@ from pytanga.viz import (
     ToolbarView,
     VisualizerApp,
 )
+from pytanga.viz._active import _plane_basis
 
 _W, _H = 320, 200
 _FILL = "#ff4444"
@@ -390,17 +391,20 @@ class ImageLabeler:
                 center=entity.center,
                 size=entity.size,
                 angle=entity.angle,
+                normal=entity.normal,
                 on_click=select,
                 handle_style=self._handle_style,
             )
         if isinstance(entity, Ellipse):
-            du = entity.dir_u if entity.dir_u is not None else Direction(1.0, 0.0, 0.0)
-            angle = math.atan2(du.y, du.x)
+            u0, v0 = _plane_basis(entity.normal)
+            du = entity.dir_u if entity.dir_u is not None else u0
+            angle = math.atan2(du.dot(v0), du.dot(u0))
             return ActEllipse(
                 center=entity.center,
                 radius_u=entity.radius_u,
                 radius_v=entity.radius_v,
                 angle=angle,
+                normal=entity.normal,
                 on_click=select,
                 handle_style=self._handle_style,
             )
@@ -408,6 +412,7 @@ class ImageLabeler:
             return ActCircle(
                 center=entity.center,
                 radius=entity.radius,
+                normal=entity.normal,
                 on_click=select,
                 handle_style=self._handle_style,
             )

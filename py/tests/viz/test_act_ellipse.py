@@ -9,8 +9,10 @@ import asyncio
 import math
 from typing import Any
 
+import pytest
+
 from pytanga.geometry import Direction, Ellipse, Point
-from pytanga.viz import ActEllipse, DragEvent, ModifierKey
+from pytanga.viz import ActEllipse, DragEvent, DragMode, InteractionEventType, ModifierKey
 from pytanga.viz._act_style import ActPointStyle
 
 
@@ -271,4 +273,109 @@ class TestRotateHandleOffset:
         after = ellipse._rotate_handle_position()
 
         assert (after.x, after.y, after.z) == (before.x, before.y, before.z)
+
+
+class TestTiltedPlane:
+    """An explicit non-+z normal keeps the ellipse on its plane."""
+
+    _NORMAL = Direction(1.0, 0.0, 1.0).normalized()  # 45° about +y
+
+    def test_default_normal_is_plus_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        ellipse = ActEllipse(center=Point(0.0, 0.0, 0.0), radius_u=2.0, radius_v=1.0)
+        ellipse._init(handle, "e1")
+        assert ellipse.entity.normal == Direction(0.0, 0.0, 1.0)
+
+    def test_entity_preserves_normal(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        ellipse = ActEllipse(
+            center=Point(1.0, 2.0, 3.0),
+            radius_u=10.0,
+            radius_v=4.0,
+            normal=self._NORMAL,
+        )
+        ellipse._init(handle, "e1")
+        e = ellipse.entity
+        assert e.normal.x == pytest.approx(self._NORMAL.x)
+        assert e.normal.y == pytest.approx(self._NORMAL.y)
+        assert e.normal.z == pytest.approx(self._NORMAL.z)
+
+    def test_dirs_are_in_plane_and_unit(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        ellipse = ActEllipse(
+            center=Point(0.0, 0.0, 0.0), radius_u=2.0, radius_v=1.0, normal=self._NORMAL
+        )
+        ellipse._init(handle, "e1")
+        e = ellipse.entity
+        assert e.dir_u is not None and e.dir_v is not None
+        assert e.dir_u.mag() == pytest.approx(1.0)
+        assert e.dir_v.mag() == pytest.approx(1.0)
+        assert e.dir_u.dot(self._NORMAL) == pytest.approx(0.0, abs=1e-9)
+        assert e.dir_v.dot(self._NORMAL) == pytest.approx(0.0, abs=1e-9)
+        assert e.dir_u.dot(e.dir_v) == pytest.approx(0.0, abs=1e-9)
+
+    def test_radius_handle_lies_on_plane(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        ellipse = ActEllipse(
+            center=Point(1.0, 2.0, 3.0),
+            radius_u=10.0,
+            radius_v=4.0,
+            normal=self._NORMAL,
+        )
+        ellipse._init(handle, "e1")
+        e = ellipse.entity
+        pos = ellipse._radius_handle_position(0)
+        assert pos.x == pytest.approx(ellipse.center.x + e.radius_u * e.dir_u.x)
+        assert pos.y == pytest.approx(ellipse.center.y + e.radius_u * e.dir_u.y)
+        assert pos.z == pytest.approx(ellipse.center.z + e.radius_u * e.dir_u.z)
+        assert abs(pos.z - ellipse.center.z) > 1e-9
+
+    def test_resize_in_tilted_basis(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        ellipse = ActEllipse(
+            center=Point(0.0, 0.0, 0.0), radius_u=2.0, radius_v=1.0, normal=self._NORMAL
+        )
+        ellipse._init(handle, "e1")
+        e = ellipse.entity
+        target = Point(3.0 * e.dir_u.x, 3.0 * e.dir_u.y, 3.0 * e.dir_u.z)
+        asyncio.run(ellipse._dispatch_radius_drag(0, DragEvent(world_position=target)))
+        assert ellipse.entity.radius_u == pytest.approx(3.0)
+
+    def test_rotate_in_tilted_basis(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        ellipse = ActEllipse(
+            center=Point(0.0, 0.0, 0.0), radius_u=2.0, radius_v=1.0, normal=self._NORMAL
+        )
+        ellipse._init(handle, "e1")
+        asyncio.run(
+            ellipse._dispatch_rotate(
+                DragEvent(world_position=Point(ellipse._v0.x, ellipse._v0.y, ellipse._v0.z))
+            )
+        )
+        assert ellipse.angle == pytest.approx(math.pi / 2)
+
+    def test_translate_applies_delta_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        ellipse = ActEllipse(
+            center=Point(0.0, 0.0, 0.0), radius_u=2.0, radius_v=1.0, normal=self._NORMAL
+        )
+        ellipse._init(handle, "e1")
+        asyncio.run(
+            ellipse._dispatch_translate(DragEvent(world_delta=Direction(1.0, 2.0, 3.0)))
+        )
+        assert ellipse.center == Point(1.0, 2.0, 3.0)
+
+
+class TestHandleDragMode:
+    def test_handles_drag_in_view_plane(self) -> None:
+        ellipse, _ = _ellipse()
+        for h in ellipse._all_handles():
+            drag = [
+                t
+                for t in h.interaction_config.triggers
+                if t.event_type == InteractionEventType.DRAG
+            ]
+            assert len(drag) == 1
+            assert drag[0].drag_mode == DragMode.VIEW_PLANE
+            assert drag[0].modifiers == frozenset()
 

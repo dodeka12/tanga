@@ -9,7 +9,7 @@ import asyncio
 from typing import Any
 
 from pytanga.geometry import Direction, Line, Point
-from pytanga.viz import ActLine, DragEvent, ModifierKey
+from pytanga.viz import ActLine, DragEvent, DragMode, InteractionEventType, ModifierKey
 from pytanga.viz._act_style import ActPointStyle
 
 
@@ -171,4 +171,28 @@ class TestHandleControls:
             h._required_drag_modifiers == frozenset({ModifierKey.SHIFT})
             for h in line._all_handles()
         )
+
+
+class TestHandleDragMode:
+    def test_handles_drag_in_view_plane(self) -> None:
+        line, _ = _line()
+        for h in line._all_handles():
+            drag = [
+                t
+                for t in h.interaction_config.triggers
+                if t.event_type == InteractionEventType.DRAG
+            ]
+            assert len(drag) == 1
+            assert drag[0].drag_mode == DragMode.VIEW_PLANE
+            assert drag[0].modifiers == frozenset()
+
+
+class TestTranslate3D:
+    def test_translate_applies_delta_z(self) -> None:
+        line, _ = _line()
+        asyncio.run(
+            line._dispatch_translate(DragEvent(world_delta=Direction(0.0, 0.0, 2.0)))
+        )
+        assert line.start == Point(0.0, 0.0, 2.0)
+        assert line.end == Point(2.0, 0.0, 2.0)
 

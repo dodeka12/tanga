@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 
 from pytanga.geometry import Direction, Point
-from pytanga.viz import ActPolygon, DragEvent, SquarePointStyle
+from pytanga.viz import ActPolygon, DragEvent, DragMode, InteractionEventType, SquarePointStyle
 from pytanga.viz._act_style import ActPointStyle
 from pytanga.viz._interaction import ModifierKey
 from pytanga.viz._point_path import PointPath
@@ -401,4 +401,28 @@ class TestHandleControls:
             h._required_drag_modifiers == frozenset({ModifierKey.SHIFT})
             for h in poly._all_handles()
         )
+
+
+class TestHandleDragMode:
+    def test_handles_drag_in_view_plane(self) -> None:
+        poly, _ = _polygon()
+        for h in poly._all_handles():
+            drag = [
+                t
+                for t in h.interaction_config.triggers
+                if t.event_type == InteractionEventType.DRAG
+            ]
+            assert len(drag) == 1
+            assert drag[0].drag_mode == DragMode.VIEW_PLANE
+            assert drag[0].modifiers == frozenset()
+
+
+class TestTranslate3D:
+    def test_translate_applies_delta_z(self) -> None:
+        poly, _ = _polygon()
+        asyncio.run(
+            poly._dispatch_translate(DragEvent(world_delta=Direction(1.0, 1.0, 2.0)))
+        )
+        assert all(p.z == 2.0 for p in poly._points)
+        assert poly._points[0] == Point(1.0, 1.0, 2.0)
 

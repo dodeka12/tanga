@@ -9,11 +9,14 @@ import asyncio
 import math
 from typing import Any
 
+import pytest
+
 from pytanga.geometry import Direction, Point, Rectangle2D
 from pytanga.viz import (
     ActPoint,
     ActRectangle2D,
     DragEvent,
+    DragMode,
     InteractionEventType,
     ModifierKey,
 )
@@ -392,4 +395,81 @@ class TestRotateHandleOffset:
         after = rect._rotate_handle_position()
 
         assert (after.x, after.y, after.z) == (before.x, before.y, before.z)
+
+
+class TestTiltedPlane:
+    """An explicit non-+z normal keeps the rectangle on its plane."""
+
+    _NORMAL = Direction(1.0, 0.0, 1.0).normalized()  # 45° about +y
+
+    def test_default_normal_is_plus_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(center=Point(0.0, 0.0, 0.0), size=(4.0, 2.0))
+        rect._init(handle, "r1")
+        assert rect.entity.normal == Direction(0.0, 0.0, 1.0)
+
+    def test_entity_preserves_normal(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(
+            center=Point(1.0, 2.0, 3.0), size=(4.0, 2.0), normal=self._NORMAL
+        )
+        rect._init(handle, "r1")
+        e = rect.entity
+        assert e.normal.x == pytest.approx(self._NORMAL.x)
+        assert e.normal.y == pytest.approx(self._NORMAL.y)
+        assert e.normal.z == pytest.approx(self._NORMAL.z)
+
+    def test_corners_lie_in_plane(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(
+            center=Point(1.0, 2.0, 3.0), size=(4.0, 2.0), normal=self._NORMAL
+        )
+        rect._init(handle, "r1")
+        c = rect.entity.center
+        for corner in rect._corners():
+            dx = corner.x - c.x
+            dy = corner.y - c.y
+            dz = corner.z - c.z
+            assert (
+                dx * self._NORMAL.x + dy * self._NORMAL.y + dz * self._NORMAL.z
+            ) == pytest.approx(0.0, abs=1e-9)
+        assert any(abs(corner.z - c.z) > 1e-9 for corner in rect._corners())
+
+    def test_rotate_in_tilted_basis(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(
+            center=Point(0.0, 0.0, 0.0), size=(4.0, 2.0), normal=self._NORMAL
+        )
+        rect._init(handle, "r1")
+        asyncio.run(
+            rect._dispatch_rotate(
+                DragEvent(world_position=Point(rect._v0.x, rect._v0.y, rect._v0.z))
+            )
+        )
+        assert rect.angle == pytest.approx(math.pi / 2)
+
+    def test_translate_applies_delta_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(
+            center=Point(0.0, 0.0, 0.0), size=(4.0, 2.0), normal=self._NORMAL
+        )
+        rect._init(handle, "r1")
+        asyncio.run(
+            rect._dispatch_translate(DragEvent(world_delta=Direction(1.0, 2.0, 3.0)))
+        )
+        assert rect.entity.center == Point(1.0, 2.0, 3.0)
+
+
+class TestHandleDragMode:
+    def test_handles_drag_in_view_plane(self) -> None:
+        rect, _ = _rect()
+        for h in rect._all_handles():
+            drag = [
+                t
+                for t in h.interaction_config.triggers
+                if t.event_type == InteractionEventType.DRAG
+            ]
+            assert len(drag) == 1
+            assert drag[0].drag_mode == DragMode.VIEW_PLANE
+            assert drag[0].modifiers == frozenset()
 

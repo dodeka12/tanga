@@ -9,7 +9,8 @@ body itself is visual-only; `on_click` makes it selectable.
 
 `Circle` is a viz-only geometry data class (no multivector representation): a
 centre `center`, a `radius`, and a plane `normal` (default `+z`). `ActCircle`
-keeps `normal = +z` and only edits `center`/`radius`.
+honors an optional `normal` (default `+z`) and edits `center`/`radius` within
+that plane.
 
 ## Quick Start
 
@@ -33,6 +34,7 @@ ActCircle(
     center: Point | None = None,
     radius: float = 1.0,
     *,
+    normal: Direction | None = None,
     min_radius: float | None = None,
     show_translate_handle: bool = True,
     handle_style: PointStyle | None = None,
@@ -47,6 +49,7 @@ ActCircle(
 
 - `entity` / `circle` return the current `Circle`.
 - `center` / `radius` expose the current geometry.
+- `normal` (constructor kwarg) sets the circle's plane (default `+z`).
 - `create_from_points(center, rim)` builds a circle from a centre and rim point
   (radius = distance), implementing the `ShapeFromPoints` protocol.
 

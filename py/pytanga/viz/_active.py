@@ -190,6 +190,22 @@ def _default_drag_triggers(button: MouseButton) -> list[InteractionTrigger]:
     ]
 
 
+def _plane_basis(normal: Direction) -> tuple[Direction, Direction]:
+    """Orthonormal in-plane axes ``(u0, v0)`` with ``u0 × v0`` = the normal.
+
+    Lets the ``Act*`` composites express an in-plane ``angle`` without
+    hardcoding the world-XY plane.  For ``normal = +z`` this returns the
+    historical convention ``u0 = (1, 0, 0)`` and ``v0 = (0, 1, 0)``.
+    """
+    n = normal.normalized()
+    ref = Direction(0.0, 1.0, 0.0)
+    if abs(ref.dot(n)) > 0.999:
+        ref = Direction(1.0, 0.0, 0.0)
+    u0 = ref.cross(n).normalized()
+    v0 = n.cross(u0)
+    return u0, v0
+
+
 # ── ActSceneObject ─────────────────────────────────────────────
 
 
@@ -1112,7 +1128,10 @@ class ActRectangle2D(ActiveObject):
     Args:
         center: Center of the rectangle (default ``(0, 0, 0)``).
         size: Full ``(width, height)`` (default ``(1, 1)``).
-        angle: In-plane rotation in radians (default ``0.0`` = axis-aligned).
+        angle: In-plane rotation in radians (default ``0.0`` = axis-aligned),
+            measured in the plane perpendicular to ``normal``.
+        normal: Plane normal direction (default ``+z``).  The rectangle lies in
+            the plane perpendicular to this normal.
         min_size: Minimum width/height during corner resize (default ``None`` =
             floating-point precision).  Pass an explicit world-unit value to clamp.
         max_size: Maximum width/height during corner resize (default ``None`` =
@@ -1145,6 +1164,7 @@ class ActRectangle2D(ActiveObject):
         size: tuple[float, float] | None = None,
         *,
         angle: float = 0.0,
+        normal: Direction | None = None,
         min_size: float | None = None,
         max_size: float | None = None,
         show_translate_handle: bool = True,
@@ -1171,7 +1191,13 @@ class ActRectangle2D(ActiveObject):
             act_style=act_style,
             style=style,
         )
-        self._rect = Rectangle2D(center=center, size=size, angle=angle)
+        self._normal = (
+            Direction(0.0, 0.0, 1.0) if normal is None else normal.normalized()
+        )
+        self._u0, self._v0 = _plane_basis(self._normal)
+        self._rect = Rectangle2D(
+            center=center, size=size, normal=self._normal, angle=angle
+        )
         self._angle = float(angle)
         self._min_size = min_size
         self._max_size = max_size
@@ -1230,22 +1256,47 @@ class ActRectangle2D(ActiveObject):
     # ── Geometry helpers ───────────────────────────────────
 
     def _dir_u(self) -> Direction:
-        return Direction(math.cos(self._angle), math.sin(self._angle), 0.0)
+        c, s = math.cos(self._angle), math.sin(self._angle)
+        return Direction(
+            c * self._u0.x + s * self._v0.x,
+            c * self._u0.y + s * self._v0.y,
+            c * self._u0.z + s * self._v0.z,
+        )
 
     def _dir_v(self) -> Direction:
-        return Direction(-math.sin(self._angle), math.cos(self._angle), 0.0)
+        c, s = math.cos(self._angle), math.sin(self._angle)
+        return Direction(
+            -s * self._u0.x + c * self._v0.x,
+            -s * self._u0.y + c * self._v0.y,
+            -s * self._u0.z + c * self._v0.z,
+        )
 
     def _corners(self) -> list[Point]:
-        cx, cy = self._rect.center.x, self._rect.center.y
-        cz = self._rect.center.z
+        c = self._rect.center
         hw, hh = self._rect.size[0] / 2.0, self._rect.size[1] / 2.0
-        ux, uy = math.cos(self._angle), math.sin(self._angle)
-        vx, vy = -math.sin(self._angle), math.cos(self._angle)
+        u = self._dir_u()
+        v = self._dir_v()
         return [
-            Point(cx - hw * ux - hh * vx, cy - hw * uy - hh * vy, cz),
-            Point(cx + hw * ux - hh * vx, cy + hw * uy - hh * vy, cz),
-            Point(cx + hw * ux + hh * vx, cy + hw * uy + hh * vy, cz),
-            Point(cx - hw * ux + hh * vx, cy - hw * uy + hh * vy, cz),
+            Point(
+                c.x - hw * u.x - hh * v.x,
+                c.y - hw * u.y - hh * v.y,
+                c.z - hw * u.z - hh * v.z,
+            ),
+            Point(
+                c.x + hw * u.x - hh * v.x,
+                c.y + hw * u.y - hh * v.y,
+                c.z + hw * u.z - hh * v.z,
+            ),
+            Point(
+                c.x + hw * u.x + hh * v.x,
+                c.y + hw * u.y + hh * v.y,
+                c.z + hw * u.z + hh * v.z,
+            ),
+            Point(
+                c.x - hw * u.x + hh * v.x,
+                c.y - hw * u.y + hh * v.y,
+                c.z - hw * u.z + hh * v.z,
+            ),
         ]
 
     def _rotate_handle_position(self) -> Point:
@@ -1256,7 +1307,7 @@ class ActRectangle2D(ActiveObject):
         return Point(
             self._rect.center.x + r * d.x,
             self._rect.center.y + r * d.y,
-            self._rect.center.z,
+            self._rect.center.z + r * d.z,
         )
 
     def _spawn_handles(self) -> None:
@@ -1269,7 +1320,7 @@ class ActRectangle2D(ActiveObject):
             handle = ActPoint(
                 pos,
                 handler=self._make_corner_handler(i),
-                drag_mode=DragMode.XY_PLANE,
+                drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
 
                 on_click=self._handle_click_handler(),
@@ -1280,7 +1331,7 @@ class ActRectangle2D(ActiveObject):
             handle = ActPoint(
                 self._rect.center,
                 handler=self._make_translate_handler(),
-                drag_mode=DragMode.XY_PLANE,
+                drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
 
                 on_click=self._handle_click_handler(),
@@ -1291,7 +1342,7 @@ class ActRectangle2D(ActiveObject):
             handle = ActPoint(
                 self._rotate_handle_position(),
                 handler=self._make_rotate_handler(),
-                drag_mode=DragMode.XY_PLANE,
+                drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
 
                 on_click=self._handle_click_handler(),
@@ -1347,14 +1398,15 @@ class ActRectangle2D(ActiveObject):
         center = Point(
             (pos.x + opposite.x) / 2.0,
             (pos.y + opposite.y) / 2.0,
-            self._rect.center.z,
+            (pos.z + opposite.z) / 2.0,
         )
         dx = pos.x - center.x
         dy = pos.y - center.y
-        ux, uy = math.cos(self._angle), math.sin(self._angle)
-        vx, vy = -math.sin(self._angle), math.cos(self._angle)
-        hw = abs(dx * ux + dy * uy)
-        hh = abs(dx * vx + dy * vy)
+        dz = pos.z - center.z
+        u = self._dir_u()
+        v = self._dir_v()
+        hw = abs(dx * u.x + dy * u.y + dz * u.z)
+        hh = abs(dx * v.x + dy * v.y + dz * v.z)
         half_floor = (self._min_size if self._min_size is not None else _FLOAT_EPS) / 2.0
         hw = max(hw, half_floor)
         hh = max(hh, half_floor)
@@ -1363,7 +1415,10 @@ class ActRectangle2D(ActiveObject):
             hw = min(hw, half_cap)
             hh = min(hh, half_cap)
         self._rect = Rectangle2D(
-            center=center, size=(2.0 * hw, 2.0 * hh), angle=self._angle
+            center=center,
+            size=(2.0 * hw, 2.0 * hh),
+            normal=self._normal,
+            angle=self._angle,
         )
         self._commit()
 
@@ -1378,19 +1433,27 @@ class ActRectangle2D(ActiveObject):
         center = Point(
             self._rect.center.x + delta.x,
             self._rect.center.y + delta.y,
-            self._rect.center.z,
+            self._rect.center.z + delta.z,
         )
-        self._rect = Rectangle2D(center=center, size=self._rect.size, angle=self._angle)
+        self._rect = Rectangle2D(
+            center=center, size=self._rect.size, normal=self._normal, angle=self._angle
+        )
         self._commit()
 
     def _rotate_to(self, pos: Point) -> None:
         dx = pos.x - self._rect.center.x
         dy = pos.y - self._rect.center.y
-        self._angle = math.atan2(dy, dx)
+        dz = pos.z - self._rect.center.z
+        u = dx * self._u0.x + dy * self._u0.y + dz * self._u0.z
+        v = dx * self._v0.x + dy * self._v0.y + dz * self._v0.z
+        self._angle = math.atan2(v, u)
         # Rebuild the body with the new angle so the rendered rectangle (and the
         # on_change payload) matches the rotated handle layout.
         self._rect = Rectangle2D(
-            center=self._rect.center, size=self._rect.size, angle=self._angle
+            center=self._rect.center,
+            size=self._rect.size,
+            normal=self._normal,
+            angle=self._angle,
         )
         self._commit()
 
@@ -1459,7 +1522,10 @@ class ActEllipse(ActiveObject):
         center: Center of the ellipse (default ``(0, 0, 0)``).
         radius_u: Semi-axis radius along ``dir_u`` (default ``1.0``).
         radius_v: Semi-axis radius along ``dir_v`` (default ``0.5``).
-        angle: In-plane rotation in radians (default ``0.0``).
+        angle: In-plane rotation in radians (default ``0.0``), measured in the
+            plane perpendicular to ``normal``.
+        normal: Plane normal direction (default ``+z``).  The ellipse lies in
+            the plane perpendicular to this normal.
         show_translate_handle: Add a centre translation handle (default ``True``).
         show_rotate_handle: Add a rim rotation handle (default ``True``).
         handle_style: Marker style for the radius handles (default a circle marker).
@@ -1484,6 +1550,7 @@ class ActEllipse(ActiveObject):
         radius_v: float = 0.5,
         *,
         angle: float = 0.0,
+        normal: Direction | None = None,
         show_translate_handle: bool = True,
         show_rotate_handle: bool = True,
         handle_style: PointStyle | None = None,
@@ -1513,6 +1580,10 @@ class ActEllipse(ActiveObject):
         self._radius_u = float(radius_u)
         self._radius_v = float(radius_v)
         self._angle = float(angle)
+        self._normal = (
+            Direction(0.0, 0.0, 1.0) if normal is None else normal.normalized()
+        )
+        self._u0, self._v0 = _plane_basis(self._normal)
         self._min_radius = min_radius
         self._max_radius = max_radius
         self._show_translate_handle = show_translate_handle
@@ -1571,16 +1642,27 @@ class ActEllipse(ActiveObject):
     # ── Geometry helpers ───────────────────────────────────
 
     def _dir_u(self) -> Direction:
-        return Direction(math.cos(self._angle), math.sin(self._angle), 0.0)
+        c, s = math.cos(self._angle), math.sin(self._angle)
+        return Direction(
+            c * self._u0.x + s * self._v0.x,
+            c * self._u0.y + s * self._v0.y,
+            c * self._u0.z + s * self._v0.z,
+        )
 
     def _dir_v(self) -> Direction:
-        return Direction(-math.sin(self._angle), math.cos(self._angle), 0.0)
+        c, s = math.cos(self._angle), math.sin(self._angle)
+        return Direction(
+            -s * self._u0.x + c * self._v0.x,
+            -s * self._u0.y + c * self._v0.y,
+            -s * self._u0.z + c * self._v0.z,
+        )
 
     def _build_ellipse(self) -> Ellipse:
         return Ellipse(
             center=self._center,
             radius_u=self._radius_u,
             radius_v=self._radius_v,
+            normal=self._normal,
             dir_u=self._dir_u(),
             dir_v=self._dir_v(),
         )
@@ -1590,13 +1672,21 @@ class ActEllipse(ActiveObject):
             d, r = self._dir_u(), self._radius_u
         else:
             d, r = self._dir_v(), self._radius_v
-        return Point(self._center.x + r * d.x, self._center.y + r * d.y, self._center.z)
+        return Point(
+            self._center.x + r * d.x,
+            self._center.y + r * d.y,
+            self._center.z + r * d.z,
+        )
 
     def _rotate_handle_position(self) -> Point:
         offset = 2.0 * self._handle_world_size()
         d = self._dir_u()
         r = self._radius_u + offset
-        return Point(self._center.x + r * d.x, self._center.y + r * d.y, self._center.z)
+        return Point(
+            self._center.x + r * d.x,
+            self._center.y + r * d.y,
+            self._center.z + r * d.z,
+        )
 
     def _spawn_handles(self) -> None:
         if self._viz_handle is None:
@@ -1608,7 +1698,7 @@ class ActEllipse(ActiveObject):
             handle = ActPoint(
                 self._radius_handle_position(i),
                 handler=self._make_radius_handler(i),
-                drag_mode=DragMode.XY_PLANE,
+                drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
 
                 on_click=self._handle_click_handler(),
@@ -1619,7 +1709,7 @@ class ActEllipse(ActiveObject):
             handle = ActPoint(
                 self._center,
                 handler=self._make_translate_handler(),
-                drag_mode=DragMode.XY_PLANE,
+                drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
 
                 on_click=self._handle_click_handler(),
@@ -1630,7 +1720,7 @@ class ActEllipse(ActiveObject):
             handle = ActPoint(
                 self._rotate_handle_position(),
                 handler=self._make_rotate_handler(),
-                drag_mode=DragMode.XY_PLANE,
+                drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
 
                 on_click=self._handle_click_handler(),
@@ -1681,9 +1771,11 @@ class ActEllipse(ActiveObject):
     # ── Default geometry mutations ─────────────────────────
 
     def _resize_radius(self, index: int, pos: Point) -> None:
-        dx, dy = pos.x - self._center.x, pos.y - self._center.y
+        dx = pos.x - self._center.x
+        dy = pos.y - self._center.y
+        dz = pos.z - self._center.z
         d = self._dir_u() if index == 0 else self._dir_v()
-        value = dx * d.x + dy * d.y
+        value = dx * d.x + dy * d.y + dz * d.z
         floor = self._min_radius if self._min_radius is not None else _FLOAT_EPS
         value = max(floor, value)
         if self._max_radius is not None:
@@ -1703,13 +1795,19 @@ class ActEllipse(ActiveObject):
 
     def _translate_by(self, delta: Direction) -> None:
         self._center = Point(
-            self._center.x + delta.x, self._center.y + delta.y, self._center.z
+            self._center.x + delta.x,
+            self._center.y + delta.y,
+            self._center.z + delta.z,
         )
         self._commit()
 
     def _rotate_to(self, pos: Point) -> None:
-        dx, dy = pos.x - self._center.x, pos.y - self._center.y
-        self._angle = math.atan2(dy, dx)
+        dx = pos.x - self._center.x
+        dy = pos.y - self._center.y
+        dz = pos.z - self._center.z
+        u = dx * self._u0.x + dy * self._u0.y + dz * self._u0.z
+        v = dx * self._v0.x + dy * self._v0.y + dz * self._v0.z
+        self._angle = math.atan2(v, u)
         self._commit()
 
     def _commit(self) -> None:
@@ -1773,6 +1871,8 @@ class ActCircle(ActiveObject):
     Args:
         center: Center of the circle (default ``(0, 0, 0)``).
         radius: Circle radius (default ``1.0``).
+        normal: Plane normal direction (default ``+z``).  The circle lies in
+            the plane perpendicular to this normal.
         min_radius: Minimum radius during resize (default ``None`` =
             floating-point precision).  Pass an explicit world-unit value to clamp.
         max_radius: Maximum radius during resize (default ``None`` = unbounded).
@@ -1798,6 +1898,7 @@ class ActCircle(ActiveObject):
         center: Point | None = None,
         radius: float = 1.0,
         *,
+        normal: Direction | None = None,
         min_radius: float | None = None,
         max_radius: float | None = None,
         show_translate_handle: bool = True,
@@ -1821,6 +1922,10 @@ class ActCircle(ActiveObject):
         )
         self._center = Point(0.0, 0.0, 0.0) if center is None else center
         self._radius = float(radius)
+        self._normal = (
+            Direction(0.0, 0.0, 1.0) if normal is None else normal.normalized()
+        )
+        self._u0, self._v0 = _plane_basis(self._normal)
         self._min_radius = min_radius
         self._max_radius = max_radius
         self._show_translate_handle = show_translate_handle
@@ -1876,10 +1981,14 @@ class ActCircle(ActiveObject):
     # ── Geometry helpers ───────────────────────────────────
 
     def _build_circle(self) -> Circle:
-        return Circle(center=self._center, radius=self._radius)
+        return Circle(center=self._center, radius=self._radius, normal=self._normal)
 
     def _radius_handle_position(self) -> Point:
-        return Point(self._center.x + self._radius, self._center.y, self._center.z)
+        return Point(
+            self._center.x + self._radius * self._u0.x,
+            self._center.y + self._radius * self._u0.y,
+            self._center.z + self._radius * self._u0.z,
+        )
 
     def _spawn_handles(self) -> None:
         if self._viz_handle is None:
@@ -1889,7 +1998,7 @@ class ActCircle(ActiveObject):
         handle = ActPoint(
             self._radius_handle_position(),
             handler=self._make_radius_handler(),
-            drag_mode=DragMode.XY_PLANE,
+            drag_mode=DragMode.VIEW_PLANE,
             act_style=self._act_style,
 
             on_click=self._handle_click_handler(),
@@ -1900,7 +2009,7 @@ class ActCircle(ActiveObject):
             handle = ActPoint(
                 self._center,
                 handler=self._make_translate_handler(),
-                drag_mode=DragMode.XY_PLANE,
+                drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
 
                 on_click=self._handle_click_handler(),
@@ -1942,7 +2051,8 @@ class ActCircle(ActiveObject):
     def _resize_radius(self, pos: Point) -> None:
         dx = pos.x - self._center.x
         dy = pos.y - self._center.y
-        radius = math.hypot(dx, dy)
+        dz = pos.z - self._center.z
+        radius = math.sqrt(dx * dx + dy * dy + dz * dz)
         floor = self._min_radius if self._min_radius is not None else _FLOAT_EPS
         radius = max(floor, radius)
         if self._max_radius is not None:
@@ -1959,7 +2069,9 @@ class ActCircle(ActiveObject):
 
     def _translate_by(self, delta: Direction) -> None:
         self._center = Point(
-            self._center.x + delta.x, self._center.y + delta.y, self._center.z
+            self._center.x + delta.x,
+            self._center.y + delta.y,
+            self._center.z + delta.z,
         )
         self._commit()
 
@@ -2202,7 +2314,7 @@ class ActPolygon(ActiveObject):
                 p,
                 handler=self._make_vertex_handler(i),
                 on_drag_end=self._make_vertex_drag_end(),
-                drag_mode=DragMode.XY_PLANE,
+                drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
 
                 on_click=self._handle_click_handler(),
@@ -2216,7 +2328,7 @@ class ActPolygon(ActiveObject):
             handle = ActPoint(
                 self._centroid(),
                 handler=self._make_translate_handler(),
-                drag_mode=DragMode.XY_PLANE,
+                drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
 
                 on_click=self._handle_click_handler(),
@@ -2348,7 +2460,8 @@ class ActPolygon(ActiveObject):
 
     def _translate_by(self, delta: Direction) -> None:
         self._points = [
-            Point(p.x + delta.x, p.y + delta.y, p.z) for p in self._points
+            Point(p.x + delta.x, p.y + delta.y, p.z + delta.z)
+            for p in self._points
         ]
         self._commit()
 
@@ -2531,7 +2644,7 @@ class ActLine(ActiveObject):
             handle = ActPoint(
                 pos,
                 handler=self._make_endpoint_handler(i),
-                drag_mode=DragMode.XY_PLANE,
+                drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
 
                 on_click=self._handle_click_handler(),
@@ -2542,7 +2655,7 @@ class ActLine(ActiveObject):
             handle = ActPoint(
                 self._midpoint(),
                 handler=self._make_translate_handler(),
-                drag_mode=DragMode.XY_PLANE,
+                drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
 
                 on_click=self._handle_click_handler(),
@@ -2589,8 +2702,16 @@ class ActLine(ActiveObject):
         self._commit()
 
     def _translate_by(self, delta: Direction) -> None:
-        self._start = Point(self._start.x + delta.x, self._start.y + delta.y, self._start.z)
-        self._end = Point(self._end.x + delta.x, self._end.y + delta.y, self._end.z)
+        self._start = Point(
+            self._start.x + delta.x,
+            self._start.y + delta.y,
+            self._start.z + delta.z,
+        )
+        self._end = Point(
+            self._end.x + delta.x,
+            self._end.y + delta.y,
+            self._end.z + delta.z,
+        )
         self._commit()
 
     def _commit(self) -> None:
