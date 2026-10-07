@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.17.0] — 2026-10-07
+- Active shapes honor an explicit `normal` plane and edit in the view plane · `ActRectangle2D`/`ActEllipse`/`ActCircle` gain a `normal` param · composite handles drag in `VIEW_PLANE` with full-3D geometry
+→ [Details](2026/10/07_0513663ab.md)
+
 ## [Since 2.16.1] — 2026-10-06
 - Unified `ActiveObject` handle API (enable/visible/drag modifiers) · `ActPoint` as an active object with content/handle styling · new shapes selected on creation · fixed rotate-handle positioning
 → [Details](2026/10/06_8aaed0550.md)

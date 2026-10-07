@@ -8,8 +8,10 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+import pytest
+
 from pytanga.geometry import Circle, Direction, Point
-from pytanga.viz import ActCircle, DragEvent, ModifierKey
+from pytanga.viz import ActCircle, DragEvent, DragMode, InteractionEventType, ModifierKey
 from pytanga.viz._act_style import ActPointStyle
 
 
@@ -192,4 +194,75 @@ class TestHandleControls:
             h._required_drag_modifiers == frozenset({ModifierKey.SHIFT})
             for h in circle._all_handles()
         )
+
+
+class TestTiltedPlane:
+    """An explicit non-+z normal keeps the circle on its plane."""
+
+    _NORMAL = Direction(1.0, 0.0, 1.0).normalized()  # 45° about +y
+
+    def test_default_normal_is_plus_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        circle = ActCircle(center=Point(0.0, 0.0, 0.0), radius=1.0)
+        circle._init(handle, "c1")
+        assert circle.entity.normal == Direction(0.0, 0.0, 1.0)
+
+    def test_entity_preserves_normal(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        circle = ActCircle(
+            center=Point(1.0, 2.0, 3.0), radius=1.0, normal=self._NORMAL
+        )
+        circle._init(handle, "c1")
+        e = circle.entity
+        assert e.normal.x == pytest.approx(self._NORMAL.x)
+        assert e.normal.y == pytest.approx(self._NORMAL.y)
+        assert e.normal.z == pytest.approx(self._NORMAL.z)
+
+    def test_radius_handle_lies_on_plane(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        circle = ActCircle(
+            center=Point(1.0, 2.0, 3.0), radius=3.0, normal=self._NORMAL
+        )
+        circle._init(handle, "c1")
+        pos = circle._radius_handle_position()
+        assert pos.x == pytest.approx(circle.center.x + 3.0 * circle._u0.x)
+        assert pos.y == pytest.approx(circle.center.y + 3.0 * circle._u0.y)
+        assert pos.z == pytest.approx(circle.center.z + 3.0 * circle._u0.z)
+        assert abs(pos.z - circle.center.z) > 1e-9
+
+    def test_resize_uses_3d_distance(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        circle = ActCircle(
+            center=Point(0.0, 0.0, 0.0), radius=1.0, normal=self._NORMAL
+        )
+        circle._init(handle, "c1")
+        asyncio.run(
+            circle._dispatch_radius_drag(DragEvent(world_position=Point(0.0, 0.0, 5.0)))
+        )
+        assert circle.radius == pytest.approx(5.0)
+
+    def test_translate_applies_delta_z(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        circle = ActCircle(
+            center=Point(0.0, 0.0, 0.0), radius=1.0, normal=self._NORMAL
+        )
+        circle._init(handle, "c1")
+        asyncio.run(
+            circle._dispatch_translate(DragEvent(world_delta=Direction(1.0, 2.0, 3.0)))
+        )
+        assert circle.entity.center == Point(1.0, 2.0, 3.0)
+
+
+class TestHandleDragMode:
+    def test_handles_drag_in_view_plane(self) -> None:
+        circle, _ = _circle()
+        for h in circle._all_handles():
+            drag = [
+                t
+                for t in h.interaction_config.triggers
+                if t.event_type == InteractionEventType.DRAG
+            ]
+            assert len(drag) == 1
+            assert drag[0].drag_mode == DragMode.VIEW_PLANE
+            assert drag[0].modifiers == frozenset()
 

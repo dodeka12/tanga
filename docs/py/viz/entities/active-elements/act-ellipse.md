@@ -11,8 +11,9 @@ interaction happens through the handles; the body itself is visual-only.
 lies in the plane perpendicular to `normal` (default `+z`), centred on `center`,
 with semi-axis radii `radius_u` / `radius_v`. Rotation is encoded in the
 orthogonal in-plane directions `dir_u` / `dir_v`; when unset the ellipse is
-axis-aligned. `ActEllipse` keeps an internal `angle` (radians) and derives
-`dir_u = (cos angle, sin angle, 0)`, `dir_v = (-sin angle, cos angle, 0)`.
+axis-aligned. `ActEllipse` keeps an internal `angle` (radians) measured within
+the plane perpendicular to `normal` (default `+z`), and derives the orthogonal
+in-plane `dir_u` / `dir_v` from it.
 
 ```python
 from pytanga.geometry import Ellipse, Point
@@ -53,6 +54,7 @@ ActEllipse(
     radius_v: float = 0.5,
     *,
     angle: float = 0.0,
+    normal: Direction | None = None,
     show_translate_handle: bool = True,
     show_rotate_handle: bool = True,
     handle_style: SquarePointStyle | None = None,
@@ -70,7 +72,8 @@ ActEllipse(
 | `center` | `Point \| None` | `(0, 0, 0)` | Centre of the ellipse |
 | `radius_u` | `float` | `1.0` | Semi-axis radius along `dir_u` |
 | `radius_v` | `float` | `0.5` | Semi-axis radius along `dir_v` |
-| `angle` | `float` | `0.0` | In-plane rotation in radians |
+| `angle` | `float` | `0.0` | In-plane rotation in radians, measured in the plane ⟂ `normal` |
+| `normal` | `Direction \| None` | `+z` | Plane normal direction (the ellipse lies ⟂ this normal) |
 | `show_translate_handle` | `bool` | `True` | Add the centre translation handle |
 | `show_rotate_handle` | `bool` | `True` | Add the rim rotation handle |
 | `handle_style` | `SquarePointStyle \| None` | square marker | Visual style of the handles |

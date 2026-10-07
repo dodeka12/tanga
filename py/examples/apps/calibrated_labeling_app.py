@@ -39,7 +39,6 @@ from PIL import Image
 
 from pytanga.geometry import (
     Circle,
-    Direction,
     Ellipse,
     Frustum,
     Line,
@@ -87,6 +86,7 @@ from pytanga.viz import (
     ViewportConfig,
     Visualizer,
 )
+from pytanga.viz._active import _plane_basis
 from pytanga.viz.image import pil_to_numpy
 
 _DATA_DIR = Path(__file__).resolve().parent.parent / "viz" / "camera" / "data" / "tless"
@@ -409,19 +409,30 @@ class _CalibratedLabeler:
         if isinstance(entity, Line):
             return ActLine(start=entity.start, end=entity.end, on_click=select)
         if isinstance(entity, Circle):
-            return ActCircle(center=entity.center, radius=entity.radius, on_click=select)
+            return ActCircle(
+                center=entity.center,
+                radius=entity.radius,
+                normal=entity.normal,
+                on_click=select,
+            )
         if isinstance(entity, Rectangle2D):
             return ActRectangle2D(
-                center=entity.center, size=entity.size, angle=entity.angle, on_click=select
+                center=entity.center,
+                size=entity.size,
+                angle=entity.angle,
+                normal=entity.normal,
+                on_click=select,
             )
         if isinstance(entity, Ellipse):
-            du = entity.dir_u if entity.dir_u is not None else Direction(1.0, 0.0, 0.0)
-            angle = math.atan2(du.y, du.x)
+            u0, v0 = _plane_basis(entity.normal)
+            du = entity.dir_u if entity.dir_u is not None else u0
+            angle = math.atan2(du.dot(v0), du.dot(u0))
             return ActEllipse(
                 center=entity.center,
                 radius_u=entity.radius_u,
                 radius_v=entity.radius_v,
                 angle=angle,
+                normal=entity.normal,
                 on_click=select,
             )
         if isinstance(entity, PointPath):

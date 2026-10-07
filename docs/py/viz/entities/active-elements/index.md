@@ -25,6 +25,7 @@ All active elements inherit from `ActSceneObject` and share:
 | Custom handler | Optional callback invoked before default movement; returns `bool` to signal full handling |
 | Click handler | Optional `on_click` callback invoked on a click (press-and-release without dragging) |
 | Standard drag triggers | View-plane, XY, XZ, YZ with Shift/Ctrl modifiers (left mouse button) |
+| Composite handle plane | `ActRectangle2D`/`ActEllipse`/`ActCircle`/`ActLine`/`ActPolygon` handles edit in the view plane, so they stay on the shape's plane |
 | Self-contained flush | Default handler calls `update()` + `flush()` after moving |
 | Labels | `viz.add(ap, label=...)` creates an attached label, removed together with the entity |
 
