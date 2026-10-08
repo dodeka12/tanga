@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.18.0 (2.18.1-rc1)] — 2026-10-08
+- Calibrated background image zoom fills the pane · per-axis pan/zoom tracks the pointer · debounced pane resize without WebGL flicker
+→ [Details](2026/10/08_53b28a777.md)
+
 ## [Since 2.18.0] — 2026-10-08
 - `CameraView.background_image` rebuilds on reconnect (no black pane) · unchanged backgrounds keep their texture on a layout re-push · `ImageData.update()` + per-instance `version` for change detection
 → [Details](2026/10/08_554e05193.md)
