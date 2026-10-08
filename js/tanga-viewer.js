@@ -3373,6 +3373,7 @@ function _backgroundTexture(img) {
         return makeTiledTexture(img);
     }
     const frame = hasImageFrame(img.id) ? takeImageFrame(img.id) : null;
+    if (!frame) return Promise.resolve(null);   // no pixel frame yet — caller decides
     // `makeEncodedTexture` applies the correct per-codec orientation itself
     // (JPEG canvas texture and data texture both render row 0 at the top), so
     // no extra flip is needed here.
@@ -3394,7 +3395,17 @@ function createImageBackground(imageMeta) {
     mesh.renderOrder = -1;
 
     _backgroundTexture(img).then((tex) => {
-        if (tex) material.uniforms.uImage.value = tex;
+        if (tex) {
+            material.uniforms.uImage.value = tex;
+        } else {
+            // The pixel frame hasn't arrived yet (it races the metadata over the
+            // wire); upload the texture once it lands (mirrors renderers/image.js).
+            registerImageFrameConsumer(img.id, (frame) => {
+                makeEncodedTexture(img, frame).then((t) => {
+                    if (t) material.uniforms.uImage.value = t;
+                });
+            });
+        }
     });
 
     return mesh;
