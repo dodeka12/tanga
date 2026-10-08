@@ -10,7 +10,7 @@ import { BannerView } from './banner-view.js';
 import { setupControls } from '../controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../renderers/factory.js';
 import { applyImageUniforms, updateImageLod } from '../renderers/image.js';
-import { createImageBackground, setBackgroundAspect, setBackgroundCrop, updateImageBackground } from '../renderers/image-background.js';
+import { createImageBackground, setBackgroundAspect, setBackgroundCrop, setBackgroundLetterbox, updateImageBackground } from '../renderers/image-background.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
 import { logForwardingEnabled, sendEvent, sendLog } from '../events.js';
@@ -28,6 +28,10 @@ import { clampOrthoView, screenWorldScale } from '../camera-fit.js';
 // version-mismatch banner pattern in viewer.js).
 
 let _sdfWebGL2WarningShown = false;
+
+//: How long a pane's size must stay stable (ms) before the deferred WebGL
+//: resize runs — debounces a window/splitter resize burst into one redraw.
+const _RESIZE_SETTLE_MS = 150;
 
 function _showSdfWebGL2Warning() {
     if (_sdfWebGL2WarningShown) return;
@@ -143,6 +147,8 @@ export class ThreeJsView extends View {
         this._surface = null;
         this._keyBindings = [];
         this._lastCameraKey = null;
+        this._resizing = false;          // in a resize burst (render is frozen)
+        this._resizeTimer = null;        // pending debounce for the real resize
 
         this.el.classList.add('tanga-three-view');
         this.el.style.position = 'relative';
@@ -323,7 +329,61 @@ export class ThreeJsView extends View {
 
     // ── sizing / render ────────────────────────────────────────
 
-    _onExtentChanged() { this.resize(); }
+    _onExtentChanged() { this._scheduleResize(); }
+
+    /**
+     * Defer the WebGL buffer reallocation while the pane is actively resizing.
+     *
+     * The ResizeObserver fires on every layout tick during a window or splitter
+     * drag, and `renderer.setSize()` reallocates (and thereby clears) the drawing
+     * buffer on each tick — the source of the blank/flickering canvas.  During a
+     * resize burst we only stretch the existing buffer to the new pane size
+     * (CSS-only) and freeze rendering; once the size is stable for
+     * `_RESIZE_SETTLE_MS` we run one real `resize()` + `render()`.
+     */
+    _scheduleResize() {
+        // First layout has no previous frame to stretch — resize directly.
+        if (this._appliedInset === null) {
+            this.resize();
+            return;
+        }
+        this._resizing = true;
+        this._stretchCanvasToPane();
+        if (this._resizeTimer) clearTimeout(this._resizeTimer);
+        this._resizeTimer = setTimeout(() => this._finishResize(), _RESIZE_SETTLE_MS);
+    }
+
+    /** CSS-stretch the live canvas and label layer to the current pane size. */
+    _stretchCanvasToPane() {
+        const width = this.width || window.innerWidth;
+        const height = this.height || window.innerHeight;
+        const inset = this._frameInset();
+        const plotHeight = Math.max(1, height - inset);
+        if (this.renderer && this.renderer.domElement) {
+            this.renderer.domElement.style.width = width + 'px';
+            this.renderer.domElement.style.height = plotHeight + 'px';
+        }
+        if (this.labelRenderer && this.labelRenderer.domElement) {
+            this.labelRenderer.domElement.style.width = width + 'px';
+            this.labelRenderer.domElement.style.height = plotHeight + 'px';
+        }
+    }
+
+    /** Settle: run the real resize (buffer realloc + camera) and repaint once. */
+    _finishResize() {
+        this._resizeTimer = null;
+        this._resizing = false;
+        this.resize();
+        this.render();
+    }
+
+    destroy() {
+        if (this._resizeTimer) {
+            clearTimeout(this._resizeTimer);
+            this._resizeTimer = null;
+        }
+        super.destroy();
+    }
 
     /**
      * Height of the annotation panel, if any, in CSS pixels.
@@ -369,6 +429,7 @@ export class ThreeJsView extends View {
 
     render() {
         if (!this.renderer || !this.camera) return;
+        if (this._resizing) return;   // frozen during a resize preview
         if (this.controls) this.controls.update();
         clampOrthoView(this.camera, this.controls);
         this._updateImageLod();
@@ -671,6 +732,10 @@ export class ThreeJsView extends View {
         applyPinhole(this.camera, p, aspect, crop);
         if (this._backgroundMesh) {
             setBackgroundCrop(this._backgroundMesh, this.camera.userData._pinholeCrop || null);
+            const letterbox = this.camera.userData._pinholeLetterbox;
+            if (letterbox) {
+                setBackgroundLetterbox(this._backgroundMesh, letterbox.hx, letterbox.hy);
+            }
         }
     }
 
@@ -754,12 +819,21 @@ export class ThreeJsView extends View {
         }
     }
 
+    /** Base fit half-extents of the current pinhole camera (1,1 fallback). */
+    _fitExtents() {
+        return (this.camera && this.camera.userData._pinholeFit) || { hx: 1, hy: 1 };
+    }
+
     /** Clamp `pan` so the crop window stays inside the image extent. */
     _clampPan(pan, zoom) {
-        const lim = 1 - 1 / zoom;
+        // Per-axis limits: the pane-shaped crop window can reach the image edge
+        // along each axis independently, bounded by that axis' base fit extent.
+        const fit = this._fitExtents();
+        const limX = Math.max(0, 1 - 1 / (fit.hx * zoom));
+        const limY = Math.max(0, 1 - 1 / (fit.hy * zoom));
         return [
-            Math.min(lim, Math.max(-lim, pan[0])),
-            Math.min(lim, Math.max(-lim, pan[1])),
+            Math.min(limX, Math.max(-limX, pan[0])),
+            Math.min(limY, Math.max(-limY, pan[1])),
         ];
     }
 
@@ -768,10 +842,16 @@ export class ThreeJsView extends View {
         const vp = this._viewport || { zoom: 1, pan: [0, 0] };
         const newZoom = Math.min(1000, Math.max(1, vp.zoom * factor));
         if (newZoom === vp.zoom) return;
-        const k = 1 / vp.zoom - 1 / newZoom;
+        // Per-axis anchor: one NDC unit maps to 1/(fit·zoom) pan units, so the
+        // cursor-anchor step differs between x and y when the pane letterboxes.
+        const fit = this._fitExtents();
+        const dInv = 1 / vp.zoom - 1 / newZoom;
         this._viewport = {
             zoom: newZoom,
-            pan: this._clampPan([vp.pan[0] + nx * k, vp.pan[1] + ny * k], newZoom),
+            pan: this._clampPan(
+                [vp.pan[0] + nx * dInv / fit.hx, vp.pan[1] + ny * dInv / fit.hy],
+                newZoom,
+            ),
         };
         this._applyViewport();
     }
@@ -780,9 +860,16 @@ export class ThreeJsView extends View {
     _panViewport(dnx, dny) {
         const vp = this._viewport || { zoom: 1, pan: [0, 0] };
         const z = vp.zoom || 1;
+        // Per-axis scale: one NDC unit covers 1/(fit·zoom) pan units, which
+        // differs between x and y when the pane letterboxes (fixes the image
+        // dragging slower than the mouse along the letterboxed axis).
+        const fit = this._fitExtents();
         this._viewport = {
             zoom: vp.zoom,
-            pan: this._clampPan([vp.pan[0] - dnx / z, vp.pan[1] - dny / z], z),
+            pan: this._clampPan(
+                [vp.pan[0] - dnx / (fit.hx * z), vp.pan[1] - dny / (fit.hy * z)],
+                z,
+            ),
         };
         this._applyViewport();
     }

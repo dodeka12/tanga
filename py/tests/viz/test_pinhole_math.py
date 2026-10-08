@@ -144,3 +144,49 @@ def test_pinhole_framing_crop_window() -> None:
     assert overpan["crop"] == {"u0": 0.5, "v0": 0.25, "u1": 1.0, "v1": 0.75}
     assert overpan["left"] == pytest.approx(0.0)
     assert overpan["right"] == pytest.approx(0.64)
+
+
+def test_pinhole_framing_fit_crop_window_grows() -> None:
+    # image 640x480 (A=1.333) in a square (1.0) pane: zooming must grow the
+    # image to fill the pane (hx/hy → 1) instead of pinning the fit region.
+    program = r"""
+    import { pinholeFraming } from './py/pytanga/viz/templates/pinhole-framing.js';
+    const base = [500, 500, 320, 240, 640, 480, 1, 100, 1.0, 'fit'];
+    const z1 = pinholeFraming(...base, { zoom: 1, pan: [0, 0] });
+    const z2 = pinholeFraming(...base, { zoom: 2, pan: [0, 0] });
+    const z4 = pinholeFraming(...base, { zoom: 4, pan: [0, 0] });
+    console.log(JSON.stringify({ z1, z2, z4 }));
+    """
+    r = _run_node_program(program)
+    z1, z2, z4 = r["z1"], r["z2"], r["z4"]
+
+    # zoom=1: full image, fit letterbox (image taller than the square pane).
+    assert z1["crop"] == {"u0": 0, "v0": 0, "u1": 1, "v1": 1}
+    assert z1["hx"] == 1
+    assert z1["hy"] == pytest.approx(0.75)
+    assert z1["fitHx"] == 1
+    assert z1["fitHy"] == pytest.approx(0.75)
+
+    # zoom=2: the image fills the pane (no letterbox).
+    assert z2["crop"]["u0"] == pytest.approx(0.25)
+    assert z2["crop"]["u1"] == pytest.approx(0.75)
+    assert z2["crop"]["v0"] == pytest.approx(1 / 6)
+    assert z2["crop"]["v1"] == pytest.approx(5 / 6)
+    assert z2["hx"] == pytest.approx(1)
+    assert z2["hy"] == pytest.approx(1)
+    assert z2["left"] == pytest.approx(-0.32)
+    assert z2["right"] == pytest.approx(0.32)
+    assert z2["top"] == pytest.approx(0.32)
+    assert z2["bottom"] == pytest.approx(-0.32)
+
+    # zoom=4: pane-shaped crop window, still filling the pane.
+    assert z4["crop"]["u0"] == pytest.approx(0.375)
+    assert z4["crop"]["u1"] == pytest.approx(0.625)
+    assert z4["crop"]["v0"] == pytest.approx(1 / 3)
+    assert z4["crop"]["v1"] == pytest.approx(2 / 3)
+    assert z4["hx"] == pytest.approx(1)
+    assert z4["hy"] == pytest.approx(1)
+    assert z4["left"] == pytest.approx(-0.16)
+    assert z4["right"] == pytest.approx(0.16)
+    assert z4["top"] == pytest.approx(0.16)
+    assert z4["bottom"] == pytest.approx(-0.16)

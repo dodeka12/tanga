@@ -358,8 +358,9 @@ pane through a clean three-layer model — camera data → camera view → pane:
   the scene graph.
 - **`pinhole-framing.js`** — a single pure module that maps the intrinsics +
   pane aspect + `fit` to both the off-center frustum bounds and the background
-  quad's letterbox half-extents (`{hx, hy}`).  One source of truth for aspect,
-  used by `applyPinhole(camera, aspect)` in `view_mode.js` on switch and resize.
+  quad's letterbox half-extents (`{hx, hy}`, zoom-scaled) plus the base fit
+  half-extents (`fitHx`/`fitHy`).  One source of truth for aspect, used by
+  `applyPinhole(camera, aspect)` in `view_mode.js` on switch and resize.
 - **`CameraView`** (presentation) — bundles the camera, a `lock` set (validated
   against `CameraLock`), a `navigation` mode (`"orbit"` default / `"2d"` dolly
   zoom + screen-space pan, no orbit), a per-pane `controls` button mapping, an
@@ -369,7 +370,10 @@ pane through a clean three-layer model — camera data → camera view → pane:
 - **Viewport navigation** — a pane's 2D viewport (`{zoom, pan}`) is a
   presentation-layer transform folded into the pinhole crop window by
   `pinhole-framing.js` (returning both the sub-frustum and the background crop
-  `{u0,v0,u1,v1}`), so projection and image never diverge.  Set at runtime via
+  `{u0,v0,u1,v1}`), so projection and image never diverge.  The crop window is
+  *pane-shaped*: as `zoom` grows its `{hx, hy}` letterbox grows toward `1`, so
+  the image fills the pane (the letterbox bars shrink) and then crops at the
+  edges — the standard image-viewer zoom.  Set at runtime via
   `Visualizer.set_viewport(view, …)` (per-pane `view_viewport` message, mirroring
   `view_camera`) or `set_viewport(scene_name=…)` / `VizSceneHandle.set_viewport`
   (scene-wide `SceneConfig.viewport` default).

@@ -3310,10 +3310,12 @@ uniform float uImageAspect;   // image width / height
 uniform float uPaneAspect;    // pane width / height
 uniform float uFit;           // 0.0 = letterbox (fit), 1.0 = stretch (fill)
 uniform vec4 uCrop;           // (u0, v0, u1, v1) normalized image coords
+uniform float uHx;            // explicit zoom-scaled letterbox half-extent (NDC)
+uniform float uHy;            // explicit zoom-scaled letterbox half-extent (NDC)
 
 void main() {
-    float hx = uFit > 0.5 ? 1.0 : min(1.0, uImageAspect / uPaneAspect);
-    float hy = uFit > 0.5 ? 1.0 : min(1.0, uPaneAspect / uImageAspect);
+    float hx = uHx > 0.0 ? uHx : (uFit > 0.5 ? 1.0 : min(1.0, uImageAspect / uPaneAspect));
+    float hy = uHy > 0.0 ? uHy : (uFit > 0.5 ? 1.0 : min(1.0, uPaneAspect / uImageAspect));
     vec2 q = vNdc / vec2(hx, hy);
     if (abs(q.x) > 1.0 || abs(q.y) > 1.0) {
         gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
@@ -3340,6 +3342,8 @@ function _buildMaterial(imageMeta) {
             uPaneAspect: { value: 1.0 },
             uFit: { value: 0.0 },
             uCrop: { value: new THREE.Vector4(0, 0, 1, 1) },
+            uHx: { value: 0.0 },
+            uHy: { value: 0.0 },
         },
         depthTest: false,
         depthWrite: false,
@@ -3441,6 +3445,23 @@ function setBackgroundAspect(mesh, paneAspect) {
     const mat = mesh && mesh.material;
     if (mat && mat.uniforms && mat.uniforms.uPaneAspect) {
         mat.uniforms.uPaneAspect.value = Number(paneAspect) || 1.0;
+    }
+}
+
+/**
+ * Set the explicit zoom-scaled letterbox half-extents (NDC) for a background
+ * quad.  These override the aspect-fit letterbox derived from `uImageAspect` /
+ * `uPaneAspect`; pass `0` for either axis to fall back to the aspect-fit value.
+ *
+ * @param {THREE.Mesh} mesh
+ * @param {number} hx  display half-extent along x (NDC)
+ * @param {number} hy  display half-extent along y (NDC)
+ */
+function setBackgroundLetterbox(mesh, hx, hy) {
+    const mat = mesh && mesh.material;
+    if (mat && mat.uniforms) {
+        if (mat.uniforms.uHx) mat.uniforms.uHx.value = Number(hx) || 0;
+        if (mat.uniforms.uHy) mat.uniforms.uHy.value = Number(hy) || 0;
     }
 }
 
