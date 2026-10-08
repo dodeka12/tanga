@@ -41,6 +41,11 @@ export function applyPinhole(camera, p, aspect, crop) {
     camera.projectionMatrix.makePerspective(f.left, f.right, f.top, f.bottom, f.near, f.far);
     camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
     camera.userData._pinholeCrop = f.crop;
+    // Retain the zoom-scaled display letterbox and the base fit half-extents so
+    // `ThreeJsView` can drive the background quad and clamp pan without
+    // recomputing the framing math.
+    camera.userData._pinholeLetterbox = { hx: f.hx, hy: f.hy };
+    camera.userData._pinholeFit = { hx: f.fitHx, hy: f.fitHy };
     // Retain the off-center frustum bounds so screen-space sizing
     // (`screenWorldScale`) can use the real frustum instead of the stale `fov`.
     camera.userData._pinholeFrustum = { top: f.top, bottom: f.bottom, near: f.near };
