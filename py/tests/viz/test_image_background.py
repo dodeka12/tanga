@@ -12,7 +12,10 @@ from pytanga.viz.views import CameraView, SceneView
 def test_background_image_serialize():  # noqa: ANN201
     img = ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8))
     node = SceneView("main", camera_view=CameraView(background_image=img))._serialize()
-    assert node["camera_view"]["background_image"] == {
+    meta = node["camera_view"]["background_image"]
+    assert meta["version"] == img.version
+    del meta["version"]
+    assert meta == {
         "id": "bg",
         "width": 12,
         "height": 8,
@@ -139,3 +142,79 @@ def test_set_layout_auto_registers_tiled_background():  # noqa: ANN201
 
     assert "bg" in viz._image_pyramids
     assert viz._image_pyramids["bg"] is img.tiled
+
+
+def test_set_layout_same_instance_sends_frame_once():  # noqa: ANN201
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+    img = ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8))
+    view = SceneView("main", camera_view=CameraView(background_image=img))
+
+    viz.set_layout(view)
+    viz.set_layout(view)
+
+    assert len(fake.binary_frames) == 1
+
+
+def test_set_layout_update_bumps_version_and_resends():  # noqa: ANN201
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+    img = ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8))
+    view = SceneView("main", camera_view=CameraView(background_image=img))
+
+    viz.set_layout(view)
+    img.update(data=np.ones((8, 12, 3), dtype=np.uint8))
+    viz.set_layout(view)
+
+    assert len(fake.binary_frames) == 2
+    assert viz._layout._background_versions["bg"] == img.version
+
+
+def test_set_layout_new_instance_resends():  # noqa: ANN201
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+    viz.set_layout(
+        SceneView(
+            "main",
+            camera_view=CameraView(
+                background_image=ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8))
+            ),
+        )
+    )
+
+    viz.set_layout(
+        SceneView(
+            "main",
+            camera_view=CameraView(
+                background_image=ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8))
+            ),
+        )
+    )
+
+    assert len(fake.binary_frames) == 2
+
+
+def test_set_layout_removed_prunes_cache():  # noqa: ANN201
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+    img = ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8))
+    viz.set_layout(SceneView("main", camera_view=CameraView(background_image=img)))
+    assert "bg" in viz._layout._background_frames
+
+    viz.set_layout(SceneView("main"))
+
+    assert "bg" not in viz._layout._background_frames
+    assert "bg" not in viz._layout._background_versions
+

@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.18.0] — 2026-10-08
+- `CameraView.background_image` rebuilds on reconnect (no black pane) · unchanged backgrounds keep their texture on a layout re-push · `ImageData.update()` + per-instance `version` for change detection
+→ [Details](2026/10/08_554e05193.md)
+
 ## [Since 2.17.0] — 2026-10-07
 - Active shapes honor an explicit `normal` plane and edit in the view plane · `ActRectangle2D`/`ActEllipse`/`ActCircle` gain a `normal` param · composite handles drag in `VIEW_PLANE` with full-3D geometry
 → [Details](2026/10/07_0513663ab.md)

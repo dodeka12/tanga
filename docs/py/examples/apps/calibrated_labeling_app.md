@@ -1,6 +1,6 @@
 # label a calibrated image in 3D
 
-**Keywords:** camera · pinhole · calibration · labelme · image labeling · CalibratedPlaneMapper · frustum · split view · InteractionSurface
+**Keywords:** camera · pinhole · calibration · labelme · image labeling · CalibratedPlaneMapper · frustum · split view · InteractionSurface · checkbox · ImageData.update · background image
 
 Loads one bundled BOP T-LESS training image plus its pinhole calibration and a
 small labelme annotation file, then shows the **same** `world` scene in two
@@ -16,6 +16,10 @@ panes:
   `_DEPTH`);
 - **right** — the same scene from an overview camera (read-only), showing the
   camera `~pytanga.geometry.Frustum` and the same shapes in 3D.
+- **toolbar** — a "Noise image" checkbox swaps the background between the photo
+  and generated noise (exercising `ImageData.update()`), and a "Swap views"
+  button swaps the two panes (exercising the background image surviving a layout
+  re-push).
 
 Pixel↔world mapping is a `~pytanga.viz.CalibratedPlaneMapper` handed to
 `~pytanga.viz.LabelMeStore`, so the labelme JSON round-trips through 3D.
@@ -53,6 +57,10 @@ panes:
   ``_DEPTH``);
 - **right** — the same scene from an overview camera (read-only), showing the
   camera :class:`~pytanga.geometry.Frustum` and the same shapes in 3D.
+- **toolbar** — a "Noise image" checkbox swaps the background between the photo
+  and generated noise (exercising ``ImageData.update()``), and a "Swap views"
+  button swaps the two panes (exercising the background image surviving a layout
+  re-push).
 
 Pixel↔world mapping is a :class:`~pytanga.viz.CalibratedPlaneMapper` handed to
 :class:`~pytanga.viz.LabelMeStore`, so the labelme JSON round-trips through 3D.
@@ -60,14 +68,13 @@ Attribution: T-LESS, Hodan et al., WACV 2017, CC BY 4.0.
 
 Run with:  uv run python py/examples/apps/calibrated_labeling_app.py
 
-Keywords: camera, pinhole, calibration, labelme, image labeling, CalibratedPlaneMapper, frustum, split view, InteractionSurface
+Keywords: camera, pinhole, calibration, labelme, image labeling, CalibratedPlaneMapper, frustum, split view, InteractionSurface, checkbox, ImageData.update, background image
 """
 
 from __future__ import annotations
 
 import json
 import math
-from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -76,7 +83,6 @@ from PIL import Image
 
 from pytanga.geometry import (
     Circle,
-    Direction,
     Ellipse,
     Frustum,
     Line,
@@ -86,6 +92,7 @@ from pytanga.geometry import (
     Rectangle2D,
 )
 from pytanga.viz import (
+    ActiveObject,
     ActCircle,
     ActEllipse,
     ActLine,
@@ -98,9 +105,11 @@ from pytanga.viz import (
     CameraCalibration,
     CameraConfig3d,
     CameraView,
+    CheckboxView,
     CirclePointStyle,
     CircleStyle,
     Color,
+    ControlEvent,
     DragBinding,
     DragMode,
     DragPreview,
@@ -123,6 +132,7 @@ from pytanga.viz import (
     ViewportConfig,
     Visualizer,
 )
+from pytanga.viz._active import _plane_basis
 from pytanga.viz.image import pil_to_numpy
 
 _DATA_DIR = Path(__file__).resolve().parent.parent / "viz" / "camera" / "data" / "tless"
@@ -304,6 +314,8 @@ class _CalibratedLabeler:
         self._world.set_cursor("crosshair" if mode is not None else None)
         for cid, button in self._tool_buttons.items():
             button.set_selected(cid == mode)
+        self._deselect()
+        self._sync_handles()
 
     def toolbar(self) -> ToolbarView:
         def _button(cid: str, icon: str, tip: str) -> ButtonView:
@@ -342,8 +354,13 @@ class _CalibratedLabeler:
         preview = self._previews.get(self._mode or "")
         if preview is None or preview.anchor is None:
             return
+        if math.hypot(*event.delta_pixels) < 3.0:
+            # A click (negligible movement) must not create a shape.
+            preview.discard()
+            return
         act = preview.finalize(event.world_position)
         self._add_shape(act, self._styles[self._mode or ""])
+        self._select(act)
 
     async def _on_click(self, event: Any, _surface: Any) -> None:
         if self._mode != "point":
@@ -354,6 +371,7 @@ class _CalibratedLabeler:
             on_click=self._make_select_handler(),
         )
         self._add_shape(act, self._styles["point"])
+        self._select(act)
 
     # ── Shape management / selection ────────────────────────
 
@@ -368,26 +386,20 @@ class _CalibratedLabeler:
             return
         self._deselect()
         self.selected = act
-        self._set_extra_handles(act, True)
         self._set_selected_style(act, True)
 
     def _deselect(self) -> None:
         if self.selected is None:
             return
         self._set_selected_style(self.selected, False)
-        self._set_extra_handles(self.selected, False)
         self.selected = None
 
     def _set_selected_style(self, act: Any, selected: bool) -> None:
         """Recolor the body (yellow) on selection and restore it on deselect."""
         for shape_act, style in self.shapes:
             if shape_act is act:
-                new_style = (
-                    replace(style, color=self.selected_color)
-                    if selected
-                    else style
-                )
-                self._world.update_style(shape_act.entity_id, new_style)
+                color = self.selected_color if selected else (style.color or "#ffffff")
+                self._world.update(shape_act.entity_id, color=color)
                 break
         self._world.flush()
 
@@ -405,13 +417,17 @@ class _CalibratedLabeler:
         for preview in self._previews.values():
             preview.discard()
 
-    @staticmethod
-    def _set_extra_handles(act: Any, visible: bool) -> None:
-        """Toggle the optional translate/rotate handles on a composite shape."""
-        if hasattr(act, "set_translate_handle_visible"):
-            act.set_translate_handle_visible(visible)
-        if hasattr(act, "set_rotate_handle_visible"):
-            act.set_rotate_handle_visible(visible)
+    def _sync_handles(self) -> None:
+        """Show control points for every entity of the active edit type."""
+        active_type = self._FACTORIES.get(self._mode or "")
+        for act, _style in self.shapes:
+            if isinstance(act, ActPoint):
+                # A bare point stays visible; it is only draggable in point mode.
+                act.set_handles_enabled(self._mode == "point")
+            elif isinstance(act, ActiveObject):
+                act.set_handles_visible(
+                    active_type is not None and isinstance(act, active_type)
+                )
 
     def _apply_size_limits(self, act: Any) -> None:
         """Clamp resize to the app's pixel-derived limits (half-extent)."""
@@ -425,10 +441,10 @@ class _CalibratedLabeler:
             act.set_radius_limits(self._min_half, self._max_half)
 
     def _add_shape(self, act: Any, style: Any) -> None:
-        self._world.add(act, style=style)
         self._apply_size_limits(act)
-        self._set_extra_handles(act, False)
+        self._world.add(act, style=style)
         self.shapes.append((act, style))
+        self._sync_handles()
         self._world.flush()
 
     def _act_from_entity(self, entity: Any) -> Any:
@@ -439,19 +455,30 @@ class _CalibratedLabeler:
         if isinstance(entity, Line):
             return ActLine(start=entity.start, end=entity.end, on_click=select)
         if isinstance(entity, Circle):
-            return ActCircle(center=entity.center, radius=entity.radius, on_click=select)
+            return ActCircle(
+                center=entity.center,
+                radius=entity.radius,
+                normal=entity.normal,
+                on_click=select,
+            )
         if isinstance(entity, Rectangle2D):
             return ActRectangle2D(
-                center=entity.center, size=entity.size, angle=entity.angle, on_click=select
+                center=entity.center,
+                size=entity.size,
+                angle=entity.angle,
+                normal=entity.normal,
+                on_click=select,
             )
         if isinstance(entity, Ellipse):
-            du = entity.dir_u if entity.dir_u is not None else Direction(1.0, 0.0, 0.0)
-            angle = math.atan2(du.y, du.x)
+            u0, v0 = _plane_basis(entity.normal)
+            du = entity.dir_u if entity.dir_u is not None else u0
+            angle = math.atan2(du.dot(v0), du.dot(u0))
             return ActEllipse(
                 center=entity.center,
                 radius_u=entity.radius_u,
                 radius_v=entity.radius_v,
                 angle=angle,
+                normal=entity.normal,
                 on_click=select,
             )
         if isinstance(entity, PointPath):
@@ -530,9 +557,42 @@ def main() -> None:
         ],
     )
 
+    # Keep the original pixels so the "Noise image" checkbox can round-trip.
+    default_data = background.data
+    assert default_data is not None
+    noise_rng = np.random.default_rng(12345)
+
+    async def _on_noise(value: Any, _event: ControlEvent) -> None:
+        if value:
+            background.update(
+                data=noise_rng.integers(
+                    0, 256, size=default_data.shape, dtype=default_data.dtype
+                )
+            )
+        else:
+            background.update(data=default_data)
+        viz.set_background_image(left, background)
+
+    async def _on_swap(_value: Any, _event: ControlEvent) -> None:
+        # Reordering the split re-pushes the layout; the reused `background`
+        # instance keeps its `version`, so the image frame is not re-sent.
+        split.children.reverse()
+        viz.set_layout(split)
+
+    app_toolbar = ToolbarView(
+        [
+            CheckboxView(
+                "noise", label="Noise image", value=False, on_change=_on_noise
+            ),
+            ButtonView("swap", label="Swap views", on_click=_on_swap),
+        ]
+    )
+
     left.preferred_height = Size.fr(1)
-    left_pane = StackView("vertical", [labeler.toolbar(), left], fill=True)
-    viz.show(layout=SplitView("horizontal", [left_pane, right]))
+    left_pane = StackView("vertical", [app_toolbar, labeler.toolbar(), left], fill=True)
+    split = SplitView("horizontal", [left_pane, right])
+
+    viz.show(layout=split)
     viz.wait()
 
 

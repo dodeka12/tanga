@@ -17,6 +17,10 @@ panes:
   ``_DEPTH``);
 - **right** — the same scene from an overview camera (read-only), showing the
   camera :class:`~pytanga.geometry.Frustum` and the same shapes in 3D.
+- **toolbar** — a "Noise image" checkbox swaps the background between the photo
+  and generated noise (exercising ``ImageData.update()``), and a "Swap views"
+  button swaps the two panes (exercising the background image surviving a layout
+  re-push).
 
 Pixel↔world mapping is a :class:`~pytanga.viz.CalibratedPlaneMapper` handed to
 :class:`~pytanga.viz.LabelMeStore`, so the labelme JSON round-trips through 3D.
@@ -24,7 +28,7 @@ Attribution: T-LESS, Hodan et al., WACV 2017, CC BY 4.0.
 
 Run with:  uv run python py/examples/apps/calibrated_labeling_app.py
 
-Keywords: camera, pinhole, calibration, labelme, image labeling, CalibratedPlaneMapper, frustum, split view, InteractionSurface
+Keywords: camera, pinhole, calibration, labelme, image labeling, CalibratedPlaneMapper, frustum, split view, InteractionSurface, checkbox, ImageData.update, background image
 """
 
 from __future__ import annotations
@@ -61,9 +65,11 @@ from pytanga.viz import (
     CameraCalibration,
     CameraConfig3d,
     CameraView,
+    CheckboxView,
     CirclePointStyle,
     CircleStyle,
     Color,
+    ControlEvent,
     DragBinding,
     DragMode,
     DragPreview,
@@ -511,9 +517,42 @@ def main() -> None:
         ],
     )
 
+    # Keep the original pixels so the "Noise image" checkbox can round-trip.
+    default_data = background.data
+    assert default_data is not None
+    noise_rng = np.random.default_rng(12345)
+
+    async def _on_noise(value: Any, _event: ControlEvent) -> None:
+        if value:
+            background.update(
+                data=noise_rng.integers(
+                    0, 256, size=default_data.shape, dtype=default_data.dtype
+                )
+            )
+        else:
+            background.update(data=default_data)
+        viz.set_background_image(left, background)
+
+    async def _on_swap(_value: Any, _event: ControlEvent) -> None:
+        # Reordering the split re-pushes the layout; the reused `background`
+        # instance keeps its `version`, so the image frame is not re-sent.
+        split.children.reverse()
+        viz.set_layout(split)
+
+    app_toolbar = ToolbarView(
+        [
+            CheckboxView(
+                "noise", label="Noise image", value=False, on_change=_on_noise
+            ),
+            ButtonView("swap", label="Swap views", on_click=_on_swap),
+        ]
+    )
+
     left.preferred_height = Size.fr(1)
-    left_pane = StackView("vertical", [labeler.toolbar(), left], fill=True)
-    viz.show(layout=SplitView("horizontal", [left_pane, right]))
+    left_pane = StackView("vertical", [app_toolbar, labeler.toolbar(), left], fill=True)
+    split = SplitView("horizontal", [left_pane, right])
+
+    viz.show(layout=split)
     viz.wait()
 
 

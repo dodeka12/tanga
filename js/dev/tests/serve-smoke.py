@@ -95,10 +95,26 @@ def main() -> None:
     async def _on_noise(_value: Any, _event: ControlEvent) -> None:
         viz.set_background_image(left, _noise(rng))
 
+    async def _on_reconnect(_value: Any, _event: ControlEvent) -> None:
+        server = viz._server
+        if server is None:
+            return
+        for session in list(server._browser_sessions.values()):
+            scene_names, layout_payload = server._resolve_layout(
+                session.scene, session.layout
+            )
+            await server._push_full_state(
+                session.ws,
+                scene_names=scene_names,
+                layout_payload=layout_payload,
+                browser_id=session.id,
+            )
+
     toolbar = ToolbarView(
         [
             ButtonView("btn_swap", label="Swap panes", on_click=_on_swap),
             ButtonView("btn_noise", label="New noise", on_click=_on_noise),
+            ButtonView("btn_reconnect", label="Reconnect", on_click=_on_reconnect),
         ]
     )
     layout = SplitView("vertical", [toolbar, body])

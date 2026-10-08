@@ -97,6 +97,7 @@ def _image_meta(image: Any) -> dict[str, Any]:
         "channels": image.channels,
         "dtype": int(image.dtype),
         "source": image.source,
+        "version": image.version,
     }
     if image.url is not None:
         meta["url"] = image.url

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import base64
 import io
+import uuid
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any
@@ -159,6 +160,9 @@ class ImageData:
     tile_size: int = 256
 
     def __post_init__(self) -> None:
+        # Per-instance identity used as the image's `version` downstream (e.g. the
+        # layout host re-sends a background frame only when this changes).
+        self.version = uuid.uuid4().hex
         self._maybe_auto_tile()
 
         if self.tiled is not None:
@@ -183,6 +187,61 @@ class ImageData:
                 "`width`, `height`, `channels`, and `dtype` are required "
                 "when `url` is given instead of `data`"
             )
+
+    def update(
+        self,
+        data: np.ndarray | None = None,
+        *,
+        url: str | None = None,
+        codec: EImageCodec | None = None,
+        jpeg_quality: int | None = None,
+    ) -> "ImageData":
+        """Replace this image's content in place and assign a fresh ``version``.
+
+        Exactly one of ``data``/``url`` must be given (mirrors the constructor's
+        mutual exclusivity).  For ``data`` the dimensions/dtype/channels are
+        re-derived and the auto-tile threshold re-applied; for ``url`` the
+        existing ``width``/``height``/``channels``/``dtype`` are kept (set them
+        directly if they change).  ``codec`` and ``jpeg_quality`` are updated
+        only when not ``None``.  Returns ``self`` for chaining.
+        """
+        if (data is None) == (url is None):
+            raise ValueError("update() needs exactly one of `data` or `url`")
+
+        if data is not None:
+            self.url = None
+            self.tiled = None
+            self.width = None
+            self.height = None
+            self.channels = None
+            self.dtype = None
+            self.data = data
+            self._maybe_auto_tile()
+            if self.tiled is not None:
+                pyramid = self.tiled
+                self.width = int(pyramid.data.shape[1])
+                self.height = int(pyramid.data.shape[0])
+                self.channels = int(pyramid.channels)
+                self.dtype = pyramid.dtype
+            else:
+                self._validate_array()
+        else:
+            self.data = None
+            self.tiled = None
+            self.url = url
+            if None in (self.width, self.height, self.channels, self.dtype):
+                raise ValueError(
+                    "`width`, `height`, `channels`, and `dtype` are required "
+                    "when `url` is given instead of `data`"
+                )
+
+        if codec is not None:
+            self.codec = codec
+        if jpeg_quality is not None:
+            self.jpeg_quality = jpeg_quality
+
+        self.version = uuid.uuid4().hex
+        return self
 
     def _maybe_auto_tile(self) -> None:
         """Replace a large pixel buffer with a lazily built tile pyramid.

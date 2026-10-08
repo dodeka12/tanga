@@ -382,7 +382,11 @@ pane through a clean three-layer model — camera data → camera view → pane:
   and a `/stream/…` url streams MJPEG.  At runtime
   `Visualizer.set_background_image(view, image)` sends the new pixel frame
   followed by a granular `view_background_image` message — no `view_layout`
-  re-push, so other panes are untouched.
+  re-push, so other panes are untouched.  On reconnect the quad is rebuilt from
+  the re-sent frame (the pane's `clear_all` tears it down); an unchanged
+  background keeps its previous texture on a layout re-push, and `set_layout`
+  re-sends a frame only when its `ImageData.version` (a per-instance uuid)
+  changed.
 - **Per-pane visibility** — `SceneView(hide=…, show=…)` filters which entities a
   pane builds (each pane has its own object registry, so no scene duplication).
 - **Runtime entity visibility** — `Scene.set_visible` /

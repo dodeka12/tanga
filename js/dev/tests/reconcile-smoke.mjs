@@ -59,10 +59,34 @@ if (JSON.stringify(afterNoise) !== JSON.stringify(afterSwap)) {
     throw new Error(`panes changed on background-image swap: ${JSON.stringify(afterNoise)}`);
 }
 
+// Reconnect (clear_all + view_layout re-push) → the calibrated background pane
+// (now on the right after the swap) must still render, not solid black.
+await page.click('button:has-text("Reconnect")');
+await page.waitForTimeout(500);
+const bgMaxBrightness = await page.evaluate(() => {
+    const canvas = document.querySelectorAll('.tanga-three-view canvas')[1];
+    const c = document.createElement('canvas');
+    c.width = canvas.width;
+    c.height = canvas.height;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(canvas, 0, 0);
+    const data = ctx.getImageData(0, 0, c.width, c.height).data;
+    let max = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        const v = Math.max(data[i], data[i + 1], data[i + 2]);
+        if (v > max) max = v;
+        if (max > 10) break;
+    }
+    return max;
+});
+if (bgMaxBrightness <= 10) {
+    throw new Error(`background pane is black after reconnect (max brightness ${bgMaxBrightness})`);
+}
+
 await browser.close();
 
 if (consoleErrors.length) {
     console.error('console errors:', consoleErrors);
     process.exit(1);
 }
-console.log('reconcile-smoke ok: panes reused on swap, background swap left canvases intact');
+console.log('reconcile-smoke ok: panes reused on swap, background swap left canvases intact, reconnect keeps the background');
