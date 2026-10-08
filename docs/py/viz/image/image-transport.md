@@ -33,6 +33,28 @@ exact = ImageData("raw", data=np.zeros((480, 640, 3), dtype=np.uint8), codec=EIm
   scientific/HDR data stays lossless out of the box.
 - `jpeg_quality=…` (default `85`) tunes the JPEG quality.
 
+## Version & in-place updates
+
+Every `ImageData` instance carries a `version` — a fresh uuid string assigned at
+construction — that identifies the image content.  pytanga uses it to avoid
+re-sending an unchanged background image on a layout re-push: **reuse the same
+`ImageData` instance** while the content is unchanged, and change the content
+(and the version) only when the pixels actually change.
+
+```python
+img = ImageData("camera", data=frame0)
+viz.set_background_image(view, img)
+
+# later, new pixels: update the same instance in place (bumps `version`):
+img.update(data=frame1)
+viz.set_background_image(view, img)
+```
+
+`ImageData.update(data=…)` (or `update(url=…)`) replaces the content in place,
+re-derives the dimensions/dtype and re-applies the auto-tile threshold, and
+assigns a fresh `version`.  Passing neither (or both) `data`/`url` raises
+`ValueError`.
+
 ## When to use which
 
 - **Standard / camera images** — leave the default; 8-bit images compress to

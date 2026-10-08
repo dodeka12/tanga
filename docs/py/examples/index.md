@@ -80,6 +80,8 @@ uv run python py/examples/<path>.py
 
 - **Axis** — [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
 
+- **background image** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md)
+
 - **banner** — [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md)
 
 - **bar** — [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
@@ -132,7 +134,7 @@ uv run python py/examples/<path>.py
 
 - **chaos** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
 
-- **checkbox** — [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
+- **checkbox** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
 - **CheckboxView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
@@ -405,6 +407,8 @@ uv run python py/examples/<path>.py
 - **ImageCanvas** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
 - **ImageData** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
+
+- **ImageData.update** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md)
 
 - **indeterminate** — [Determinate and indeterminate progress bars with a status line](viz/ui/controls/progress_bar.md)
 

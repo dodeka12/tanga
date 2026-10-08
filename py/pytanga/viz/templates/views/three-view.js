@@ -472,6 +472,8 @@ export class ThreeJsView extends View {
         }
         this._interaction.clearAllInteractive();
         this.sceneObjects.clear();
+        this._backgroundMesh = null;
+        this._backgroundImage = null;
         this._removeAnnotation();
         if (this._titleElement) {
             this._titleElement.remove();
@@ -807,7 +809,7 @@ export class ThreeJsView extends View {
             return;
         }
 
-        if (this._backgroundMesh) {
+        if (this._backgroundMesh && this._backgroundMesh.parent === this.scene) {
             // Reuse the existing quad: the new texture replaces the old one
             // in place (after decoding), so there is no black gap between
             // frames and the current crop window is retained.

@@ -167,6 +167,51 @@ class TestImageData:
             img.to_bytes()
 
 
+class TestImageDataUpdate:
+    def test_version_present_and_unique(self) -> None:
+        a = ImageData("i", data=np.zeros((2, 2), dtype=np.uint8))
+        b = ImageData("i", data=np.zeros((2, 2), dtype=np.uint8))
+        assert isinstance(a.version, str) and len(a.version) == 32
+        assert a.version != b.version
+
+    def test_update_data_bumps_version_and_metadata(self) -> None:
+        img = ImageData("i", data=np.zeros((2, 3), dtype=np.uint8))
+        old = img.version
+        result = img.update(data=np.ones((4, 5, 3), dtype=np.uint8))
+        assert result is img
+        assert img.version != old
+        assert (img.width, img.height, img.channels) == (5, 4, 3)
+        assert img.dtype is ImageDType.UINT8
+
+    def test_update_data_re_tiles_large(self) -> None:
+        img = ImageData("i", data=np.zeros((2, 2), dtype=np.uint8))
+        assert img.source == "data"
+        img.update(data=np.zeros((5000, 100, 3), dtype=np.uint8))
+        assert img.source == "tiled"
+        assert img.data is None
+        assert img.tiled is not None
+        assert (img.width, img.height, img.channels) == (100, 5000, 3)
+
+    def test_update_url_sets_url(self) -> None:
+        img = ImageData(
+            "u", url="http://a", width=4, height=3, channels=3, dtype=ImageDType.UINT8
+        )
+        old = img.version
+        img.update(url="http://b")
+        assert img.source == "url"
+        assert img.url == "http://b"
+        assert img.data is None
+        assert img.version != old
+        assert (img.width, img.height, img.channels) == (4, 3, 3)
+
+    def test_update_requires_exactly_one(self) -> None:
+        img = ImageData("i", data=np.zeros((2, 2), dtype=np.uint8))
+        with pytest.raises(ValueError, match="exactly one"):
+            img.update()
+        with pytest.raises(ValueError, match="exactly one"):
+            img.update(data=np.zeros((2, 2), dtype=np.uint8), url="http://x")
+
+
 class TestPilToNumpy:
     def test_missing_pil_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setitem(sys.modules, "PIL", None)

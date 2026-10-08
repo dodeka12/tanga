@@ -769,6 +769,7 @@ class LayoutHostImpl:
         self._layouts_serialized: dict[str, dict[str, Any]] = {}
         self._scene_layouts_serialized: dict[str, dict[str, Any]] = {}
         self._background_frames: dict[str, bytes] = {}
+        self._background_versions: dict[str, str] = {}
 
     # ── LayoutHost contract ─────────────────────────────
 
@@ -817,28 +818,49 @@ class LayoutHostImpl:
         self._layouts[name] = Layout(root, self._overlay)
         self._layout_control_ids = self.register(root)
         self._sync_overlays()
-        self._collect_background_frames(root)
-        for frame in self._background_frames.values():
+        for frame in self._collect_background_frames(root).values():
             self._transport.send_bytes(frame)
         return name
 
-    def _collect_background_frames(self, root: View) -> None:
-        """Encode and store (then send) any ``CameraView.background_image`` bytes."""
+    def _collect_background_frames(self, root: View) -> dict[str, bytes]:
+        """Encode any changed ``CameraView.background_image`` frames.
+
+        Returns the freshly-encoded frames for images whose ``version`` changed
+        (or that are new); unchanged images are skipped so a layout re-push does
+        not re-encode/re-send them.  Updates the ``_background_frames``/
+        ``_background_versions`` caches and prunes ids no longer present.
+        """
         from ._image_wire import encode_image_frame
         from .views import iter_scene_views
 
+        changed: dict[str, bytes] = {}
+        seen: set[str] = set()
         for scene_view in iter_scene_views(root):
             camera_view = scene_view.camera_view
             if camera_view is None:
                 continue
             image = camera_view.background_image
-            if image is not None and image.data is not None:
-                self._background_frames[image.id] = encode_image_frame(
-                    image.id,
-                    image.data,
-                    codec=image.codec,
-                    jpeg_quality=image.jpeg_quality or 85,
-                )
+            if image is None or image.data is None:
+                continue
+            seen.add(image.id)
+            if self._background_versions.get(image.id) == image.version:
+                continue
+            frame = encode_image_frame(
+                image.id,
+                image.data,
+                codec=image.codec,
+                jpeg_quality=image.jpeg_quality or 85,
+            )
+            changed[image.id] = frame
+            self._background_frames[image.id] = frame
+            self._background_versions[image.id] = image.version
+
+        stale = (set(self._background_frames) | set(self._background_versions)) - seen
+        for image_id in stale:
+            self._background_frames.pop(image_id, None)
+            self._background_versions.pop(image_id, None)
+
+        return changed
 
     def background_image_frames(self) -> list[tuple[str, bytes]]:
         """Return ``(id, encoded_frame)`` for every background image (re-sent on connect)."""
@@ -870,6 +892,7 @@ class LayoutHostImpl:
                 jpeg_quality=image.jpeg_quality or 85,
             )
             self._background_frames[image.id] = frame
+            self._background_versions[image.id] = image.version
             self._transport.send_bytes(frame)
         self._transport.send(
             {
