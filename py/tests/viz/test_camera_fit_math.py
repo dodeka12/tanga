@@ -276,3 +276,44 @@ def test_screen_world_scale_pinhole_frustum() -> None:
     out = json.loads(proc.stdout)
     # worldHeight at dist 10 = (5 - (-5)) / 1 * 10 = 100; scale = 100 / 1000 = 0.1.
     assert out["pinhole"] == pytest.approx(0.1)
+
+
+def test_screen_world_scale_uses_depth_not_distance() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not available")
+    program = r"""
+    import { screenWorldScale } from './py/pytanga/viz/templates/camera-fit.js';
+    // Off-axis points: the perspective scale must use depth along the view
+    // axis, not the Euclidean distance from the camera.
+    const forward = { x: 0, y: 0, z: -1 };
+    const pinhole = screenWorldScale(
+        {
+            isOrthographicCamera: false,
+            fov: 50,  // stale — ignored when _pinholeFrustum is present
+            position: { x: 0, y: 0, z: 0 },
+            userData: { _pinholeFrustum: { top: 5, bottom: -5, near: 1 } },
+        },
+        1000, { x: 3, y: 4, z: -10 }, forward
+    );
+    const persp = screenWorldScale(
+        { isOrthographicCamera: false, fov: 90, position: { x: 0, y: 0, z: 0 } },
+        1000, { x: 6, y: 8, z: -10 }, forward
+    );
+    console.log(JSON.stringify({ pinhole, persp }));
+    """
+    proc = subprocess.run(
+        [node, "--input-type=module", "-e", program],
+        cwd=_REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    # depth 10 → pinhole worldHeight = (10 / 1) * 10 = 100 → 0.1
+    # (Euclidean distance √(3²+4²+10²) = √125 would give ≈ 0.1118).
+    assert out["pinhole"] == pytest.approx(0.1)
+    # depth 10, fov 90 → worldHeight = 2 * 10 * tan(45°) = 20 → 0.02
+    # (Euclidean distance √(6²+8²+10²) = √200 would give ≈ 0.0283).
+    assert out["persp"] == pytest.approx(0.02)

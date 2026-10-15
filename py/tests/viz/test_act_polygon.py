@@ -11,7 +11,13 @@ from typing import Any
 import pytest
 
 from pytanga.geometry import Direction, Point
-from pytanga.viz import ActPolygon, DragEvent, DragMode, InteractionEventType, SquarePointStyle
+from pytanga.viz import (
+    ActPolygon,
+    DragEvent,
+    DragMode,
+    InteractionEventType,
+    SquarePointStyle,
+)
 from pytanga.viz._act_style import ActPointStyle
 from pytanga.viz._interaction import ModifierKey
 from pytanga.viz._point_path import PointPath
@@ -74,7 +80,11 @@ class _FakeHandle:
 
 
 def _polygon(points: list[Point] | None = None, **kwargs: Any):  # noqa: ANN202
-    points = points or [Point(0.0, 0.0, 0.0), Point(1.0, 0.0, 0.0), Point(1.0, 1.0, 0.0)]
+    points = points or [
+        Point(0.0, 0.0, 0.0),
+        Point(1.0, 0.0, 0.0),
+        Point(1.0, 1.0, 0.0),
+    ]
     handle = _FakeHandle(space_dim=2)
     poly = ActPolygon(points, **kwargs)
     poly._init(handle, "p1")
@@ -147,7 +157,7 @@ class TestBehaviour:
         asyncio.run(poly._dispatch_vertex_drag(0, event))
         assert len(poly.points) == 4
         assert poly.points[0] == Point(-1.0, 0.0, 0.0)  # new start (inserted before)
-        assert poly.points[1] == Point(0.0, 0.0, 0.0)   # original start shifted
+        assert poly.points[1] == Point(0.0, 0.0, 0.0)  # original start shifted
 
     def test_ctrl_drag_middle_inserts_after(self) -> None:
         poly, _ = _polygon(closed=False)
@@ -324,7 +334,11 @@ class TestBehaviour:
         asyncio.run(
             poly._dispatch_translate(DragEvent(world_delta=Direction(1.0, 1.0, 0.0)))
         )
-        assert poly.points == [Point(1.0, 1.0, 0.0), Point(2.0, 1.0, 0.0), Point(2.0, 2.0, 0.0)]
+        assert poly.points == [
+            Point(1.0, 1.0, 0.0),
+            Point(2.0, 1.0, 0.0),
+            Point(2.0, 2.0, 0.0),
+        ]
 
     def test_on_change_fired(self) -> None:
         seen: list[list[Point]] = []
@@ -338,9 +352,7 @@ class TestBehaviour:
         assert len(seen[0]) == 3
 
     def test_create_from_points_is_open(self) -> None:
-        poly = ActPolygon.create_from_points(
-            Point(0.0, 0.0, 0.0), Point(4.0, 2.0, 0.0)
-        )
+        poly = ActPolygon.create_from_points(Point(0.0, 0.0, 0.0), Point(4.0, 2.0, 0.0))
         assert poly._closed is False
         assert poly._auto_close is True
         assert poly.points == [Point(0.0, 0.0, 0.0), Point(4.0, 2.0, 0.0)]
@@ -412,9 +424,22 @@ class TestHandleDragMode:
                 for t in h.interaction_config.triggers
                 if t.event_type == InteractionEventType.DRAG
             ]
-            assert len(drag) == 1
-            assert drag[0].drag_mode == DragMode.VIEW_PLANE
-            assert drag[0].modifiers == frozenset()
+            assert any(
+                t.drag_mode == DragMode.VIEW_PLANE and t.modifiers == frozenset()
+                for t in drag
+            )
+
+    def test_vertex_handles_have_ctrl_drag_trigger(self) -> None:
+        poly, _ = _polygon()
+        for h in poly._vertex_handles:
+            ctrl = [
+                t
+                for t in h.interaction_config.triggers
+                if t.event_type == InteractionEventType.DRAG
+                and t.modifiers == frozenset({ModifierKey.CTRL})
+            ]
+            assert len(ctrl) == 1
+            assert ctrl[0].drag_mode == DragMode.VIEW_PLANE
 
 
 class TestTranslate3D:
@@ -425,4 +450,3 @@ class TestTranslate3D:
         )
         assert all(p.z == 2.0 for p in poly._points)
         assert poly._points[0] == Point(1.0, 1.0, 2.0)
-

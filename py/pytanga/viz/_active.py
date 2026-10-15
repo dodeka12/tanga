@@ -677,8 +677,6 @@ class ActiveObject(ActSceneObject):
         self.remove()
 
 
-
-
 class ActPoint(ActiveObject):
     """An interactive draggable point.
 
@@ -985,7 +983,9 @@ class ActImagePlane(ActSceneObject):
         )
         self._image_view = image_view
         self._entity: Any = entity if entity is not None else image_view
-        self._mapper: CoordinateMapper = mapper if mapper is not None else PlanarMapper()
+        self._mapper: CoordinateMapper = (
+            mapper if mapper is not None else PlanarMapper()
+        )
 
     # ── Properties ─────────────────────────────────────────
 
@@ -1322,7 +1322,6 @@ class ActRectangle2D(ActiveObject):
                 handler=self._make_corner_handler(i),
                 drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
-
                 on_click=self._handle_click_handler(),
             )
             self._spawn_handle(handle, style=style)
@@ -1333,7 +1332,6 @@ class ActRectangle2D(ActiveObject):
                 handler=self._make_translate_handler(),
                 drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
-
                 on_click=self._handle_click_handler(),
             )
             self._spawn_handle(handle, style=translate_style)
@@ -1344,7 +1342,6 @@ class ActRectangle2D(ActiveObject):
                 handler=self._make_rotate_handler(),
                 drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
-
                 on_click=self._handle_click_handler(),
             )
             self._spawn_handle(handle, style=rotate_style)
@@ -1407,7 +1404,9 @@ class ActRectangle2D(ActiveObject):
         v = self._dir_v()
         hw = abs(dx * u.x + dy * u.y + dz * u.z)
         hh = abs(dx * v.x + dy * v.y + dz * v.z)
-        half_floor = (self._min_size if self._min_size is not None else _FLOAT_EPS) / 2.0
+        half_floor = (
+            self._min_size if self._min_size is not None else _FLOAT_EPS
+        ) / 2.0
         hw = max(hw, half_floor)
         hh = max(hh, half_floor)
         if self._max_size is not None:
@@ -1422,9 +1421,7 @@ class ActRectangle2D(ActiveObject):
         )
         self._commit()
 
-    def set_size_limits(
-        self, min_size: float | None, max_size: float | None
-    ) -> None:
+    def set_size_limits(self, min_size: float | None, max_size: float | None) -> None:
         """Set the resize clamp (world units; ``None`` = floating-point min / unbounded max)."""
         self._min_size = None if min_size is None else float(min_size)
         self._max_size = None if max_size is None else float(max_size)
@@ -1495,9 +1492,7 @@ class ActRectangle2D(ActiveObject):
         self._rotate_handle = None
 
     @classmethod
-    def create_from_points(
-        cls, a: Point, b: Point, **kwargs: Any
-    ) -> "ActRectangle2D":
+    def create_from_points(cls, a: Point, b: Point, **kwargs: Any) -> "ActRectangle2D":
         """Build a rectangle from two opposite corners."""
         rect = Rectangle2D.between(a, b)
         size = rect.size
@@ -1700,7 +1695,6 @@ class ActEllipse(ActiveObject):
                 handler=self._make_radius_handler(i),
                 drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
-
                 on_click=self._handle_click_handler(),
             )
             self._spawn_handle(handle, style=style)
@@ -1711,7 +1705,6 @@ class ActEllipse(ActiveObject):
                 handler=self._make_translate_handler(),
                 drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
-
                 on_click=self._handle_click_handler(),
             )
             self._spawn_handle(handle, style=translate_style)
@@ -1722,7 +1715,6 @@ class ActEllipse(ActiveObject):
                 handler=self._make_rotate_handler(),
                 drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
-
                 on_click=self._handle_click_handler(),
             )
             self._spawn_handle(handle, style=rotate_style)
@@ -1908,8 +1900,7 @@ class ActCircle(ActiveObject):
         style: Any = None,
         on_radius_drag: Callable[[DragEvent, "ActCircle"], Awaitable[bool]]
         | None = None,
-        on_translate: Callable[[DragEvent, "ActCircle"], Awaitable[bool]]
-        | None = None,
+        on_translate: Callable[[DragEvent, "ActCircle"], Awaitable[bool]] | None = None,
         on_change: Callable[[Circle], None] | None = None,
         on_click: ActClickHandler | None = None,
     ) -> None:
@@ -2000,7 +1991,6 @@ class ActCircle(ActiveObject):
             handler=self._make_radius_handler(),
             drag_mode=DragMode.VIEW_PLANE,
             act_style=self._act_style,
-
             on_click=self._handle_click_handler(),
         )
         self._spawn_handle(handle, style=style)
@@ -2011,12 +2001,10 @@ class ActCircle(ActiveObject):
                 handler=self._make_translate_handler(),
                 drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
-
                 on_click=self._handle_click_handler(),
             )
             self._spawn_handle(handle, style=translate_style)
             self._translate_handle = handle
-
 
     # ── Handler closures ───────────────────────────────────
 
@@ -2315,8 +2303,12 @@ class ActPolygon(ActiveObject):
                 handler=self._make_vertex_handler(i),
                 on_drag_end=self._make_vertex_drag_end(),
                 drag_mode=DragMode.VIEW_PLANE,
+                drag_bindings=[
+                    DragBinding(
+                        MouseButton.LEFT, self._make_vertex_handler(i), ModifierKey.CTRL
+                    )
+                ],
                 act_style=self._act_style,
-
                 on_click=self._handle_click_handler(),
                 click_bindings=self._make_delete_bindings(i),
             )
@@ -2330,7 +2322,6 @@ class ActPolygon(ActiveObject):
                 handler=self._make_translate_handler(),
                 drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
-
                 on_click=self._handle_click_handler(),
             )
             self._spawn_handle(handle, style=translate_style)
@@ -2460,8 +2451,7 @@ class ActPolygon(ActiveObject):
 
     def _translate_by(self, delta: Direction) -> None:
         self._points = [
-            Point(p.x + delta.x, p.y + delta.y, p.z + delta.z)
-            for p in self._points
+            Point(p.x + delta.x, p.y + delta.y, p.z + delta.z) for p in self._points
         ]
         self._commit()
 
@@ -2646,7 +2636,6 @@ class ActLine(ActiveObject):
                 handler=self._make_endpoint_handler(i),
                 drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
-
                 on_click=self._handle_click_handler(),
             )
             self._spawn_handle(handle, style=style)
@@ -2657,7 +2646,6 @@ class ActLine(ActiveObject):
                 handler=self._make_translate_handler(),
                 drag_mode=DragMode.VIEW_PLANE,
                 act_style=self._act_style,
-
                 on_click=self._handle_click_handler(),
             )
             self._spawn_handle(handle, style=translate_style)
@@ -2752,4 +2740,3 @@ class ActLine(ActiveObject):
     def create_from_points(cls, a: Point, b: Point, **kwargs: Any) -> "ActLine":
         """Build a line segment from two points."""
         return cls(start=a, end=b, **kwargs)
-

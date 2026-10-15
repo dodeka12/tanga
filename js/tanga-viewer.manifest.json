@@ -240,7 +240,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/camera-fit.js",
-      "sha256": "521bff78569bcf99a8f5251a2029d413cce6218a243a8c8ba531a79287f5ea09"
+      "sha256": "18b4e1564c48ff56ca9cc2c7c0c6eb5d212274d87cc43a4d5bed0781bf9f93a7"
     },
     {
       "path": "py/pytanga/viz/templates/scene-builder.js",
@@ -283,6 +283,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "6c587045d74d28745f4834bc3b673f86e9ba31305479ad2147c318312f10506f",
-  "bundle_sha256": "8423e0699fca1bb91e91cc5272861a031635d61f1284c3b2ab45cbe681ca51a5"
+  "fingerprint_sha256": "d9918c39fa63d3f03ef0fe5ddaf55a6e305efad0819a315741b8232927c48d9f",
+  "bundle_sha256": "6e66079238a1dc8ac3c372af425e3150f1d151f847fbea31179198acd6499e08"
 }

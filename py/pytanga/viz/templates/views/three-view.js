@@ -501,11 +501,12 @@ export class ThreeJsView extends View {
         const viewportPx = Math.max(1, height);
         const billboard = !this.camera.isOrthographicCamera;
         const worldPos = new THREE.Vector3();
+        const forward = this.camera.getWorldDirection(new THREE.Vector3());
         for (const entry of this.sceneObjects.values()) {
             const mesh = entry && entry.mesh;
             if (!mesh || !mesh.userData || !mesh.userData.isScreenSpace) continue;
             mesh.getWorldPosition(worldPos);
-            mesh.scale.setScalar(screenWorldScale(this.camera, viewportPx, worldPos));
+            mesh.scale.setScalar(screenWorldScale(this.camera, viewportPx, worldPos, forward));
             // Flat square/circle/icon billboards face the camera in perspective;
             // the crosshair is a 3D Group and keeps its world orientation.
             if (billboard && mesh.isMesh) {
@@ -779,7 +780,13 @@ export class ThreeJsView extends View {
 
     _onViewportWheel(e) {
         if (!this._viewportInputEnabled()) return;
+        // Always consume the wheel in the calibrated pane so it never reaches
+        // the browser (page zoom/scroll).
         e.preventDefault();
+        // A drag in progress (entity or surface) uses a cached screen→world
+        // scale; zooming mid-drag would change that scale and detach the dragged
+        // point from the pointer, so ignore the wheel while dragging.
+        if (this._interaction && this._interaction.isDragActive()) return;
         const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
         const [nx, ny] = this._screenNdc(e);
         this._zoomViewport(nx, ny, Math.exp(-delta * 0.0015));

@@ -421,7 +421,7 @@ pane through a clean three-layer model — camera data → camera view → pane:
   `PlanarMapper` (identity: `Point(u, v, 0)`) and a `CalibratedPlaneMapper`
   (pinhole ray ∩ a plane ⟂ the optical axis at a fixed `depth`).  It maps
   *image* pixels only — screen-pixel sizing lives on the frontend in
-  `screenWorldScale` (`camera-fit.js`).  `world_units_per_pixel()` returns the
+  `screenWorldScale` (`camera-fit.js`), whose perspective branch uses the point's depth along the camera's view axis (not Euclidean distance).  `world_units_per_pixel()` returns the
   world size of one image pixel at the plane (`1.0` for `PlanarMapper`,
   `depth / fx` for `CalibratedPlaneMapper`), used for scale-dependent distances
   (min radius/size, auto-close tolerance, rotate-handle offset).
