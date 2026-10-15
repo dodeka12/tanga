@@ -14,7 +14,13 @@ def test_background_image_serialize():  # noqa: ANN201
     node = SceneView("main", camera_view=CameraView(background_image=img))._serialize()
     meta = node["camera_view"]["background_image"]
     assert meta["version"] == img.version
-    del meta["version"]
+    assert meta["shader"] == {"fragment": None, "vertex": None}
+    assert meta["uniforms"]["u_brightness"] == 0.0
+    assert meta["uniforms"]["u_contrast"] == 1.0
+    assert meta["uniforms"]["u_midpoint"] == 0.5
+    assert meta["uniforms"]["u_mode"] == 1  # 3 channels → RGB
+    assert meta["uniforms"]["u_value_max"] == 1.0  # uint8 → [0, 1]
+    del meta["version"], meta["shader"], meta["uniforms"]
     assert meta == {
         "id": "bg",
         "width": 12,
@@ -95,7 +101,7 @@ def test_set_background_image_creates_camera_view():  # noqa: ANN201
     viz.set_background_image(view, img)
 
     assert view.camera_view is not None
-    assert view.camera_view.background_image is img
+    assert view.camera_view.background_image.primary_image is img
 
 
 def test_set_background_image_rejects_non_scene_view():  # noqa: ANN201
@@ -217,4 +223,67 @@ def test_set_layout_removed_prunes_cache():  # noqa: ANN201
 
     assert "bg" not in viz._layout._background_frames
     assert "bg" not in viz._layout._background_versions
+
+
+def test_set_background_uniform_sends_message():  # noqa: ANN201
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+    view = SceneView(
+        "main",
+        camera_view=CameraView(
+            background_image=ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8))
+        ),
+    )
+
+    before = len(fake.binary_frames)
+    viz.set_background_uniform(view, "u_contrast", 1.2)
+
+    assert len(fake.binary_frames) == before  # no pixel bytes
+    msg = fake.json_messages[-1]
+    assert msg["type"] == "view_background_uniforms"
+    assert msg["view_id"] == view.id
+    assert msg["uniforms"] == {"u_contrast": 1.2}
+
+
+def test_register_background_shader_re_pushes():  # noqa: ANN201
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+    view = SceneView(
+        "main",
+        camera_view=CameraView(
+            background_image=ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8))
+        ),
+    )
+
+    viz.register_background_shader(view, "void main() {}", "vertex")
+
+    msg = fake.json_messages[-1]
+    assert msg["type"] == "view_background_image"
+    assert msg["image"]["shader"] == {"fragment": "void main() {}", "vertex": "vertex"}
+
+
+def test_set_background_image_preserves_shader_and_uniforms():  # noqa: ANN201
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+    view = SceneView("main")
+    viz.set_background_image(view, ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    viz.register_background_shader(view, "frag")
+    viz.set_background_uniform(view, "u_contrast", 1.5)
+
+    img2 = ImageData("bg", data=np.ones((8, 12, 3), dtype=np.uint8))
+    viz.set_background_image(view, img2)
+
+    image_view = view.camera_view.background_image
+    assert image_view.primary_image is img2
+    assert image_view.shader["fragment"] == "frag"
+    assert image_view.uniforms["u_contrast"] == 1.5
 

@@ -641,6 +641,11 @@ async function handleMessage(msg) {
         if (target) target.setBackgroundImage(msg.image);
         return;
     }
+    if (msg.type === 'view_background_uniforms') {
+        const target = _viewById.get(msg.view_id);
+        if (target) target.setBackgroundUniforms(msg.uniforms);
+        return;
+    }
     if (msg.type === 'view_surface') {
         const target = _viewById.get(msg.view_id);
         if (target) target.setSurface(msg.surface);

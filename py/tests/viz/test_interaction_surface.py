@@ -227,6 +227,34 @@ class TestClickAnchorResolution:
         asyncio.run(_run())
 
 
+class TestDragBindingResolution:
+    def test_ctrl_binding_wins_over_general_handler(self) -> None:
+        from pytanga.viz import DragBinding, ModifierKey, MouseButton
+
+        async def general(event: Any, surface: InteractionSurface) -> bool:
+            return True
+
+        async def ctrl(event: Any, surface: InteractionSurface) -> bool:
+            return True
+
+        surface = InteractionSurface(
+            PlanarMapper(),
+            on_drag=general,
+            drag_bindings=[DragBinding(MouseButton.LEFT, ctrl, ModifierKey.CTRL)],
+        )
+
+        class _Event:
+            mouse_button = MouseButton.LEFT
+
+        ctrl_event = _Event()
+        ctrl_event.modifiers = frozenset({ModifierKey.CTRL})
+        assert surface._resolve_drag_handler(ctrl_event) is ctrl  # noqa: SLF001
+
+        plain_event = _Event()
+        plain_event.modifiers = frozenset()
+        assert surface._resolve_drag_handler(plain_event) is general  # noqa: SLF001
+
+
 async def _noop_drag(event: DragEvent, surface: InteractionSurface) -> bool:
     return True
 

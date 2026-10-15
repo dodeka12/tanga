@@ -104,6 +104,24 @@ def _image_meta(image: Any) -> dict[str, Any]:
     return meta
 
 
+def _image_view_meta(view: Any) -> dict[str, Any]:
+    """Serialize a background ``ImageView`` to ``background_image`` metadata.
+
+    Emits the primary image's metadata (a flat dict, or ``tiled_meta``) plus the
+    shared ``shader``/``uniforms`` state carried by the ``ImageView``.
+    """
+    primary = view.primary_image
+    if primary is None:
+        meta: dict[str, Any] = {}
+    elif primary.source == "tiled":
+        meta = dict(primary.tiled_meta)
+    else:
+        meta = _image_meta(primary)
+    meta["shader"] = dict(view.shader)
+    meta["uniforms"] = dict(view.uniforms)
+    return meta
+
+
 def _normalize_id_set(values: set[str] | None) -> set[str]:
     """Validate a ``hide``/``show`` set of entity ids."""
     if values is None:

@@ -56,12 +56,12 @@ from __future__ import annotations
 import argparse
 import math
 import os
-from dataclasses import replace
-from typing import Any, Callable, cast
+from typing import Any, Callable
 
 import numpy as np
-from pytanga.geometry import Circle, Direction, Ellipse, Line, Point, Rectangle2D
+from pytanga.geometry import Circle, Ellipse, Line, Point, Rectangle2D
 from pytanga.viz import (
+    ActiveObject,
     ActCircle,
     ActEllipse,
     ActLine,
@@ -95,6 +95,7 @@ from pytanga.viz import (
     ToolbarView,
     VisualizerApp,
 )
+from pytanga.viz._active import _plane_basis
 
 _W, _H = 320, 200
 _FILL = "#ff4444"
@@ -132,6 +133,15 @@ class ImageLabeler:
     Copy this class into your app and adapt :meth:`_style_for_act` /
     :meth:`_style_for_mode` to change how each shape type is styled.
     """
+
+    #: Edit mode → composite type whose control points are shown while active.
+    _MODE_TYPES = {
+        "rect": ActRectangle2D,
+        "ellipse": ActEllipse,
+        "circle": ActCircle,
+        "line": ActLine,
+        "polygon": ActPolygon,
+    }
 
     def __init__(
         self,
@@ -305,6 +315,8 @@ class ImageLabeler:
         self._canvas.set_cursor("crosshair" if mode else None)
         for cid, button in self._tool_buttons.items():
             button.set_selected(cid == mode)
+        self._deselect()
+        self._sync_handles()
 
     def _make_select_handler(self) -> Any:
         async def on_click(_event, act) -> None:  # noqa: ANN001
@@ -317,12 +329,10 @@ class ImageLabeler:
             return
         self._deselect()
         self.selected = act
-        self._set_extra_handles(act, True)
         for shape in self.shapes:
             if shape.act is act:
-                self._canvas.handle.update_style(
-                    shape.act.entity_id,
-                    replace(cast(Any, shape.style), color=self.selected_color),
+                self._canvas.handle.update(
+                    shape.act.entity_id, color=self.selected_color
                 )
                 break
         self._canvas.handle.flush()
@@ -332,11 +342,10 @@ class ImageLabeler:
         if self.selected is None:
             return
         act = self.selected
-        self._set_extra_handles(act, False)
         for shape in self.shapes:
             if shape.act is act:
-                self._canvas.handle.update_style(
-                    shape.act.entity_id, cast(Any, shape.style)
+                self._canvas.handle.update(
+                    shape.act.entity_id, color=self.fill_color
                 )
                 break
         self._canvas.handle.flush()
@@ -379,8 +388,13 @@ class ImageLabeler:
         preview = self._previews.get(self.mode or "")
         if preview is None or preview.anchor is None:
             return
+        if math.hypot(*event.delta_pixels) < 3.0:
+            # A click (negligible movement) must not create a shape.
+            preview.discard()
+            return
         act = preview.finalize(event.world_position)
         self.add_shape(act)
+        self._select(act)
         if self.mode == "polygon":
             self.set_mode(None)  # one-shot
 
@@ -395,6 +409,7 @@ class ImageLabeler:
             on_click=self._make_select_handler(),
         )
         self.add_shape(act)
+        self._select(act)
 
     # ── Shapes ──────────────────────────────────────────────
 
@@ -406,17 +421,20 @@ class ImageLabeler:
                 center=entity.center,
                 size=entity.size,
                 angle=entity.angle,
+                normal=entity.normal,
                 on_click=select,
                 handle_style=self._handle_style,
             )
         if isinstance(entity, Ellipse):
-            du = entity.dir_u if entity.dir_u is not None else Direction(1.0, 0.0, 0.0)
-            angle = math.atan2(du.y, du.x)
+            u0, v0 = _plane_basis(entity.normal)
+            du = entity.dir_u if entity.dir_u is not None else u0
+            angle = math.atan2(du.dot(v0), du.dot(u0))
             return ActEllipse(
                 center=entity.center,
                 radius_u=entity.radius_u,
                 radius_v=entity.radius_v,
                 angle=angle,
+                normal=entity.normal,
                 on_click=select,
                 handle_style=self._handle_style,
             )
@@ -424,6 +442,7 @@ class ImageLabeler:
             return ActCircle(
                 center=entity.center,
                 radius=entity.radius,
+                normal=entity.normal,
                 on_click=select,
                 handle_style=self._handle_style,
             )
@@ -464,9 +483,8 @@ class ImageLabeler:
     def add_shape(self, act: Any, label: str | None = None) -> None:
         """Register *act* as a labeled shape, styled for its type."""
         style = self._style_for_act(act)
-        self._canvas.handle.add(act, style=style)
         self._apply_size_limits(act)
-        self._set_extra_handles(act, False)
+        self._canvas.handle.add(act, style=style)
         self.shapes.append(
             LabelShape(
                 act=act,
@@ -474,6 +492,7 @@ class ImageLabeler:
                 label=label if label is not None else self.default_label,
             )
         )
+        self._sync_handles()
         self._canvas.handle.flush()
         self._notify_change()
 
@@ -556,13 +575,18 @@ class ImageLabeler:
 
     # ── Styles + callbacks ──────────────────────────────────
 
-    @staticmethod
-    def _set_extra_handles(act: Any, visible: bool) -> None:
-        """Toggle the optional translate/rotate handles on a composite shape."""
-        if hasattr(act, "set_translate_handle_visible"):
-            act.set_translate_handle_visible(visible)
-        if hasattr(act, "set_rotate_handle_visible"):
-            act.set_rotate_handle_visible(visible)
+    def _sync_handles(self) -> None:
+        """Show control points for every entity of the active edit type."""
+        active_type = self._MODE_TYPES.get(self.mode or "")
+        for shape in self.shapes:
+            act = shape.act
+            if isinstance(act, ActPoint):
+                # A bare point stays visible; it is only draggable in point mode.
+                act.set_handles_enabled(self.mode == "point")
+            elif isinstance(act, ActiveObject):
+                act.set_handles_visible(
+                    active_type is not None and isinstance(act, active_type)
+                )
 
     def _style_for_act(self, act: Any) -> Any:
         if isinstance(act, ActRectangle2D):

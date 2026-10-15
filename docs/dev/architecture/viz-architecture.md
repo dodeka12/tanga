@@ -309,6 +309,14 @@ those pixel frames through the `window.__tanga` frame-store API
 `window.__tangaAnimReady` promise that the bootstrap top-level-awaits before
 reading `window.__TANGA_ANIMATION__`.
 
+The `ImageView` shader/uniform state and the default colour pipeline are
+**shared** with the background image (see "Image background" below): `ImageView`
+holds images + uniforms + fragment/vertex, `ImageView._serialize_state()` is the
+shared payload (the scene entity `_serialize()` adds only the
+`id`/`layer`/`kind`/`frame` envelope), and `image-shader.js::buildImageColorPipeline()`
+plus `image.js::buildColorUniforms` / `applyImageUniforms` are used by both
+`renderers/image.js` (scene mesh) and `renderers/image-background.js` (NDC quad).
+
 The same 2D scene hosts interactive rectangles: `Rectangle2D` (a new viz-only
 entity, `kind == "Rectangle2D"`, rendered by `renderers/rectangle2d.js` as an
 outline + optional fill) and `ActRectangle2D` (a composite `ActSceneObject` that
@@ -390,7 +398,12 @@ pane through a clean three-layer model — camera data → camera view → pane:
   the re-sent frame (the pane's `clear_all` tears it down); an unchanged
   background keeps its previous texture on a layout re-push, and `set_layout`
   re-sends a frame only when its `ImageData.version` (a per-instance uuid)
-  changed.
+  changed.  `background_image` is an `ImageView` (a bare `ImageData` is
+  auto-wrapped), so it also carries `shader`/`uniforms`; the default background
+  shader mirrors the canvas colour pipeline inside the letterbox/crop quad, and
+  `Visualizer.register_background_shader` / `register_background_uniform` /
+  `set_background_uniform` drive it via a granular `view_background_uniforms`
+  message (no pixel re-send, no layout re-push).
 - **Per-pane visibility** — `SceneView(hide=…, show=…)` filters which entities a
   pane builds (each pane has its own object registry, so no scene duplication).
 - **Runtime entity visibility** — `Scene.set_visible` /

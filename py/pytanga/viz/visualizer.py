@@ -1139,6 +1139,50 @@ class Visualizer(_JupyterDisplayMixin):
             self._register_pyramid(image.tiled)
         self._layout.push_background_image(view, image)
 
+    def _background_image_view(self, view: SceneView) -> Any:
+        """Resolve (or create) the background ``ImageView`` for *view*."""
+        from ._image_view import ImageView
+        from .views import CameraView, SceneView
+
+        if not isinstance(view, SceneView):
+            raise TypeError(f"view must be a SceneView, got {type(view).__name__}")
+        if view.camera_view is None:
+            view.camera_view = CameraView()
+        image_view = view.camera_view.background_image
+        if image_view is None:
+            image_view = ImageView("")
+            view.camera_view.background_image = image_view
+        return image_view
+
+    def register_background_shader(
+        self, view: SceneView, fragment: str, vertex: str | None = None
+    ) -> None:
+        """Register a custom background shader and re-push the background.
+
+        When a background image is already set, this re-sends the
+        ``view_background_image`` message (with the new ``shader``) so the
+        frontend rebuilds the material.  Otherwise the shader is stored and
+        applied once a background image is set.
+        """
+        image_view = self._background_image_view(view)
+        image_view.register_shader(fragment, vertex)
+        if image_view.primary_image is not None:
+            self._layout.push_background_image(view, image_view)
+
+    def register_background_uniform(
+        self, view: SceneView, name: str, default: float | int
+    ) -> None:
+        """Register a background uniform with a default (keeps an existing value)."""
+        self._background_image_view(view).register_uniform(name, default)
+
+    def set_background_uniform(
+        self, view: SceneView, name: str, value: float | int
+    ) -> None:
+        """Set a background uniform and push a granular uniform update."""
+        image_view = self._background_image_view(view)
+        image_view.set_uniform(name, value)
+        self._layout.push_background_uniforms(view, {name: value})
+
     def register_image_pyramid(
         self, image_id: str, data: Any, *, tile_size: int = 256
     ) -> Any:
@@ -1180,7 +1224,10 @@ class Visualizer(_JupyterDisplayMixin):
             camera_view = scene_view.camera_view
             if camera_view is None:
                 continue
-            image = camera_view.background_image
+            image_view = camera_view.background_image
+            if image_view is None:
+                continue
+            image = image_view.primary_image
             if image is not None and image.tiled is not None:
                 self._register_pyramid(image.tiled)
 

@@ -264,6 +264,33 @@ export function makeStreamTexture(img) {
     return texture;
 }
 
+// Standard color-processing uniform defaults shared by the image plane and the
+// background quad (value-range → brightness/contrast → clamp).  Any value the
+// caller supplied in `u` overrides the default.
+export function buildColorUniforms(u) {
+    const s = u || {};
+    return {
+        u_value_min: { value: s.u_value_min ?? 0.0 },
+        u_value_max: { value: s.u_value_max ?? 1.0 },
+        u_brightness: { value: s.u_brightness ?? 0.0 },
+        u_contrast: { value: s.u_contrast ?? 1.0 },
+        u_midpoint: { value: s.u_midpoint ?? 0.5 },
+        u_mode: { value: s.u_mode ?? 1 },
+    };
+}
+
+// Add any custom uniforms (keys beyond the standard set, e.g. a custom shader's
+// `u_angle`).  `image_update` / `view_background_uniforms` patches reuse the
+// same keys via `applyImageUniforms`.
+export function addCustomUniforms(uniforms, u) {
+    for (const [name, value] of Object.entries(u || {})) {
+        if (!(name in uniforms)) {
+            uniforms[name] = { value };
+        }
+    }
+    return uniforms;
+}
+
 function buildUniforms(ent) {
     const u = ent.uniforms || {};
     const images = ent.images || [];
@@ -274,21 +301,9 @@ function buildUniforms(ent) {
         uImage2: { value: null },
         uImage3: { value: null },
         uImageSize: { value: new THREE.Vector2(primary.width || 1, primary.height || 1) },
-        u_value_min: { value: u.u_value_min ?? 0.0 },
-        u_value_max: { value: u.u_value_max ?? 1.0 },
-        u_brightness: { value: u.u_brightness ?? 0.0 },
-        u_contrast: { value: u.u_contrast ?? 1.0 },
-        u_midpoint: { value: u.u_midpoint ?? 0.5 },
-        u_mode: { value: u.u_mode ?? 1 },
+        ...buildColorUniforms(u),
     };
-    // Custom shader uniforms — any key beyond the standard set above (e.g.
-    // a custom shader's `u_angle`).  `image_update` patches reuse the same
-    // keys via `applyImageUniforms`.
-    for (const [name, value] of Object.entries(u)) {
-        if (!(name in uniforms)) {
-            uniforms[name] = { value };
-        }
-    }
+    addCustomUniforms(uniforms, u);
     return uniforms;
 }
 

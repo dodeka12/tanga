@@ -2837,11 +2837,12 @@ void main() {
 }`;
 }
 
-function buildImageFragment() {
+// Shared color-processing GLSL: channel-mode mapping → value-range normalize →
+// brightness/contrast → clamp.  Declares the standard color uniforms and a
+// `tangaSampleColor(vec4)` helper used by both the image plane and the
+// background quad.
+function buildImageColorPipeline() {
     return /* glsl */ `
-precision highp float;
-varying vec2 vUv;
-uniform sampler2D uImage0;
 uniform float u_value_min;
 uniform float u_value_max;
 uniform float u_brightness;
@@ -2849,11 +2850,7 @@ uniform float u_contrast;
 uniform float u_midpoint;
 uniform int u_mode;
 
-void main() {
-    // Hardware sampling: mipmapped textures + linear minification give smooth
-    // downscaling, and NearestFilter magnification keeps hard 1:1 pixels.
-    vec4 tex = texture2D(uImage0, vUv);
-
+vec3 tangaSampleColor(vec4 tex) {
     vec3 color;
     if (u_mode == 0) {
         color = vec3(tex.r);            // channel 1 as grayscale
@@ -2866,8 +2863,22 @@ void main() {
     }
 
     vec3 n = (color - u_value_min) / max(u_value_max - u_value_min, 1e-6);
-    vec3 outC = clamp((n - u_midpoint) * u_contrast + u_midpoint + u_brightness, 0.0, 1.0);
-    gl_FragColor = vec4(outC, 1.0);
+    return clamp((n - u_midpoint) * u_contrast + u_midpoint + u_brightness, 0.0, 1.0);
+}`;
+}
+
+function buildImageFragment() {
+    return /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uImage0;
+${buildImageColorPipeline()}
+
+void main() {
+    // Hardware sampling: mipmapped textures + linear minification give smooth
+    // downscaling, and NearestFilter magnification keeps hard 1:1 pixels.
+    vec4 tex = texture2D(uImage0, vUv);
+    gl_FragColor = vec4(tangaSampleColor(tex), 1.0);
 }`;
 }
 
@@ -3131,6 +3142,33 @@ function makeStreamTexture(img) {
     return texture;
 }
 
+// Standard color-processing uniform defaults shared by the image plane and the
+// background quad (value-range → brightness/contrast → clamp).  Any value the
+// caller supplied in `u` overrides the default.
+function buildColorUniforms(u) {
+    const s = u || {};
+    return {
+        u_value_min: { value: s.u_value_min ?? 0.0 },
+        u_value_max: { value: s.u_value_max ?? 1.0 },
+        u_brightness: { value: s.u_brightness ?? 0.0 },
+        u_contrast: { value: s.u_contrast ?? 1.0 },
+        u_midpoint: { value: s.u_midpoint ?? 0.5 },
+        u_mode: { value: s.u_mode ?? 1 },
+    };
+}
+
+// Add any custom uniforms (keys beyond the standard set, e.g. a custom shader's
+// `u_angle`).  `image_update` / `view_background_uniforms` patches reuse the
+// same keys via `applyImageUniforms`.
+function addCustomUniforms(uniforms, u) {
+    for (const [name, value] of Object.entries(u || {})) {
+        if (!(name in uniforms)) {
+            uniforms[name] = { value };
+        }
+    }
+    return uniforms;
+}
+
 function buildUniforms(ent) {
     const u = ent.uniforms || {};
     const images = ent.images || [];
@@ -3141,21 +3179,9 @@ function buildUniforms(ent) {
         uImage2: { value: null },
         uImage3: { value: null },
         uImageSize: { value: new THREE.Vector2(primary.width || 1, primary.height || 1) },
-        u_value_min: { value: u.u_value_min ?? 0.0 },
-        u_value_max: { value: u.u_value_max ?? 1.0 },
-        u_brightness: { value: u.u_brightness ?? 0.0 },
-        u_contrast: { value: u.u_contrast ?? 1.0 },
-        u_midpoint: { value: u.u_midpoint ?? 0.5 },
-        u_mode: { value: u.u_mode ?? 1 },
+        ...buildColorUniforms(u),
     };
-    // Custom shader uniforms — any key beyond the standard set above (e.g.
-    // a custom shader's `u_angle`).  `image_update` patches reuse the same
-    // keys via `applyImageUniforms`.
-    for (const [name, value] of Object.entries(u)) {
-        if (!(name in uniforms)) {
-            uniforms[name] = { value };
-        }
-    }
+    addCustomUniforms(uniforms, u);
     return uniforms;
 }
 
@@ -3312,6 +3338,7 @@ uniform float uFit;           // 0.0 = letterbox (fit), 1.0 = stretch (fill)
 uniform vec4 uCrop;           // (u0, v0, u1, v1) normalized image coords
 uniform float uHx;            // explicit zoom-scaled letterbox half-extent (NDC)
 uniform float uHy;            // explicit zoom-scaled letterbox half-extent (NDC)
+${buildImageColorPipeline()}
 
 void main() {
     float hx = uHx > 0.0 ? uHx : (uFit > 0.5 ? 1.0 : min(1.0, uImageAspect / uPaneAspect));
@@ -3324,7 +3351,8 @@ void main() {
         vec2 uv;
         uv.x = uCrop.x + p.x * (uCrop.z - uCrop.x);
         uv.y = 1.0 - uCrop.w + p.y * (uCrop.w - uCrop.y);
-        gl_FragColor = texture2D(uImage, uv);
+        vec4 tex = texture2D(uImage, uv);
+        gl_FragColor = vec4(tangaSampleColor(tex), 1.0);
     }
 }`;
 
@@ -3333,18 +3361,21 @@ function _buildMaterial(imageMeta) {
     const img = imageMeta || {};
     const width = Number(img.width) || 1;
     const height = Number(img.height) || 1;
+    const uniforms = {
+        uImage: { value: null },
+        uImageAspect: { value: width / height },
+        uPaneAspect: { value: 1.0 },
+        uFit: { value: 0.0 },
+        uCrop: { value: new THREE.Vector4(0, 0, 1, 1) },
+        uHx: { value: 0.0 },
+        uHy: { value: 0.0 },
+        ...buildColorUniforms(img.uniforms),
+    };
+    addCustomUniforms(uniforms, img.uniforms);
     return new THREE.ShaderMaterial({
-        vertexShader: _BG_VERTEX,
-        fragmentShader: _BG_FRAGMENT,
-        uniforms: {
-            uImage: { value: null },
-            uImageAspect: { value: width / height },
-            uPaneAspect: { value: 1.0 },
-            uFit: { value: 0.0 },
-            uCrop: { value: new THREE.Vector4(0, 0, 1, 1) },
-            uHx: { value: 0.0 },
-            uHy: { value: 0.0 },
-        },
+        vertexShader: img.shader?.vertex || _BG_VERTEX,
+        fragmentShader: img.shader?.fragment || _BG_FRAGMENT,
+        uniforms,
         depthTest: false,
         depthWrite: false,
     });
@@ -3397,6 +3428,12 @@ function createImageBackground(imageMeta) {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.frustumCulled = false;
     mesh.renderOrder = -1;
+    // Remember which shader sources built this material so the pane can detect a
+    // shader change (which requires a rebuild) versus a texture-only update.
+    mesh.userData._backgroundShader = {
+        fragment: img.shader?.fragment ?? null,
+        vertex: img.shader?.vertex ?? null,
+    };
 
     _backgroundTexture(img).then((tex) => {
         if (tex) {
@@ -3430,6 +3467,8 @@ function updateImageBackground(mesh, imageMeta) {
     const width = Number(img.width) || 1;
     const height = Number(img.height) || 1;
     mat.uniforms.uImageAspect.value = width / height;
+    // Re-apply color-processing + custom uniforms from the new metadata.
+    applyImageUniforms(mesh, img.uniforms);
     _backgroundTexture(img).then((tex) => {
         if (tex) mat.uniforms.uImage.value = tex;
     });

@@ -307,6 +307,9 @@
             "Pinhole Calibrated": "py/examples/viz/camera/pinhole_calibrated.md"
           },
           {
+            "Pinhole Calibrated Custom Shader": "py/examples/viz/camera/pinhole_calibrated_custom_shader.md"
+          },
+          {
             "Pinhole Calibrated Streaming": "py/examples/viz/camera/pinhole_calibrated_streaming.md"
           },
           {

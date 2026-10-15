@@ -839,7 +839,10 @@ class LayoutHostImpl:
             camera_view = scene_view.camera_view
             if camera_view is None:
                 continue
-            image = camera_view.background_image
+            image_view = camera_view.background_image
+            if image_view is None:
+                continue
+            image = image_view.primary_image
             if image is None or image.data is None:
                 continue
             seen.add(image.id)
@@ -874,31 +877,60 @@ class LayoutHostImpl:
         that pane's background quad — no ``view_layout`` re-push.  *image* may
         be ``None`` to clear the background.
         """
+        from ._image_view import ImageView
         from ._image_wire import encode_image_frame
         from .views import CameraView
-        from .views._helpers import _image_meta
+        from .views._helpers import _image_view_meta
 
         if not isinstance(view, SceneView):
             raise TypeError(f"view must be a SceneView, got {type(view).__name__}")
         if view.camera_view is None:
             view.camera_view = CameraView(background_image=image)
-        else:
+        elif image is None or isinstance(image, ImageView):
             view.camera_view.background_image = image
-        if image is not None and image.data is not None:
+        else:
+            existing = view.camera_view.background_image
+            if isinstance(existing, ImageView):
+                # Preserve the existing shader/uniform state across a pixel swap.
+                existing.set_image(image)
+            else:
+                wrapped = ImageView(image.id)
+                wrapped.set_image(image)
+                view.camera_view.background_image = wrapped
+
+        image_view = view.camera_view.background_image
+        primary = image_view.primary_image if image_view is not None else None
+        if primary is not None and primary.data is not None:
             frame = encode_image_frame(
-                image.id,
-                image.data,
-                codec=image.codec,
-                jpeg_quality=image.jpeg_quality or 85,
+                primary.id,
+                primary.data,
+                codec=primary.codec,
+                jpeg_quality=primary.jpeg_quality or 85,
             )
-            self._background_frames[image.id] = frame
-            self._background_versions[image.id] = image.version
+            self._background_frames[primary.id] = frame
+            self._background_versions[primary.id] = primary.version
             self._transport.send_bytes(frame)
         self._transport.send(
             {
                 "type": "view_background_image",
                 "view_id": view.id,
-                "image": _image_meta(image) if image is not None else None,
+                "image": _image_view_meta(image_view) if image_view is not None else None,
+            }
+        )
+
+    def push_background_uniforms(self, view: SceneView, patch: dict[str, Any]) -> None:
+        """Patch one pane's background uniforms via a granular message.
+
+        Merges ``patch`` into the background quad's ``ShaderMaterial.uniforms``
+        without re-sending pixels or re-pushing the layout.
+        """
+        if not isinstance(view, SceneView):
+            raise TypeError(f"view must be a SceneView, got {type(view).__name__}")
+        self._transport.send(
+            {
+                "type": "view_background_uniforms",
+                "view_id": view.id,
+                "uniforms": dict(patch),
             }
         )
 

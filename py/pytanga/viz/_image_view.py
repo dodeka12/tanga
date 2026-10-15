@@ -73,6 +73,11 @@ class ImageView:
         return list(self._images)
 
     @property
+    def primary_image(self) -> ImageData | None:
+        """The primary (layer 0, frame-defining) image, or ``None`` if empty."""
+        return self._images[0] if self._images else None
+
+    @property
     def frame(self) -> tuple[int, int]:
         """The pixel frame extent ``(width, height)``, or ``(0, 0)`` if empty."""
         return self._frame if self._frame is not None else (0, 0)
@@ -142,19 +147,33 @@ class ImageView:
         self._fragment = fragment
         self._vertex = vertex
 
+    @property
+    def shader(self) -> dict[str, str | None]:
+        """The custom shader sources (``fragment``/``vertex``); both ``None`` → default."""
+        return {"fragment": self._fragment, "vertex": self._vertex}
+
     # -- serialization ------------------------------------------------
 
-    def _serialize(self) -> dict[str, Any]:
-        """Serialize to the canonical ``image`` entity dict (README contract)."""
+    def _serialize_state(self) -> dict[str, Any]:
+        """Serialize the shared image + shader + uniform state (no scene envelope)."""
         return {
-            "id": self.id,
-            "layer": "scene",
-            "kind": "image",
-            "frame": {"width": self.frame[0], "height": self.frame[1]},
             "images": [self._serialize_image(img) for img in self._images],
             "shader": {"fragment": self._fragment, "vertex": self._vertex},
             "uniforms": dict(self._uniforms),
         }
+
+    def _serialize(self) -> dict[str, Any]:
+        """Serialize to the canonical ``image`` entity dict (README contract)."""
+        result = self._serialize_state()
+        result.update(
+            {
+                "id": self.id,
+                "layer": "scene",
+                "kind": "image",
+                "frame": {"width": self.frame[0], "height": self.frame[1]},
+            }
+        )
+        return result
 
     def _serialize_image(self, image: ImageData) -> dict[str, Any]:
         """Serialize one image layer (metadata only — pixels travel as bytes)."""

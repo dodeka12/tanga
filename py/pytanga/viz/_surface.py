@@ -6,9 +6,11 @@
 An :class:`InteractionSurface` binds a :class:`~pytanga.viz.CoordinateMapper`
 (which defines a plane + pixel↔world mapping) to a set of pointer handlers and
 a serialized wire description.  Unlike an :class:`~pytanga.viz.ActSceneObject`,
-it has **no scene entity**: the frontend emits its drag/click events when the
-pointer hits *empty space* in the pane (see ``templates/interaction.js``), and
-the backend resolves world positions against ``mapper.plane()``.
+it has **no scene entity**: the frontend resolves each gesture to the nearest
+hit target whose ``interaction.triggers`` match, falling through to this surface
+(whose hit is the mouse ray intersected with ``mapper.plane()``) when no nearer
+entity matches (see ``templates/interaction.js``); the backend resolves world
+positions against ``mapper.plane()``.
 
 The surface is the shared interaction primitive behind the flat
 :class:`~pytanga.viz.ImageCanvas` (``PlanarMapper``, ``z = 0``) and a calibrated

@@ -8,7 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
-from ._helpers import _image_meta, _normalize_lock, _normalize_navigation
+from ._helpers import _image_view_meta, _normalize_lock, _normalize_navigation
+from .._image_view import ImageView
 from ..camera import (
     CameraAction,
     CameraConfig,
@@ -45,6 +46,13 @@ class CameraView:
         self.camera = _normalize_camera_config(self.camera)
         self.navigation = _normalize_navigation(self.navigation)
         self.lock = _normalize_lock(self.lock)
+        if self.background_image is not None and not isinstance(
+            self.background_image, ImageView
+        ):
+            image = self.background_image
+            view = ImageView(image.id)
+            view.set_image(image)
+            self.background_image = view
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {}
@@ -62,5 +70,5 @@ class CameraView:
         if self.viewport is not None:
             result["viewport"] = self.viewport.to_dict()
         if self.background_image is not None:
-            result["background_image"] = _image_meta(self.background_image)
+            result["background_image"] = _image_view_meta(self.background_image)
         return result

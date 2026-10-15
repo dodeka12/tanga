@@ -11,6 +11,7 @@ interaction.
 |-------|---------------------|
 | [Image Canvas](image-canvas.md) | `ImageCanvas`/`ImageData`, the pixel frame, overlays, `scene_view()` |
 | [Custom Shaders](custom-shaders.md) | `register_shader`/`register_uniform`/`set_uniform`, the GLSL contract |
+| [Background Shaders](background-shaders.md) | shaders/uniforms for `CameraView.background_image`, ctrl+drag brightness/contrast |
 | [Interaction](interaction.md) | `DragBinding`/`ClickBinding`, drag/click handlers, cursors, `ActRectangle2D` |
 | [Image transport](image-transport.md) | `codec`/`jpeg_quality`, JPEG vs lossless zlib, when to use which |
 | [HDR images](hdr-images.md) | `read_exr`/`read_hdr`, linear float32, EXR codecs + Radiance RGBE |

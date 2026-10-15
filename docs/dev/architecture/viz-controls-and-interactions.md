@@ -396,11 +396,14 @@ Three orthogonal concerns:
 - **visual** — the image, an orthogonal rendering detail: `ImageView` (flat
   `ImageCanvas`) or `CameraView.background_image` (calibrated).
 
-The surface resolves pointer→world on the **backend**: the frontend emits
-`interaction:drag_*`/`click` events for the pane's *empty space* (intersecting
-the mouse ray with the surface's serialized `{point, normal}` in
-`interaction.js` `_getSurfaceHit`), each carrying the picking
-`ray_origin`/`ray_direction`, and the backend rebases onto
+The surface resolves pointer→world on the **backend**: the frontend resolves
+each gesture (drag/click/dblclick/scroll) to the **nearest hit target whose
+`interaction.triggers` match** — event type + button + modifiers, matched
+**exactly** (a trigger with no `modifiers` fires only when none are held) —
+falling through to the pane's surface when no nearer entity matches.  The
+surface hit is the mouse ray intersected with the surface's serialized
+`{point, normal}` in `interaction.js` `_getSurfaceHit`; each event carries the
+picking `ray_origin`/`ray_direction`, and the backend rebases onto
 `surface.drag_anchor`/`click_anchor` (a generic ray↔`mapper.plane()`
 intersection) from that ray — no `pixel_ray` reconstruction — via the same
 `_act_objects` lookup as `Act` entities.  The surface

@@ -119,6 +119,7 @@ from pytanga.viz import (
     LabelMeStore,
     LabelView,
     LineStyle,
+    ModifierKey,
     MouseButton,
     PointPath,
     PointPathStyle,
@@ -255,6 +256,8 @@ class _CalibratedLabeler:
         fill: str = "#ff4444",
     ) -> None:
         self._world = world
+        self._viz: Any = None
+        self._view: Any = None
         self._mode: str | None = None
         self.selected: Any = None
         self.shapes: list[tuple[Any, Any]] = []  # (act, body_style)
@@ -291,7 +294,10 @@ class _CalibratedLabeler:
         # "point" is click-to-place (no DragPreview), but still needs a style.
         self._styles["point"] = _style_for("point", fill)
 
-        self._drag_binding = DragBinding(MouseButton.LEFT, self._on_drag, enabled=False)
+        self._draw_binding = DragBinding(MouseButton.LEFT, self._on_drag, enabled=False)
+        self._brightness_contrast_binding = DragBinding(
+            MouseButton.LEFT, self._on_brightness_contrast_drag, ModifierKey.CTRL
+        )
         self._tool_buttons: dict[str, ButtonView] = {}
         self.surface = CalibratedSurface(
             calib,
@@ -299,7 +305,7 @@ class _CalibratedLabeler:
             on_drag_start=self._on_drag_start,
             on_drag_end=self._on_drag_end,
             on_click=self._on_click,
-            drag_bindings=[self._drag_binding],
+            drag_bindings=[self._draw_binding, self._brightness_contrast_binding],
         )
 
         world.on_key("Delete", self._on_delete)
@@ -308,7 +314,7 @@ class _CalibratedLabeler:
 
     def set_mode(self, mode: str | None) -> None:
         self._mode = mode
-        self._drag_binding.enabled = mode is not None and mode != "point"
+        self._draw_binding.enabled = mode is not None and mode != "point"
         self.surface.set_enabled(mode is not None)
         self.surface.set_click_enabled(mode == "point")
         self._world.set_cursor("crosshair" if mode is not None else None)
@@ -316,6 +322,25 @@ class _CalibratedLabeler:
             button.set_selected(cid == mode)
         self._deselect()
         self._sync_handles()
+
+    def set_background_view(self, viz: Any, view: Any) -> None:
+        """Bind the ctrl+drag brightness/contrast handler to *view*'s background."""
+        self._viz = viz
+        self._view = view
+
+    async def _on_brightness_contrast_drag(self, event: Any, _surface: Any) -> bool:
+        # Ctrl+left drag: horizontal movement → contrast, vertical → brightness.
+        if self._viz is None or self._view is None:
+            return False
+        dx, dy = event.delta_pixels
+        u = self._view.camera_view.background_image.uniforms
+        self._viz.set_background_uniform(
+            self._view, "u_contrast", max(0.0, u["u_contrast"] + 0.005 * dx)
+        )
+        self._viz.set_background_uniform(
+            self._view, "u_brightness", u["u_brightness"] + 0.005 * dy
+        )
+        return True
 
     def toolbar(self) -> ToolbarView:
         def _button(cid: str, icon: str, tip: str) -> ButtonView:
@@ -556,6 +581,10 @@ def main() -> None:
             )
         ],
     )
+
+    # Ctrl+left-drag on the calibrated pane adjusts the background's brightness
+    # (vertical) and contrast (horizontal).
+    labeler.set_background_view(viz, left)
 
     # Keep the original pixels so the "Noise image" checkbox can round-trip.
     default_data = background.data
