@@ -5270,15 +5270,16 @@ function _containMinZoom(camera, v2d) {
  * standing for the target CSS-pixel size) renders at that many CSS pixels.
  *
  * - ortho: `(top - bottom) / (viewportPx · zoom)` (uniform across the frustum).
- * - perspective: `2 · dist · tan(fov / 2) / viewportPx` (per-marker distance).
+ * - perspective: `2 · depth · tan(fov / 2) / viewportPx` (depth along the view axis; falls back to Euclidean distance when `forward` is omitted).
  *
  * @param {object} camera  { isOrthographicCamera, top, bottom, zoom, fov,
  *                           position: {x, y, z} }
  * @param {number} viewportPx  viewport height in CSS pixels.
  * @param {object} worldPos  {x, y, z} world position of the marker.
+ * @param {object} [forward]  {x, y, z} camera view direction (unit length).
  * @returns {number}  positive world-units-per-CSS-pixel scale (1 for degenerate).
  */
-function screenWorldScale(camera, viewportPx, worldPos) {
+function screenWorldScale(camera, viewportPx, worldPos, forward) {
     const vp = Math.max(1, Number(viewportPx) || 1);
     if (camera && camera.isOrthographicCamera) {
         const span = Number(camera.top) - Number(camera.bottom);
@@ -5291,18 +5292,31 @@ function screenWorldScale(camera, viewportPx, worldPos) {
     const dx = Number(p.x || 0) - Number(c.x || 0);
     const dy = Number(p.y || 0) - Number(c.y || 0);
     const dz = Number(p.z || 0) - Number(c.z || 0);
-    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    if (!(dist > 0)) return 1;
+    // The perspective scale depends on the distance *along the view axis*, not
+    // the straight-line distance from the camera.  Use the projected depth when
+    // the caller supplies the view direction, and fall back to Euclidean
+    // distance (e.g. pure-math callers with no orientation) otherwise.
+    let depth = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (forward) {
+        const fx = Number(forward.x) || 0;
+        const fy = Number(forward.y) || 0;
+        const fz = Number(forward.z) || 0;
+        const fl = Math.sqrt(fx * fx + fy * fy + fz * fz);
+        if (fl > 0) {
+            depth = Math.abs((fx * dx + fy * dy + fz * dz) / fl);
+        }
+    }
+    if (!(depth > 0)) return 1;
     // Off-center pinhole: `camera.fov` is stale (the off-center `makePerspective`
     // never updates it), so use the retained frustum span when available.
     const frustum = camera && camera.userData && camera.userData._pinholeFrustum;
     if (frustum && Number(frustum.near) > 0) {
         const span = Number(frustum.top) - Number(frustum.bottom);
-        const worldHeight = (span / Number(frustum.near)) * dist;
+        const worldHeight = (span / Number(frustum.near)) * depth;
         return worldHeight / vp;
     }
     const fov = Number(camera && camera.fov) || 50;
-    const worldHeight = 2 * dist * Math.tan((fov * Math.PI) / 360);
+    const worldHeight = 2 * depth * Math.tan((fov * Math.PI) / 360);
     return worldHeight / vp;
 }
 

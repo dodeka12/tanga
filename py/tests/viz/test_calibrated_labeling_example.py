@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any
@@ -16,7 +17,9 @@ from pytanga.geometry import Matrix, OpenCVFrame
 from pytanga.viz import (
     CalibratedPlaneMapper,
     CameraCalibration,
+    DragEvent,
     LabelMeStore,
+    ModifierKey,
     PlanarMapper,
     Visualizer,
 )
@@ -50,9 +53,7 @@ def test_mapper_world_units_per_pixel() -> None:
     assert PlanarMapper().world_units_per_pixel() == 1.0
     calib = _calibration()
     mapper = CalibratedPlaneMapper(calib, depth=0.6)
-    assert mapper.world_units_per_pixel() == pytest.approx(
-        0.6 / calib.K.data[0, 0]
-    )
+    assert mapper.world_units_per_pixel() == pytest.approx(0.6 / calib.K.data[0, 0])
 
 
 def test_labels_load_and_map_without_errors() -> None:
@@ -196,3 +197,23 @@ def test_add_shape_applies_pixel_scale_before_spawning_handles() -> None:
         expected_pos.y,
         expected_pos.z,
     )
+
+
+def test_ctrl_drag_does_not_create_shape() -> None:
+    """Ctrl+drag adjusts brightness/contrast; it must not create a shape."""
+    module = _load_example()
+    labeler = _make_labeler(module)
+    labeler.set_mode("polygon")
+
+    ctrl = frozenset({ModifierKey.CTRL})
+    start = DragEvent(modifiers=ctrl, world_position=module.Point(0.0, 0.0, 0.0))
+    end = DragEvent(
+        modifiers=ctrl,
+        delta_pixels=(50.0, 0.0),
+        world_position=module.Point(1.0, 0.0, 0.0),
+    )
+
+    asyncio.run(labeler._on_drag_start(start, None))  # noqa: SLF001
+    asyncio.run(labeler._on_drag_end(end, None))  # noqa: SLF001
+
+    assert labeler.shapes == []

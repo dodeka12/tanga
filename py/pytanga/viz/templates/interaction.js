@@ -342,7 +342,6 @@ export class InteractionController {
         // depth), including the off-center pinhole camera whose stale `fov`
         // would otherwise give a zoom-independent scale.
         const viewportHeight = this.rendererDomElement.clientHeight;
-        const scale = screenWorldScale(this.camera, viewportHeight, intersectPoint);
 
         const right = new THREE.Vector3();
         const up = new THREE.Vector3();
@@ -350,6 +349,11 @@ export class InteractionController {
         this.camera.matrixWorld.extractBasis(right, up, forward);
         right.normalize();
         up.normalize();
+        // `extractBasis`'s third column is the camera's local +Z (backwards);
+        // the view direction is -Z, so negate it for the depth scale.
+        const viewDir = forward.clone().negate().normalize();
+
+        const scale = screenWorldScale(this.camera, viewportHeight, intersectPoint, viewDir);
 
         const screenDx = right.clone().multiplyScalar(scale);
         const screenDy = up.clone().multiplyScalar(-scale);  // screen -Y → world
