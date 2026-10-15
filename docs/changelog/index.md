@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.18.0 (2.18.1-rc2)] — 2026-10-15
+- Calibrated background image shaders (brightness/contrast + custom shaders/uniforms) · ctrl+drag brightness/contrast · nearest-to-furthest hit resolution with exact modifier matching · custom background shader example
+→ [Details](2026/10/15_70258d8b6.md)
+
 ## [Since 2.18.0 (2.18.1-rc1)] — 2026-10-08
 - Calibrated background image zoom fills the pane · per-axis pan/zoom tracks the pointer · debounced pane resize without WebGL flicker
 → [Details](2026/10/08_53b28a777.md)
