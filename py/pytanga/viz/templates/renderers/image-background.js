@@ -9,7 +9,8 @@
 
 import * as THREE from 'three';
 
-import { makeEncodedTexture, makeStreamTexture, makeTiledTexture } from './image.js';
+import { addCustomUniforms, applyImageUniforms, buildColorUniforms, makeEncodedTexture, makeStreamTexture, makeTiledTexture } from './image.js';
+import { buildImageColorPipeline } from './image-shader.js';
 import { hasImageFrame, registerImageFrameConsumer, takeImageFrame } from '../image-frames.js';
 
 const _BG_VERTEX = /* glsl */ `
@@ -29,6 +30,7 @@ uniform float uFit;           // 0.0 = letterbox (fit), 1.0 = stretch (fill)
 uniform vec4 uCrop;           // (u0, v0, u1, v1) normalized image coords
 uniform float uHx;            // explicit zoom-scaled letterbox half-extent (NDC)
 uniform float uHy;            // explicit zoom-scaled letterbox half-extent (NDC)
+${buildImageColorPipeline()}
 
 void main() {
     float hx = uHx > 0.0 ? uHx : (uFit > 0.5 ? 1.0 : min(1.0, uImageAspect / uPaneAspect));
@@ -41,7 +43,8 @@ void main() {
         vec2 uv;
         uv.x = uCrop.x + p.x * (uCrop.z - uCrop.x);
         uv.y = 1.0 - uCrop.w + p.y * (uCrop.w - uCrop.y);
-        gl_FragColor = texture2D(uImage, uv);
+        vec4 tex = texture2D(uImage, uv);
+        gl_FragColor = vec4(tangaSampleColor(tex), 1.0);
     }
 }`;
 
@@ -50,18 +53,21 @@ function _buildMaterial(imageMeta) {
     const img = imageMeta || {};
     const width = Number(img.width) || 1;
     const height = Number(img.height) || 1;
+    const uniforms = {
+        uImage: { value: null },
+        uImageAspect: { value: width / height },
+        uPaneAspect: { value: 1.0 },
+        uFit: { value: 0.0 },
+        uCrop: { value: new THREE.Vector4(0, 0, 1, 1) },
+        uHx: { value: 0.0 },
+        uHy: { value: 0.0 },
+        ...buildColorUniforms(img.uniforms),
+    };
+    addCustomUniforms(uniforms, img.uniforms);
     return new THREE.ShaderMaterial({
-        vertexShader: _BG_VERTEX,
-        fragmentShader: _BG_FRAGMENT,
-        uniforms: {
-            uImage: { value: null },
-            uImageAspect: { value: width / height },
-            uPaneAspect: { value: 1.0 },
-            uFit: { value: 0.0 },
-            uCrop: { value: new THREE.Vector4(0, 0, 1, 1) },
-            uHx: { value: 0.0 },
-            uHy: { value: 0.0 },
-        },
+        vertexShader: img.shader?.vertex || _BG_VERTEX,
+        fragmentShader: img.shader?.fragment || _BG_FRAGMENT,
+        uniforms,
         depthTest: false,
         depthWrite: false,
     });
@@ -114,6 +120,12 @@ export function createImageBackground(imageMeta) {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.frustumCulled = false;
     mesh.renderOrder = -1;
+    // Remember which shader sources built this material so the pane can detect a
+    // shader change (which requires a rebuild) versus a texture-only update.
+    mesh.userData._backgroundShader = {
+        fragment: img.shader?.fragment ?? null,
+        vertex: img.shader?.vertex ?? null,
+    };
 
     _backgroundTexture(img).then((tex) => {
         if (tex) {
@@ -147,6 +159,8 @@ export function updateImageBackground(mesh, imageMeta) {
     const width = Number(img.width) || 1;
     const height = Number(img.height) || 1;
     mat.uniforms.uImageAspect.value = width / height;
+    // Re-apply color-processing + custom uniforms from the new metadata.
+    applyImageUniforms(mesh, img.uniforms);
     _backgroundTexture(img).then((tex) => {
         if (tex) mat.uniforms.uImage.value = tex;
     });

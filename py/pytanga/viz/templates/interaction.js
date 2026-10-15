@@ -19,6 +19,7 @@
 
 import * as THREE from 'three';
 import { screenWorldScale } from '../camera-fit.js';
+import { matchTriggers, resolveHitTarget } from './hit-resolution.js';
 
 // Double-click timeout (ms)
 const DBLCLICK_TIMEOUT = 300;
@@ -98,9 +99,9 @@ export class InteractionController {
     surfaceClaimsPointer(event) {
         // Does the pane's surface claim this pointer event for a drag?  A
         // surface registers its button/modifier combos via drag triggers; a
-        // trigger without `mouse_button` (or `modifiers`) matches any button
-        // (or modifier).  Everything not claimed here passes through to the
-        // pane's navigation (pan/rotate/zoom).
+        // trigger without `mouse_button` matches any button, and its `modifiers`
+        // must match the held modifiers exactly (empty = none).  Everything not
+        // claimed here passes through to the pane's navigation (pan/rotate/zoom).
         const s = this._surface;
         if (!s || !s.interaction || !s.interaction.enabled) return false;
         const button = this._mouseButtonFromEvent(event);
@@ -399,18 +400,7 @@ export class InteractionController {
 
     _findMatchingTriggers(objectId, eventType, button, modifiers) {
         const config = this._getObjectConfig(objectId);
-        if (!config) return [];
-        return config.triggers.filter(t => {
-            if (t.event_type !== eventType) return false;
-            if (t.mouse_button != null && t.mouse_button !== button) return false;
-            const reqMods = t.modifiers || [];
-            if (reqMods.length > 0) {
-                for (const m of reqMods) {
-                    if (!modifiers.has(m)) return false;
-                }
-            }
-            return true;
-        });
+        return matchTriggers(config, eventType, button, modifiers);
     }
 
     _getActiveModifiers(event) {
@@ -464,17 +454,31 @@ export class InteractionController {
         return { objectId: s.id, intersect: { point: hitPoint, face: null } };
     }
 
-    _getHit(event) {
+    _resolveGestureHit(event, eventType, button, modifiers) {
         if (this._readOnly) return null;
-        return this._getInteractiveHit(event) || this._getSurfaceHit(event);
+        const candidates = this._getInteractiveHits(event);
+        const surface = this._getSurfaceHit(event);
+        return resolveHitTarget(
+            candidates,
+            surface,
+            (id) => this._getObjectConfig(id),
+            eventType,
+            button,
+            modifiers,
+        );
     }
 
     // ── Raycasting ───────────────────────────────────────────────
 
     _getInteractiveHit(event) {
+        const hits = this._getInteractiveHits(event);
+        return hits.length > 0 ? hits[0] : null;
+    }
+
+    _getInteractiveHits(event) {
         const meshes = [];
         for (const [, obj] of this.interactiveObjects) meshes.push(obj.mesh);
-        if (meshes.length === 0) return null;
+        if (meshes.length === 0) return [];
 
         // Raycast background planes last.  An image plane sits at the same
         // z = 0 as the shape bodies drawn over it, so an equal-distance raycast
@@ -492,13 +496,22 @@ export class InteractionController {
 
         this.raycaster.setFromCamera(this.mouse, this.camera);
         const intersects = this.raycaster.intersectObjects(meshes, true);
-        if (intersects.length === 0) return null;
 
-        const hitMesh = intersects[0].object;
-        for (const [id, obj] of this.interactiveObjects) {
-            if (obj.mesh === hitMesh || this._isDescendantOf(hitMesh, obj.mesh)) {
-                return { objectId: id, intersect: intersects[0] };
+        const seen = new Set();
+        const hits = [];
+        for (const intersect of intersects) {
+            const objectId = this._objectIdForMesh(intersect.object);
+            if (objectId && !seen.has(objectId)) {
+                seen.add(objectId);
+                hits.push({ objectId, intersect });
             }
+        }
+        return hits;
+    }
+
+    _objectIdForMesh(mesh) {
+        for (const [id, obj] of this.interactiveObjects) {
+            if (obj.mesh === mesh || this._isDescendantOf(mesh, obj.mesh)) return id;
         }
         return null;
     }
@@ -553,15 +566,13 @@ export class InteractionController {
     // ── Pointer Event Handlers ───────────────────────────────────
 
     _onPointerDown(event) {
-        const hit = this._getHit(event);
-        if (!hit) return;
-
         const modifiers = this._getActiveModifiers(event);
         const button = this._mouseButtonFromEvent(event);
 
-        const dragTriggers = this._findMatchingTriggers(hit.objectId, 'drag', button, modifiers);
-        if (dragTriggers.length > 0) {
-            const worldPos = hit.intersect.point;
+        const dragHit = this._resolveGestureHit(event, 'drag', button, modifiers);
+        if (dragHit) {
+            const dragTriggers = this._findMatchingTriggers(dragHit.objectId, 'drag', button, modifiers);
+            const worldPos = dragHit.intersect.point;
             const { screenDx, screenDy, dist } = this._computeScreenPlaneVectors(worldPos);
             // Pick the most specific trigger (most modifier requirements wins)
             const trigger = dragTriggers.reduce((best, t) => {
@@ -572,7 +583,7 @@ export class InteractionController {
             const dragMode = trigger.drag_mode || 'view_plane';
 
             this._activeDrag = {
-                objectId: hit.objectId,
+                objectId: dragHit.objectId,
                 button, modifiers,
                 startPos: { x: event.clientX, y: event.clientY },
                 lastPos: { x: event.clientX, y: event.clientY },
@@ -595,7 +606,7 @@ export class InteractionController {
                 unsentPixelDelta: new THREE.Vector2(),
             };
             this._dragStarted = false;
-            const hitConfig = this._getObjectConfig(hit.objectId);
+            const hitConfig = this._getObjectConfig(dragHit.objectId);
             if (hitConfig && hitConfig.cursor) {
                 this.rendererDomElement.style.cursor = hitConfig.cursor;
             }
@@ -605,11 +616,14 @@ export class InteractionController {
             event.stopPropagation();
         }
 
-        this._clickState.set(hit.objectId, {
-            pointerDownPos: { x: event.clientX, y: event.clientY },
-            pointerDownTime: performance.now(),
-            button, modifiers,
-        });
+        const clickHit = this._resolveGestureHit(event, 'click', button, modifiers);
+        if (clickHit) {
+            this._clickState.set(clickHit.objectId, {
+                pointerDownPos: { x: event.clientX, y: event.clientY },
+                pointerDownTime: performance.now(),
+                button, modifiers,
+            });
+        }
     }
 
     _pixelToWorldDelta(dx, dy, screenDx, screenDy, dragMode) {
@@ -779,7 +793,9 @@ export class InteractionController {
             }
         }
 
-        const hit = this._getHit(event);
+        const button = this._mouseButtonFromEvent(event);
+        const modifiers = this._getActiveModifiers(event);
+        const hit = this._resolveGestureHit(event, 'click', button, modifiers);
         const objectId = hit ? hit.objectId : null;
         if (objectId) {
             const state = this._clickState.get(objectId);
@@ -790,8 +806,6 @@ export class InteractionController {
                 const elapsed = performance.now() - state.pointerDownTime;
 
                 if (dist < CLICK_THRESHOLD && elapsed < DBLCLICK_TIMEOUT) {
-                    const button = this._mouseButtonFromEvent(event);
-                    const modifiers = this._getActiveModifiers(event);
                     const triggers = this._findMatchingTriggers(objectId, 'click', button, modifiers);
                     if (triggers.length > 0 && hit) {
                         const wp = hit.intersect.point;
@@ -830,10 +844,10 @@ export class InteractionController {
     // ── Dblclick / wheel / capture / cancel ──────────────────────
 
     _onDblClick(event) {
-        const hit = this._getHit(event);
-        if (!hit) return;
         const button = this._mouseButtonFromEvent(event);
         const modifiers = this._getActiveModifiers(event);
+        const hit = this._resolveGestureHit(event, 'dblclick', button, modifiers);
+        if (!hit) return;
         const triggers = this._findMatchingTriggers(hit.objectId, 'dblclick', button, modifiers);
         if (triggers.length > 0) {
             const wp = hit.intersect.point;
@@ -872,9 +886,9 @@ export class InteractionController {
     }
 
     _onWheel(event) {
-        const hit = this._getHit(event);
-        if (!hit) return;
         const modifiers = this._getActiveModifiers(event);
+        const hit = this._resolveGestureHit(event, 'scroll', null, modifiers);
+        if (!hit) return;
         const triggers = this._findMatchingTriggers(hit.objectId, 'scroll', null, modifiers);
         if (triggers.length > 0) {
             event.preventDefault();

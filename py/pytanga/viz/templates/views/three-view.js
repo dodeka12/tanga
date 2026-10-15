@@ -896,12 +896,26 @@ export class ThreeJsView extends View {
             return;
         }
 
-        if (this._backgroundMesh && this._backgroundMesh.parent === this.scene) {
+        // A fragment/vertex change cannot be applied to a live ShaderMaterial, so
+        // rebuild the quad instead of reusing it.
+        const nextShader = this._backgroundImage.shader || {};
+        const prevShader = this._backgroundMesh
+            ? (this._backgroundMesh.userData._backgroundShader || {})
+            : {};
+        const shaderChanged = this._backgroundMesh
+            && ((prevShader.fragment ?? null) !== (nextShader.fragment ?? null)
+                || (prevShader.vertex ?? null) !== (nextShader.vertex ?? null));
+
+        if (this._backgroundMesh && this._backgroundMesh.parent === this.scene && !shaderChanged) {
             // Reuse the existing quad: the new texture replaces the old one
             // in place (after decoding), so there is no black gap between
             // frames and the current crop window is retained.
             updateImageBackground(this._backgroundMesh, this._backgroundImage);
         } else {
+            if (this._backgroundMesh) {
+                this.scene.remove(this._backgroundMesh);
+                this._backgroundMesh = null;
+            }
             this._backgroundMesh = createImageBackground(this._backgroundImage);
             this.scene.add(this._backgroundMesh);
         }
@@ -909,6 +923,11 @@ export class ThreeJsView extends View {
         if (this.camera && this.camera.userData._pinhole) {
             this._applyPinholeFraming(this._viewport);
         }
+    }
+
+    /** Patch this pane's background quad uniforms (`view_background_uniforms`). */
+    setBackgroundUniforms(patch) {
+        if (this._backgroundMesh) applyImageUniforms(this._backgroundMesh, patch);
     }
 
     /** Set this pane's entity visibility filter (per-pane ``hide``/``show``). */

@@ -10,6 +10,7 @@
 | [Fit 2D](fit_2d.md) | camera, 2D, fit camera, orthographic | 2D fit-camera keeps the axes/grid undistorted |
 | [Modes](modes.md) | camera, modes, auto-fit, explicit, 2D, 3D | Auto-fit, explicit, and partial camera modes |
 | [Pinhole Calibrated](pinhole_calibrated.md) | camera, pinhole, calibration, BOP, OpenCV, image background, frustum, split view, annotation | a real calibrated image (BOP T-LESS) + 3D overview |
+| [Pinhole Calibrated Custom Shader](pinhole_calibrated_custom_shader.md) | camera, pinhole, calibration, image background, custom shader, uniform, GLSL, RGB rotation, ctrl+drag | a custom GLSL shader on a calibrated image |
 | [Pinhole Calibrated Streaming](pinhole_calibrated_streaming.md) | camera, pinhole, calibration, frustum, image background, streaming, split view, pane swap | a live-updated camera view + pane swap |
 | [Pinhole Camera](pinhole_camera.md) | camera, pinhole, calibration, frustum, split view | a calibrated camera as a free orbit/pan/zoom view |
 | [Pinhole Overlay](pinhole_overlay.md) | camera, pinhole, calibration, frustum, image background, lock, split view | calibrated camera view (image) + default 3D overview |
@@ -17,4 +18,4 @@
 
 ## Keywords
 
-2D · 30fps · 3D · Axes2D · BOP · CoordinateSystem · Grid · OpenCV · View2DConfig · View3dConfig · annotation · auto-fit · axes · calibration · camera · checkbox · explicit · fit camera · frustum · grid · image background · lock · mjpeg · modes · orthographic · overlay · pane swap · pinhole · plot · register_camera_stream · space_dim · split view · stream · streaming · switch view · underlay · up vector
+2D · 30fps · 3D · Axes2D · BOP · CoordinateSystem · GLSL · Grid · OpenCV · RGB rotation · View2DConfig · View3dConfig · annotation · auto-fit · axes · calibration · camera · checkbox · ctrl+drag · custom shader · explicit · fit camera · frustum · grid · image background · lock · mjpeg · modes · orthographic · overlay · pane swap · pinhole · plot · register_camera_stream · space_dim · split view · stream · streaming · switch view · underlay · uniform · up vector

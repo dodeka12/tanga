@@ -113,3 +113,12 @@ class TestSerialize:
         shader = view._serialize()["shader"]
         assert shader["fragment"] == "void main() {}"
         assert shader["vertex"] == "vertex"
+
+    def test_serialize_state_shape(self) -> None:
+        view = ImageView("img1")
+        view.set_image(_img("img1", channels=3))
+        state = view._serialize_state()
+        assert set(state) == {"images", "shader", "uniforms"}
+        assert state["shader"] == {"fragment": None, "vertex": None}
+        assert state["uniforms"]["u_mode"] == 1
+        assert state["images"][0]["channels"] == 3
