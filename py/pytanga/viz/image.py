@@ -15,7 +15,7 @@ import base64
 import io
 import uuid
 from dataclasses import dataclass
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 from typing import Any
 
 import numpy as np
@@ -27,6 +27,9 @@ __all__ = [
     "EImageCodec",
     "ImageData",
     "ImageChannelMode",
+    "LayerBlendMode",
+    "ImageLayerStyle",
+    "DEFAULT_IMAGE_LAYER_STYLE",
     "default_mode",
     "default_value_range",
     "pil_to_numpy",
@@ -108,6 +111,90 @@ class ImageChannelMode(IntEnum):
     RGB = 1
     MAGNITUDE = 2
     ALPHA = 3
+
+    @classmethod
+    def from_str(cls, value: str) -> "ImageChannelMode":
+        """Resolve a ``"gray"``/``"rgb"``/``"magnitude"``/``"alpha"`` string to its code."""
+        mapping = {
+            "gray": cls.GRAY,
+            "grayscale": cls.GRAY,
+            "rgb": cls.RGB,
+            "magnitude": cls.MAGNITUDE,
+            "alpha": cls.ALPHA,
+        }
+        try:
+            return mapping[value]
+        except KeyError as exc:
+            raise ValueError(f"Unknown channel mode {value!r}") from exc
+
+
+class LayerBlendMode(StrEnum):
+    """How an image layer is composited over the layers below it (``u_layerN_blend``)."""
+
+    NORMAL = "normal"
+    ADD = "add"
+    MULTIPLY = "multiply"
+    SCREEN = "screen"
+
+    @property
+    def code(self) -> int:
+        """The integer wire code used by the ``u_layerN_blend`` uniform."""
+        return {
+            LayerBlendMode.NORMAL: 0,
+            LayerBlendMode.ADD: 1,
+            LayerBlendMode.MULTIPLY: 2,
+            LayerBlendMode.SCREEN: 3,
+        }[self]
+
+    @classmethod
+    def from_code(cls, code: int) -> "LayerBlendMode":
+        """Convert a wire code (0/1/2/3) back to an enum member."""
+        try:
+            return {
+                0: cls.NORMAL,
+                1: cls.ADD,
+                2: cls.MULTIPLY,
+                3: cls.SCREEN,
+            }[code]
+        except KeyError as exc:
+            raise ValueError(f"Unknown layer blend code: {code!r}") from exc
+
+
+@dataclass(slots=True)
+class ImageLayerStyle:
+    """Per-layer compositing style for an image layer.
+
+    Every field defaults to ``None``, meaning "unspecified".  A full apply
+    (``set_image``/``add_layer``/``set_layer``) resolves ``None`` to the
+    per-image default (enabled/opacity/blend from the dataclass, channel/value
+    range from the image); a partial merge (``set_layer_style``) leaves ``None``
+    fields unchanged.  A partially-initialized instance such as
+    ``ImageLayerStyle(opacity=0.5)`` is therefore valid.
+    """
+
+    enabled: bool | None = None
+    opacity: float | None = None
+    blend: LayerBlendMode | str | None = None
+    channel: ImageChannelMode | str | None = None
+    value_min: float | None = None
+    value_max: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.blend is not None and isinstance(self.blend, str):
+            self.blend = LayerBlendMode(self.blend)
+        if self.channel is not None and isinstance(self.channel, str):
+            self.channel = ImageChannelMode.from_str(self.channel)
+        if self.opacity is not None and not 0.0 <= self.opacity <= 1.0:
+            raise ValueError(f"opacity must be within [0, 1], got {self.opacity!r}")
+        if self.value_min is not None and self.value_max is not None:
+            if self.value_min > self.value_max:
+                raise ValueError(
+                    f"value_min ({self.value_min}) must be <= value_max ({self.value_max})"
+                )
+
+
+#: The default layer style (every field at its default).
+DEFAULT_IMAGE_LAYER_STYLE = ImageLayerStyle()
 
 
 def default_mode(channels: int) -> int:
@@ -327,6 +414,35 @@ class ImageData:
         if self.tiled is None:
             raise ValueError("ImageData has no tiled source")
         return self.tiled.meta()
+
+    def layer_meta(self) -> dict[str, Any]:
+        """Serialize this image into the canonical per-layer metadata.
+
+        The base dict is identical for every ``source`` (``data``/``url``/
+        ``tiled``); source-specific extras are additive, so transport never
+        changes the layer schema.  ``version`` is this ``ImageData``'s identity
+        uuid; ``tile_version`` (tiled only) is the pyramid cache key used in the
+        ``/image/…`` tile URL.
+        """
+        assert self.width is not None and self.height is not None
+        assert self.channels is not None and self.dtype is not None
+        meta: dict[str, Any] = {
+            "id": self.id,
+            "width": self.width,
+            "height": self.height,
+            "channels": self.channels,
+            "dtype": int(self.dtype),
+            "source": self.source,
+            "version": self.version,
+        }
+        if self.url is not None:
+            meta["url"] = self.url
+        if self.tiled is not None:
+            tiled = self.tiled.meta()
+            meta["tile_size"] = tiled["tile_size"]
+            meta["levels"] = tiled["levels"]
+            meta["tile_version"] = tiled["tile_version"]
+        return meta
 
     @property
     def supports_jpeg(self) -> bool:

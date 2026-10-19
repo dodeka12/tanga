@@ -11,6 +11,7 @@ from typing import Any
 from ._base import VizStyle, WireframeDashPattern
 from ._overlay_styles import LabelStyle
 from ._tex_label_style import TextureLabelStyle
+from ..image import EImageCodec
 
 
 @dataclass
@@ -1005,4 +1006,99 @@ class ParallelLinePairStyle(ConicStyle):
         result["style_type"] = "ParallelLinePairStyle"
         if self.length is not None:
             result["length"] = self.length
+        return result
+
+
+@dataclass
+class DepthImageStyle(VizStyle):
+    """Visual style for :class:`~pytanga.viz.DepthImage`.
+
+    ``mesh_scale`` is the fraction of the reference resolution used for the mesh
+    grid (and the transmitted depth); ``image_scale``/``segmentation_scale`` are
+    the transmitted-resolution fractions for the color image / segmentation
+    (``None`` = full, segmentation follows ``image_scale``).  ``codec`` reuses
+    :class:`~pytanga.viz.EImageCodec`; ``None`` auto-selects per frame.
+
+    Attributes:
+        render_mode: ``"depth"`` (colormap), ``"image"``, or ``"plain"``.
+        colormap: ``"viridis"``, ``"turbo"``, or ``"gray"`` (depth mode).
+        mesh_scale: Mesh/depth resolution fraction (0..1).
+        max_mesh_size: Hard cap on the longest grid side (cells).
+        image_scale: Transmitted image resolution fraction (``None`` = full).
+        segmentation_scale: Transmitted segmentation fraction (``None`` =
+            follow ``image_scale``).
+        codec: ``EImageCodec`` (``None`` = auto per frame).
+        jpeg_quality: JPEG quality (0..100) when JPEG is used.
+        world_scale: World units per reference pixel.
+        depth_scale: World units per depth unit (may be negative to invert).
+        depth_offset: Depth subtracted before scaling.
+        depth_min / depth_max: Colormap/clamp range.
+        discard_missing: When ``True``, discard missing-depth fragments.
+        double_sided: Render both sides of the surface.
+        color: Base color for ``"plain"`` mode.
+        opacity: Surface opacity.
+        shininess: Blinn-Phong specular exponent for ``"plain"`` mode.
+        specular: Blinn-Phong specular color for ``"plain"`` mode.
+    """
+
+    render_mode: str | None = None
+    colormap: str | None = None
+    mesh_scale: float | None = None
+    max_mesh_size: int | None = None
+    image_scale: float | None = None
+    segmentation_scale: float | None = None
+    codec: EImageCodec | None = None
+    jpeg_quality: int | None = None
+    world_scale: float | None = None
+    depth_scale: float | None = None
+    depth_offset: float | None = None
+    depth_min: float | None = None
+    depth_max: float | None = None
+    discard_missing: bool | None = None
+    double_sided: bool | None = None
+    color: str | None = None
+    opacity: float | None = None
+    shininess: float | None = None
+    specular: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {"style_type": "DepthImageStyle"}
+        if self.render_mode is not None:
+            result["render_mode"] = self.render_mode
+        if self.colormap is not None:
+            result["colormap"] = self.colormap
+        if self.mesh_scale is not None:
+            result["mesh_scale"] = self.mesh_scale
+        if self.max_mesh_size is not None:
+            result["max_mesh_size"] = self.max_mesh_size
+        if self.image_scale is not None:
+            result["image_scale"] = self.image_scale
+        if self.segmentation_scale is not None:
+            result["segmentation_scale"] = self.segmentation_scale
+        if self.codec is not None:
+            result["codec"] = int(self.codec)
+        if self.jpeg_quality is not None:
+            result["jpeg_quality"] = self.jpeg_quality
+        if self.world_scale is not None:
+            result["world_scale"] = self.world_scale
+        if self.depth_scale is not None:
+            result["depth_scale"] = self.depth_scale
+        if self.depth_offset is not None:
+            result["depth_offset"] = self.depth_offset
+        if self.depth_min is not None:
+            result["depth_min"] = self.depth_min
+        if self.depth_max is not None:
+            result["depth_max"] = self.depth_max
+        if self.discard_missing is not None:
+            result["discard_missing"] = self.discard_missing
+        if self.double_sided is not None:
+            result["double_sided"] = self.double_sided
+        if self.color is not None:
+            result["color"] = self.color
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+        if self.shininess is not None:
+            result["shininess"] = self.shininess
+        if self.specular is not None:
+            result["specular"] = self.specular
         return result

@@ -1,17 +1,36 @@
-// Shared SDF lighting model (directional lights + ambient) used by both the
-// fullscreen SDF viewer and the standard viewer's per-object SDF proxies, so
-// both share one source of truth for the light preamble and uniform uploads.
+// Shared scene lighting model (ambient + directional lights) consumed by the
+// standard viewer, the SDF renderer (fullscreen + per-object proxies), and the
+// depth-image surface, so all renderers share one source of truth for the
+// light preamble, wire parsing, and uniform uploads.
 //
 // Pure module (no three.js / DOM): the light preamble is a GLSL string and the
 // uniform setters operate on whatever uniform objects the caller supplies.
 
 export const MAX_LIGHTS = 8;
 
-// Frontend defaults mirror the Python defaults (a white light from the
-// diagonal (1,1,1) at intensity 0.8 plus a white 0.45 ambient).
+// Defaults mirror the Python `DEFAULT_SCENE_LIGHTING` (which in turn mirrors
+// the historical hardcoded three.js lights): a white 0.5 ambient plus two
+// white directional lights — normalize((10,20,10)) @ 0.8 and
+// normalize((-5,-2,-8)) @ 0.3.  Directions are pre-normalized unit vectors
+// pointing *toward* the light.
 export const DEFAULT_LIGHTING = {
-    ambient: { color: '#ffffff', intensity: 0.45 },
-    lights: [{ direction: [1, 1, 1], color: '#ffffff', intensity: 0.8 }],
+    ambient: { color: '#ffffff', intensity: 0.5 },
+    lights: [
+        {
+            direction: [0.408248290463863, 0.816496580927726, 0.408248290463863],
+            color: '#ffffff',
+            intensity: 0.8,
+        },
+        {
+            direction: [
+                -0.5184758473652127,
+                -0.20739033894608505,
+                -0.8295613557843402,
+            ],
+            color: '#ffffff',
+            intensity: 0.3,
+        },
+    ],
 };
 
 // Declared as a JS template so `MAX_LIGHTS` has a single source of truth, then

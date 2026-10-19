@@ -303,16 +303,21 @@ class Control:
     def handle_event(self, event: str, payload: dict[str, Any]) -> Dispatch:
         """Apply an incoming frontend *event* and return the dispatch to run.
 
-        The generic implementation is a pass-through for value-bearing
-        controls: it does **not** mutate the model (only :class:`Table` keeps
-        its state authoritative).  Subclasses override this to map their own
-        events onto model mutations.
+        Value-bearing controls keep their model authoritative: the incoming
+        value is coerced and written back to ``self.value`` (via
+        :meth:`set_value`) before the dispatch is returned, so
+        :meth:`get_value` reflects the latest user input.  ``Button`` controls
+        carry no value, and controls that override this method (e.g.
+        :class:`Table`) manage their own model mutations.
         """
+        value = payload.get("value")
+        if self._value_type is not None and value is not None:
+            self.set_value(value)
         if event == "click":
             return Dispatch("click", None, None)
         if event in ("press", "release"):
-            return Dispatch(event, payload.get("value"), None)
-        return Dispatch("change", payload.get("value"), None)
+            return Dispatch(event, value, None)
+        return Dispatch("change", value, None)
 
     async def handle_event_async(self, event: str, payload: dict[str, Any]) -> Dispatch:
         """Async variant of :meth:`handle_event`.

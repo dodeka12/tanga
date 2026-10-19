@@ -163,6 +163,31 @@ let totalDuration = animData.frame_count > 0
     : 0;"""
 
 
+def js_expand_frames() -> str:
+    """Generate the ``_expandFrames(animData)`` helper.
+
+    Returns ``animData.frames`` when the recording was embedded as full
+    snapshots (legacy), otherwise materializes full ``frames[]`` from the
+    delta encoding ``animData.initial`` + ``animData.deltas``.  This keeps the
+    playback/scrub engine (which consumes full ``frames[n]``) unchanged.
+    """
+    return """// ── Frame expansion (delta → full snapshots) ──────────────
+function _expandFrames(animData) {
+    if (animData.frames) return animData.frames;
+    const initial = animData.initial || [];
+    const deltas = animData.deltas || [];
+    const frames = [initial];
+    const state = new Map();
+    for (const ent of initial) state.set(ent.id, ent);
+    for (const d of deltas) {
+        for (const id of (d.remove || [])) state.delete(id);
+        for (const ent of (d.set || [])) state.set(ent.id, ent);
+        frames.push([...state.values()]);
+    }
+    return frames;
+}"""
+
+
 def js_animation_data_init(fps: int, extra_map_vars: str = "") -> str:
     """Generate the animation data initialisation block.
 
@@ -178,7 +203,7 @@ def js_animation_data_init(fps: int, extra_map_vars: str = "") -> str:
     return f"""await window.__tangaAnimReady;
 const animData = _getAnimData();
 const fps = animData.fps || {fps};
-const frames = animData.frames || [];
+const frames = _expandFrames(animData);
 const cameras = animData.cameras || [];
 const figMeshMap = new Map();{extra_map_vars}"""
 

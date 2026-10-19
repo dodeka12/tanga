@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 
 from ._jupyter import _JupyterDisplayMixin
 from ._keys import KeyModifier
+from ._lighting import SceneLighting
 from ._notebook_cell import current_cell_id, execution_token
 from ._props import _normalize_color
 from ._scene_handle import VizSceneHandle
@@ -1004,6 +1005,25 @@ class Visualizer(_JupyterDisplayMixin):
         scene.config.cursor = cursor
         self._push_scene_config(scene_name)
 
+    def set_scene_lighting(
+        self,
+        lighting: SceneLighting | None,
+        *,
+        scene_name: str = "",
+    ) -> None:
+        """Set a scene's lighting configuration at runtime.
+
+        ``None`` clears the override so the frontend default lighting returns.
+        The lighting is pushed via the established ``scene_config`` message.
+
+        Args:
+            lighting: A :class:`SceneLighting`, or ``None`` for the default.
+            scene_name: Target scene (default ``""`` = main scene).
+        """
+        scene = self._layout.scenes[scene_name]
+        scene.config.lighting = lighting
+        self._push_scene_config(scene_name)
+
     def set_space_dim(
         self,
         space_dim: int,
@@ -1355,7 +1375,12 @@ class Visualizer(_JupyterDisplayMixin):
         scene = self._layout.scenes.get(scene_name)
         if scene is None:
             return []
-        return scene.image_frames()
+        frames = scene.image_frames() + scene.depth_image_frames()
+        print(
+            f"[depth-image] _image_frames_for scene={scene_name!r} "
+            f"n_frames={len(frames)} ids={[fid for fid, _ in frames]}"
+        )
+        return frames
 
     def _interrupt_event(self, scene_name: str = "") -> threading.Event:
         """Return (creating if needed) the interrupt :class:`threading.Event`
@@ -3056,7 +3081,7 @@ class Visualizer(_JupyterDisplayMixin):
             )
 
             return render_export_animated_html(
-                animation.to_dict(),
+                animation.to_diff_dict(),
                 scene_config=scene.config.to_dict(),
                 anim_style=anim_style.to_dict() if anim_style is not None else None,
                 title=self._title,
@@ -3196,7 +3221,7 @@ class Visualizer(_JupyterDisplayMixin):
             )
 
             return render_export_animated_figure(
-                animation.to_dict(),
+                animation.to_diff_dict(),
                 figure_style=resolved.to_dict(),
                 figure_config=fig_config.to_dict(),
                 scene_config=scene.config.to_dict(),

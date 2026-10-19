@@ -287,12 +287,12 @@ browser through one of three mutually exclusive `ImageData` sources:
   via `THREE.TextureLoader`, or a **camera feed** (`/stream/{id}`) served as
   **MJPEG** (`_camera_stream.py`, drawn into a texture by `makeStreamTexture`).
 - **`source: "tiled"`** — an **HTTP tile pyramid** (`_image_pyramid.py`,
-  `/image/{id}/{version}/{level}/{x}/{y}`, `format=jpeg|png|raw|zlib`): `uint8`
-  tiles stream as JPEG/PNG (drawn to a canvas) while `float32`/`uint16` tiles
-  stream as lossless zlib-compressed raw, assembled client-side into a float
-  texture so `u_value_min`/`u_value_max` and brightness/contrast use the full
-  dynamic range.  `version` is a per-`image_id` counter bumped on each
-  re-registration, so a same-id runtime swap fetches fresh URLs instead of
+  `/image/{id}/{tile_version}/{level}/{x}/{y}`, `format=jpeg|png|raw|zlib`):
+  `uint8` tiles stream as JPEG/PNG (drawn to a canvas) while `float32`/`uint16`
+  tiles stream as lossless zlib-compressed raw, assembled client-side into a
+  float texture so `u_value_min`/`u_value_max` and brightness/contrast use the
+  full dynamic range.  `tile_version` is a per-`image_id` cache key bumped on
+  each re-registration, so a same-id runtime swap fetches fresh URLs instead of
   stale browser-cached tiles (the route also serves `Cache-Control: no-store`).
   `ImageData` auto-tiles arrays over `tile_max_dim`/`tile_max_bytes`
   (defaults 4096 px / 32 MB) and `ImageCanvas._sync_image` auto-registers the
@@ -309,13 +309,47 @@ those pixel frames through the `window.__tanga` frame-store API
 `window.__tangaAnimReady` promise that the bootstrap top-level-awaits before
 reading `window.__TANGA_ANIMATION__`.
 
-The `ImageView` shader/uniform state and the default colour pipeline are
-**shared** with the background image (see "Image background" below): `ImageView`
-holds images + uniforms + fragment/vertex, `ImageView._serialize_state()` is the
-shared payload (the scene entity `_serialize()` adds only the
-`id`/`layer`/`kind`/`frame` envelope), and `image-shader.js::buildImageColorPipeline()`
-plus `image.js::buildColorUniforms` / `applyImageUniforms` are used by both
-`renderers/image.js` (scene mesh) and `renderers/image-background.js` (NDC quad).
+`AnimationRecording` records each frame as a full, id-keyed entity snapshot
+(`capture_frame` → `Scene.full_state`).  For animated export,
+`AnimationRecording.to_diff_dict()` reduces those full snapshots to `initial`
+(frame 0, full) plus a per-frame `deltas` list of only the entities that changed
+or were removed (whole-entity diffs).  The animated bootstrap expands them back
+to full `frames[]` at load via `_expandFrames`
+(`py/pytanga/viz/export/_bootstrap/_animation.py`) before the id-based
+`_reconcileFrame` plays them, so unchanged entities are stored once and playback/
+scrubbing are unchanged.  `to_dict()` still emits the full `frames` list for
+legacy consumers.
+
+`ImageView` supports **up to `MAX_IMAGE_LAYERS` (4) layers**.  Each layer is an
+`ImageData` (any `source`) plus per-layer compositing uniforms — `u_layer{i}_enabled`,
+`u_layer{i}_opacity`, `u_layer{i}_blend` (`LayerBlendMode`: normal / add /
+multiply / screen), `u_layer{i}_mode`, and
+`u_layer{i}_value_min`/`u_layer{i}_value_max` (per-layer normalization, so a
+uint16 depth map or uint8 segmentation normalizes independently of the primary
+image).  Layers are composited bottom-up by the default shader and sampled by
+the primary frame's normalized UV (the plane is sized to the primary image's
+pixel extent).  Per-layer state lives only in the uniform dict and is projected
+into the serialized `images[]` entries by `ImageView.serialized_images()` /
+`ImageData.layer_meta()` — one canonical per-image dict whose base is identical
+for `data`/`url`/`tiled` (`tiled` adds `tile_size`/`levels`/`tile_version`;
+`version` is always the `ImageData` uuid).  The per-layer state is bundled in
+`ImageLayerStyle` (`enabled`/`opacity`/`blend`/`channel`/`value_min`/`value_max`,
+all `None`-defaulted) and applied via `ImageView.set_image`/`add_layer` (returns
+the new layer index)/`set_layer` (full apply, `None` → per-image default) and
+`set_layer_style` (partial merge, `None` → keep current).  `ImageCanvas` mirrors
+these and drives the granular `image_update` message.  `LayerBlendMode` is a
+`StrEnum` (`"normal"`/`"add"`/`"multiply"`/`"screen"`) whose `.code` int feeds the
+wire uniform.
+
+The shader/uniform state and the default compositing pipeline are **shared** with
+the background image (see "Image background" below): `ImageView` holds images +
+uniforms + fragment/vertex, `ImageView._serialize_state()` is the shared payload
+(the scene entity `_serialize()` adds only the `id`/`layer`/`kind`/`frame`
+envelope), and `image-shader.js::buildImageLayerPipeline()` (per-layer
+`tangaSampleLayer` + `tangaBlend` + `tangaComposite`) plus
+`image.js::buildColorUniforms`/`buildLayerUniforms`/`applyImageUniforms` are used
+by both `renderers/image.js` (scene mesh) and `renderers/image-background.js`
+(NDC quad).
 
 The same 2D scene hosts interactive rectangles: `Rectangle2D` (a new viz-only
 entity, `kind == "Rectangle2D"`, rendered by `renderers/rectangle2d.js` as an
@@ -323,6 +357,72 @@ outline + optional fill) and `ActRectangle2D` (a composite `ActSceneObject` that
 spawns square `ActPoint` handles for resize/translate).  Drag-to-create is shown
 in the `rectangle_labeling.py` example by composing a disabled left-drag binding
 plus a mode flag (no bespoke `draw_rectangle()` helper).
+
+### Depth image (extension recipe)
+
+`DepthImage` (`depth_image.py`) is a **viz-only** scene entity (no GA conversion)
+that renders a per-pixel depth map as a **2.5D heightfield surface** in the normal
+3D viewer.  `DepthImageData` bundles three numpy arrays — `image` (optional),
+`depth` (required), `segmentation` (optional) — that may have *different* pixel
+resolutions (only the extent matches); `DepthImage` adds the presentation fields
+(custom shader/uniforms + initial `selected_segments`) and `DepthImageStyle`
+(`_styles/_entity_styles.py`) holds the appearance knobs (`render_mode`,
+`colormap`, `mesh_scale`, `image_scale`/`segmentation_scale`, `codec`, depth
+mapping, …).
+
+It follows the `image` entity pattern end to end, with two differences:
+
+- **`kind == "depth_image"`** (`VizDepthImage` in `_nodes.py`) — the content
+  payload (`frame` / `depth` / `image` / `segmentation` / `shader` / `mesh` /
+  `uniforms`) is produced by `DepthImage._build(style, entity_id)`, which
+  **downscales the arrays Python-side** (depth → mesh resolution, image →
+  `image_scale`, segmentation → `segmentation_scale`; nearest for depth/seg,
+  area/bilinear for image) and wraps them as id-keyed `ImageData` binary frames
+  (`<eid>.depth` / `<eid>.image` / `<eid>.seg`) — so only the needed resolution
+  is transmitted.  `DepthImageStyle.codec` reuses `EImageCodec` (`None` =
+  auto per frame; JPEG only for a uint8 color image, depth/segmentation always
+  lossless).  `Scene.add_depth_image` pushes the frames live (bytes first);
+  `Scene.depth_image_frames()` re-sends them on connect.  Unlike `VizImage`,
+  `VizDepthImage.serialize()` adds the standard node envelope
+  (`parent_id`/`transform`/`visible`), so it supports parenting/transforms.
+- **Vertex shader + segmentation filter** — `renderers/depth-shader.js` +
+  `renderers/depth-image.js` build a decimated `PlaneGeometry` whose vertex
+  shader samples the nearest-filtered `uDepth` and displaces `position.z`
+  (setting `vUv`/`vDepth`/`vValid`); the fragment shader colors by
+  `u_render_mode` (colormap / `uImage0` / plain `u_color`), discards missing
+  depth, and discards non-selected segmentation ids via
+  `tangaSegmentSelected(vUv)` (no color **and** no depth write).
+
+Live uniform/segment changes use a granular **`depth_image_update`** message
+(`Scene.set_depth_image_uniform` / `set_depth_image_selected_segments`, surfaced
+as `VizObjectRef.set_uniform` / `set_selected_segments`) — no pixel re-send, no
+mesh rebuild.  The new renderer modules are added to
+`_bootstrap/_html.py::_RENDERER_FILES` so the HTML-export bundle includes them.
+
+### Scene lighting
+
+A single **per-scene lighting** configuration (ambient + directional lights)
+drives **all three** render paths — the standard `MeshPhongMaterial` entities, the
+ray-marched SDF renderer, and the depth surface's custom shader — so they share
+one light setup.
+
+- **Python model** — `_lighting.py` defines `LightSpec` (`color` + `intensity`),
+  `DirectionalLightSpec` (a `direction` toward the light + `LightSpec`), and
+  `SceneLighting` (ambient + a tuple of directional lights).
+  `SceneConfig.lighting: SceneLighting | None` (`None` = frontend default)
+  serializes into the `scene_config.lighting` wire block
+  (`{"ambient": {color, intensity}, "lights": [{direction: [x,y,z], color,
+  intensity}]}`); `Visualizer.set_scene_lighting(...)` sets it and re-pushes
+  `scene_config`.  Lighting is in **world space**; a directional `direction` is a
+  unit vector **toward** the light (the frontend normalizes non-unit input).
+- **Shared shader module** — `renderers/shader-lighting.js` is the single source
+  of truth for the light preamble (`lightPreamble`), wire parsing
+  (`parseLighting`), and uniform uploads (`setLightUniforms`, `DEFAULT_LIGHTING`);
+  `sdf.js`/`sdf/glsl.js` and `depth-shader.js` import it.
+- **Standard renderer** — `three-view.js::_applyLighting` replaces the hardcoded
+  lights with `AmbientLight` + `DirectionalLight`s built from the config, and
+  `_applyShaderLighting` re-lights existing SDF/depth materials on a
+  `scene_config` re-push.
 
 ### Overlay coordinate system (extension recipe)
 
@@ -398,12 +498,15 @@ pane through a clean three-layer model — camera data → camera view → pane:
   the re-sent frame (the pane's `clear_all` tears it down); an unchanged
   background keeps its previous texture on a layout re-push, and `set_layout`
   re-sends a frame only when its `ImageData.version` (a per-instance uuid)
-  changed.  `background_image` is an `ImageView` (a bare `ImageData` is
-  auto-wrapped), so it also carries `shader`/`uniforms`; the default background
-  shader mirrors the canvas colour pipeline inside the letterbox/crop quad, and
-  `Visualizer.register_background_shader` / `register_background_uniform` /
-  `set_background_uniform` drive it via a granular `view_background_uniforms`
-  message (no pixel re-send, no layout re-push).
+  changed — one binary frame per layer (url/tiled layers send none).
+  `background_image` is an `ImageView` (a bare `ImageData` is auto-wrapped), so
+  it carries the same multi-layer state as the canvas: the metadata emits a flat
+  primary image (for framing/`uImageAspect`) plus a full `images[]` layer list,
+  and the default background shader composites the layers (`u_layer{i}_*`) inside
+  the letterbox/crop quad — `Visualizer.register_background_shader` /
+  `register_background_uniform` / `set_background_uniform` drive it via a
+  granular `view_background_uniforms` message (no pixel re-send, no layout
+  re-push).
 - **Per-pane visibility** — `SceneView(hide=…, show=…)` filters which entities a
   pane builds (each pane has its own object registry, so no scene duplication).
 - **Runtime entity visibility** — `Scene.set_visible` /

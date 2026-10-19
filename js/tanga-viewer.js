@@ -2867,18 +2867,104 @@ vec3 tangaSampleColor(vec4 tex) {
 }`;
 }
 
+// Per-layer compositing pipeline shared by the image plane and the background
+// quad.  It declares the four texture samplers, the per-layer uniforms, the
+// shared brightness/contrast/midpoint uniforms, and the helpers that sample a
+// layer (`tangaSampleLayer`), blend one layer over another (`tangaBlend`), and
+// composite every enabled layer bottom-up (`tangaComposite`).
+function buildImageLayerPipeline() {
+    const samplers = [];
+    const decls = [];
+    const steps = [];
+    for (let i = 0; i < 4; i++) {
+        samplers.push(`uniform sampler2D uImage${i};`);
+        decls.push(layerUniformDecl(i));
+        steps.push(layerComposite(i));
+    }
+    return /* glsl */ `
+${samplers.join('\n')}
+${decls.join('')}
+uniform float u_brightness;
+uniform float u_contrast;
+uniform float u_midpoint;
+
+vec3 tangaSampleLayer(vec4 tex, int chmode, float vmin, float vmax) {
+    vec3 color;
+    if (chmode == 0) {
+        color = vec3(tex.r);            // channel 1 as grayscale
+    } else if (chmode == 2) {
+        color = vec3(length(tex.rgb));  // magnitude of channels 1-3
+    } else if (chmode == 3) {
+        color = vec3(tex.a);            // channel 4 as grayscale
+    } else {
+        color = tex.rgb;                // RGB
+    }
+
+    vec3 n = (color - vmin) / max(vmax - vmin, 1e-6);
+    return clamp((n - u_midpoint) * u_contrast + u_midpoint + u_brightness, 0.0, 1.0);
+}
+
+vec3 tangaBlend(vec3 dst, vec3 src, float alpha, int mode) {
+    if (mode == 1) {
+        return dst + src * alpha;                        // add
+    } else if (mode == 2) {
+        return mix(dst, dst * src, alpha);               // multiply
+    } else if (mode == 3) {
+        return mix(dst, 1.0 - (1.0 - dst) * (1.0 - src), alpha);  // screen
+    }
+    return mix(dst, src, alpha);                         // normal (source-over)
+}
+
+void tangaComposite(vec2 uv, out vec3 color, out float alpha) {
+    vec3 acc = vec3(0.0);
+    float accA = 0.0;
+${steps.join('')}
+    color = acc;
+    alpha = accA;
+}`;
+}
+
+function layerUniformDecl(i) {
+    return `
+uniform int u_layer${i}_enabled;
+uniform float u_layer${i}_opacity;
+uniform int u_layer${i}_blend;
+uniform int u_layer${i}_mode;
+uniform float u_layer${i}_value_min;
+uniform float u_layer${i}_value_max;`;
+}
+
+function layerComposite(i) {
+    const sample = `tangaSampleLayer(texture2D(uImage${i}, uv), `
+        + `u_layer${i}_mode, u_layer${i}_value_min, u_layer${i}_value_max)`;
+    if (i === 0) {
+        return `
+    if (u_layer${i}_enabled == 1) {
+        acc = ${sample};
+        accA = u_layer${i}_opacity;
+    }`;
+    }
+    return `
+    if (u_layer${i}_enabled == 1) {
+        vec3 c${i} = ${sample};
+        acc = accA > 0.0 ? tangaBlend(acc, c${i}, u_layer${i}_opacity, u_layer${i}_blend) : c${i};
+        accA = accA > 0.0 ? max(accA, u_layer${i}_opacity) : u_layer${i}_opacity;
+    }`;
+}
+
 function buildImageFragment() {
     return /* glsl */ `
 precision highp float;
 varying vec2 vUv;
-uniform sampler2D uImage0;
-${buildImageColorPipeline()}
+${buildImageLayerPipeline()}
 
 void main() {
     // Hardware sampling: mipmapped textures + linear minification give smooth
     // downscaling, and NearestFilter magnification keeps hard 1:1 pixels.
-    vec4 tex = texture2D(uImage0, vUv);
-    gl_FragColor = vec4(tangaSampleColor(tex), 1.0);
+    vec3 color;
+    float alpha;
+    tangaComposite(vUv, color, alpha);
+    gl_FragColor = vec4(color, alpha);
 }`;
 }
 
@@ -3024,7 +3110,7 @@ async function makeTiledDataTexture(img, level) {
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
             jobs.push((async () => {
-                const resp = await fetch(`/image/${img.id}/${img.version ?? 0}/${level}/${x}/${y}?format=zlib`);
+                const resp = await fetch(`/image/${img.id}/${img.tile_version ?? 0}/${level}/${x}/${y}?format=zlib`);
                 if (!resp.ok) return;
                 const compressed = new Uint8Array(await resp.arrayBuffer());
                 const stream = new Blob([compressed]).stream()
@@ -3073,7 +3159,7 @@ async function makeTiledCanvasTexture(img, level) {
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
             jobs.push((async () => {
-                const resp = await fetch(`/image/${img.id}/${img.version ?? 0}/${level}/${x}/${y}?format=${format}`);
+                const resp = await fetch(`/image/${img.id}/${img.tile_version ?? 0}/${level}/${x}/${y}?format=${format}`);
                 if (!resp.ok) return;
                 const bitmap = await createImageBitmap(await resp.blob());
                 ctx.drawImage(bitmap, x * tileSize, y * tileSize);
@@ -3157,6 +3243,27 @@ function buildColorUniforms(u) {
     };
 }
 
+// Per-layer compositing uniform defaults (enabled / opacity / blend / channel
+// mode / value range).  The serialized `uniforms` carry the seeded values; the
+// fallbacks here only apply to a hand-built entity missing them.
+function buildLayerUniforms(u) {
+    const s = u || {};
+    const out = {};
+    for (let i = 0; i < 4; i++) {
+        // `enabled` must default to 0: a layer with no serialized uniforms has
+        // no image (its `uImage{i}` is null), and enabling it would composite a
+        // black texture over the real layers.  Existing layers always serialize
+        // `u_layer{i}_enabled`, so the fallback only fires for missing layers.
+        out[`u_layer${i}_enabled`] = { value: s[`u_layer${i}_enabled`] ?? 0 };
+        out[`u_layer${i}_opacity`] = { value: s[`u_layer${i}_opacity`] ?? 1.0 };
+        out[`u_layer${i}_blend`] = { value: s[`u_layer${i}_blend`] ?? 0 };
+        out[`u_layer${i}_mode`] = { value: s[`u_layer${i}_mode`] ?? 1 };
+        out[`u_layer${i}_value_min`] = { value: s[`u_layer${i}_value_min`] ?? 0.0 };
+        out[`u_layer${i}_value_max`] = { value: s[`u_layer${i}_value_max`] ?? 1.0 };
+    }
+    return out;
+}
+
 // Add any custom uniforms (keys beyond the standard set, e.g. a custom shader's
 // `u_angle`).  `image_update` / `view_background_uniforms` patches reuse the
 // same keys via `applyImageUniforms`.
@@ -3180,6 +3287,7 @@ function buildUniforms(ent) {
         uImage3: { value: null },
         uImageSize: { value: new THREE.Vector2(primary.width || 1, primary.height || 1) },
         ...buildColorUniforms(u),
+        ...buildLayerUniforms(u),
     };
     addCustomUniforms(uniforms, u);
     return uniforms;
@@ -3299,6 +3407,17 @@ function updateImage(mesh, ent, prev) {
     if (material.uniforms.u_contrast) material.uniforms.u_contrast.value = uniforms.u_contrast ?? 1.0;
     if (material.uniforms.u_midpoint) material.uniforms.u_midpoint.value = uniforms.u_midpoint ?? 0.5;
     if (material.uniforms.u_mode) material.uniforms.u_mode.value = uniforms.u_mode ?? 1;
+    // Apply per-layer compositing uniforms (enabled / opacity / blend / channel
+    // mode / value range).  The serialized `uniforms` always carry them; guard
+    // on presence so an older entity without them leaves the current values.
+    for (let i = 0; i < 4; i++) {
+        for (const key of ['enabled', 'opacity', 'blend', 'mode', 'value_min', 'value_max']) {
+            const name = `u_layer${i}_${key}`;
+            if (material.uniforms[name] && name in uniforms) {
+                material.uniforms[name].value = uniforms[name];
+            }
+        }
+    }
     return true;
 }
 
@@ -3331,14 +3450,13 @@ void main() {
 const _BG_FRAGMENT = /* glsl */ `
 precision highp float;
 varying vec2 vNdc;
-uniform sampler2D uImage;
 uniform float uImageAspect;   // image width / height
 uniform float uPaneAspect;    // pane width / height
 uniform float uFit;           // 0.0 = letterbox (fit), 1.0 = stretch (fill)
 uniform vec4 uCrop;           // (u0, v0, u1, v1) normalized image coords
 uniform float uHx;            // explicit zoom-scaled letterbox half-extent (NDC)
 uniform float uHy;            // explicit zoom-scaled letterbox half-extent (NDC)
-${buildImageColorPipeline()}
+${buildImageLayerPipeline()}
 
 void main() {
     float hx = uHx > 0.0 ? uHx : (uFit > 0.5 ? 1.0 : min(1.0, uImageAspect / uPaneAspect));
@@ -3351,8 +3469,10 @@ void main() {
         vec2 uv;
         uv.x = uCrop.x + p.x * (uCrop.z - uCrop.x);
         uv.y = 1.0 - uCrop.w + p.y * (uCrop.w - uCrop.y);
-        vec4 tex = texture2D(uImage, uv);
-        gl_FragColor = vec4(tangaSampleColor(tex), 1.0);
+        vec3 color;
+        float alpha;
+        tangaComposite(uv, color, alpha);
+        gl_FragColor = vec4(color, 1.0);
     }
 }`;
 
@@ -3362,7 +3482,10 @@ function _buildMaterial(imageMeta) {
     const width = Number(img.width) || 1;
     const height = Number(img.height) || 1;
     const uniforms = {
-        uImage: { value: null },
+        uImage0: { value: null },
+        uImage1: { value: null },
+        uImage2: { value: null },
+        uImage3: { value: null },
         uImageAspect: { value: width / height },
         uPaneAspect: { value: 1.0 },
         uFit: { value: 0.0 },
@@ -3370,6 +3493,7 @@ function _buildMaterial(imageMeta) {
         uHx: { value: 0.0 },
         uHy: { value: 0.0 },
         ...buildColorUniforms(img.uniforms),
+        ...buildLayerUniforms(img.uniforms),
     };
     addCustomUniforms(uniforms, img.uniforms);
     return new THREE.ShaderMaterial({
@@ -3415,6 +3539,32 @@ function _backgroundTexture(img) {
     return makeEncodedTexture(img, frame);
 }
 
+// The layer list to render.  `_image_view_meta` always emits `images[]`; fall
+// back to the flat primary metadata for an older single-image background.
+function _layersOf(imageMeta) {
+    const img = imageMeta || {};
+    if (Array.isArray(img.images) && img.images.length) return img.images;
+    return img.source ? [img] : [];
+}
+
+// Bind layer `i`'s texture to `uImage{i}`.  When the pixel frame has not arrived
+// yet (it races the metadata over the wire), register a consumer so the texture
+// is uploaded once the frame lands (mirrors renderers/image.js).
+function _bindLayerTexture(material, img, i) {
+    const key = `uImage${i}`;
+    _backgroundTexture(img).then((tex) => {
+        if (tex) {
+            material.uniforms[key].value = tex;
+        } else {
+            registerImageFrameConsumer(img.id, (frame) => {
+                makeEncodedTexture(img, frame).then((t) => {
+                    if (t) material.uniforms[key].value = t;
+                });
+            });
+        }
+    });
+}
+
 /**
  * Build a screen-space image background quad.
  *
@@ -3435,19 +3585,10 @@ function createImageBackground(imageMeta) {
         vertex: img.shader?.vertex ?? null,
     };
 
-    _backgroundTexture(img).then((tex) => {
-        if (tex) {
-            material.uniforms.uImage.value = tex;
-        } else {
-            // The pixel frame hasn't arrived yet (it races the metadata over the
-            // wire); upload the texture once it lands (mirrors renderers/image.js).
-            registerImageFrameConsumer(img.id, (frame) => {
-                makeEncodedTexture(img, frame).then((t) => {
-                    if (t) material.uniforms.uImage.value = t;
-                });
-            });
-        }
-    });
+    const layers = _layersOf(img);
+    for (let i = 0; i < layers.length && i < 4; i++) {
+        _bindLayerTexture(material, layers[i], i);
+    }
 
     return mesh;
 }
@@ -3469,9 +3610,14 @@ function updateImageBackground(mesh, imageMeta) {
     mat.uniforms.uImageAspect.value = width / height;
     // Re-apply color-processing + custom uniforms from the new metadata.
     applyImageUniforms(mesh, img.uniforms);
-    _backgroundTexture(img).then((tex) => {
-        if (tex) mat.uniforms.uImage.value = tex;
-    });
+    const layers = _layersOf(img);
+    for (let i = 0; i < layers.length && i < 4; i++) {
+        const layer = layers[i];
+        const key = `uImage${i}`;
+        _backgroundTexture(layer).then((tex) => {
+            if (tex) mat.uniforms[key].value = tex;
+        });
+    }
 }
 
 /**
@@ -3599,6 +3745,493 @@ function tileRect(pyramid, level, x, y) {
         w: Math.min(pyramid.tile_size, grid.width - x0),
         h: Math.min(pyramid.tile_size, grid.height - y0),
     };
+}
+
+// Shared scene lighting model (ambient + directional lights) consumed by the
+// standard viewer, the SDF renderer (fullscreen + per-object proxies), and the
+// depth-image surface, so all renderers share one source of truth for the
+// light preamble, wire parsing, and uniform uploads.
+//
+// Pure module (no three.js / DOM): the light preamble is a GLSL string and the
+// uniform setters operate on whatever uniform objects the caller supplies.
+
+const MAX_LIGHTS = 8;
+
+// Defaults mirror the Python `DEFAULT_SCENE_LIGHTING` (which in turn mirrors
+// the historical hardcoded three.js lights): a white 0.5 ambient plus two
+// white directional lights — normalize((10,20,10)) @ 0.8 and
+// normalize((-5,-2,-8)) @ 0.3.  Directions are pre-normalized unit vectors
+// pointing *toward* the light.
+const DEFAULT_LIGHTING = {
+    ambient: { color: '#ffffff', intensity: 0.5 },
+    lights: [
+        {
+            direction: [0.408248290463863, 0.816496580927726, 0.408248290463863],
+            color: '#ffffff',
+            intensity: 0.8,
+        },
+        {
+            direction: [
+                -0.5184758473652127,
+                -0.20739033894608505,
+                -0.8295613557843402,
+            ],
+            color: '#ffffff',
+            intensity: 0.3,
+        },
+    ],
+};
+
+// Declared as a JS template so `MAX_LIGHTS` has a single source of truth, then
+// injected into the assembled fragment before the raymarch body.
+const lightPreamble = `
+const int MAX_LIGHTS = ${MAX_LIGHTS};
+uniform int uLightCount;
+uniform vec3 uLightDir[MAX_LIGHTS];
+uniform vec3 uLightColor[MAX_LIGHTS];
+uniform vec3 uAmbientColor;
+`;
+
+function parseHexColor(hex, fallback = [0.7, 0.6, 0.5]) {
+    if (typeof hex !== 'string') return fallback;
+    const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+    if (!m) return fallback;
+    const n = parseInt(m[1], 16);
+    return [
+        ((n >> 16) & 255) / 255,
+        ((n >> 8) & 255) / 255,
+        (n & 255) / 255,
+    ];
+}
+
+function parseAmbient(a) {
+    const [r, g, b] = parseHexColor(a && a.color);
+    const i = a && typeof a.intensity === 'number' ? a.intensity : 1.0;
+    return [r * i, g * i, b * i];
+}
+
+function parseLight(l) {
+    const [r, g, b] = parseHexColor(l && l.color);
+    const i = l && typeof l.intensity === 'number' ? l.intensity : 1.0;
+    let d = (l && l.direction) || [0, 0, 1];
+    const len = Math.hypot(d[0], d[1], d[2]);
+    d = len > 1e-9 ? [d[0] / len, d[1] / len, d[2] / len] : [0, 0, 1];
+    return { direction: d, color: [r * i, g * i, b * i] };
+}
+
+function parseLighting(wire) {
+    return {
+        ambient: parseAmbient((wire && wire.ambient) || DEFAULT_LIGHTING.ambient),
+        lights: ((wire && wire.lights) || DEFAULT_LIGHTING.lights).map(parseLight),
+    };
+}
+
+function setLightUniforms(u, lighting) {
+    if (!u) return;
+    u.uLightCount.value = lighting.lights.length;
+    for (let i = 0; i < MAX_LIGHTS; i++) {
+        const l = lighting.lights[i];
+        if (l) {
+            u.uLightDir.value[i].set(l.direction[0], l.direction[1], l.direction[2]);
+            u.uLightColor.value[i].set(l.color[0], l.color[1], l.color[2]);
+        } else {
+            u.uLightDir.value[i].set(0, 0, 0);
+            u.uLightColor.value[i].set(0, 0, 0);
+        }
+    }
+    u.uAmbientColor.value.set(lighting.ambient[0], lighting.ambient[1], lighting.ambient[2]);
+}
+
+// Depth image shader — vertex/fragment shaders for the 2.5D depth surface.
+// Pure GLSL string building (Node-testable, mirrors image-shader.js).
+
+function buildDepthVertex() {
+    return /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+varying float vDepth;
+varying float vValid;
+varying vec3 vNormal;
+varying vec3 vWorldPosition;
+
+uniform sampler2D uDepth;
+uniform vec2 uDepthSize;
+uniform vec2 uWorldStep;     // object-space distance between depth samples
+uniform float u_depth_scale;  // world units per depth unit (may be negative)
+uniform float u_depth_offset; // subtracted from depth before scaling
+uniform float u_missing_depth; // sentinel for non-finite depth
+uniform float u_depth_min;    // clamp lower bound (also the missing-depth height)
+uniform float u_depth_max;    // clamp upper bound
+
+void main() {
+    vUv = uv;
+    // Nearest tap at the pixel centre (depth is a nearest-filtered texture).
+    vec2 snap = (floor(uv * uDepthSize) + 0.5) / max(uDepthSize, vec2(1.0));
+    float d = texture2D(uDepth, snap).r;
+    bool missing = (d == u_missing_depth);
+    vValid = missing ? 0.0 : 1.0;
+    vDepth = missing ? u_depth_min : clamp(d, u_depth_min, u_depth_max);
+    vec3 p = position;
+    p.z += (vDepth - u_depth_offset) * u_depth_scale;
+
+    // World-space surface normal by finite differences on the depth field.
+    vec2 du = vec2(1.0 / max(uDepthSize.x, 1.0), 0.0);
+    vec2 dv = vec2(0.0, 1.0 / max(uDepthSize.y, 1.0));
+    float dU = texture2D(uDepth, snap + du).r;
+    float dV = texture2D(uDepth, snap + dv).r;
+    float cU = (dU == u_missing_depth) ? u_depth_min : clamp(dU, u_depth_min, u_depth_max);
+    float cV = (dV == u_missing_depth) ? u_depth_min : clamp(dV, u_depth_min, u_depth_max);
+    float hC = (vDepth - u_depth_offset) * u_depth_scale;
+    vec3 tX = vec3(uWorldStep.x, 0.0, (cU - u_depth_offset) * u_depth_scale - hC);
+    vec3 tY = vec3(0.0, uWorldStep.y, (cV - u_depth_offset) * u_depth_scale - hC);
+    vec3 n = normalize(cross(tX, tY));
+
+    vNormal = normalize(mat3(modelMatrix) * n);
+    vWorldPosition = (modelMatrix * vec4(p, 1.0)).xyz;
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+}`;
+}
+
+// Built-in depth color maps (selectable via u_colormap).
+function buildDepthColormap() {
+    return /* glsl */ `
+vec3 _depthViridis(float t) {
+    const vec3 c0 = vec3(0.2777273272234177, 0.005407344544966578, 0.3340998053353061);
+    const vec3 c1 = vec3(0.1050930431085774, 1.404613529898575, 1.384590162594685);
+    const vec3 c2 = vec3(-0.3308618287255563, 0.214847559468213, 0.09509516302823659);
+    const vec3 c3 = vec3(-4.634230498983486, -5.799100973351585, -19.33244095627987);
+    const vec3 c4 = vec3(6.228269936347081, 14.17993336680509, 56.69055260068105);
+    const vec3 c5 = vec3(4.776384997670288, -13.74514537774601, -65.35303263337234);
+    const vec3 c6 = vec3(-5.435455855934631, 4.645852612178535, 26.3124352495832);
+    return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
+}
+
+vec3 _depthTurbo(float x) {
+    const vec4 kRedVec4 = vec4(0.13572138, 4.61539260, -42.66032258, 132.13108234);
+    const vec4 kGreenVec4 = vec4(0.09140261, 2.19418839, 4.84296658, -14.18503333);
+    const vec4 kBlueVec4 = vec4(0.10667330, 12.64194608, -60.58204836, 110.36276771);
+    const vec2 kRedVec2 = vec2(-152.94239396, 59.28637943);
+    const vec2 kGreenVec2 = vec2(4.27729857, 2.82956604);
+    const vec2 kBlueVec2 = vec2(-89.90310912, 27.34824973);
+    vec4 v4 = vec4(1.0, x, x * x, x * x * x);
+    vec2 v2 = v4.zw * v4.z;
+    return vec3(
+        dot(v4, kRedVec4) + dot(v2, kRedVec2),
+        dot(v4, kGreenVec4) + dot(v2, kGreenVec2),
+        dot(v4, kBlueVec4) + dot(v2, kBlueVec2)
+    );
+}
+
+vec3 depthColormap(float t, int m) {
+    if (m == 0) return _depthViridis(t);
+    if (m == 2) return vec3(t);
+    return _depthTurbo(t);
+}`;
+}
+
+function buildDepthFragment() {
+    return /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+varying float vDepth;
+varying float vValid;
+varying vec3 vNormal;
+varying vec3 vWorldPosition;
+
+uniform sampler2D uDepth;
+uniform sampler2D uSegMask;
+uniform sampler2D uImage0;
+uniform vec2 uDepthSize;
+uniform vec2 uSegSize;
+uniform vec2 uImageSize;
+uniform float u_missing_depth;
+uniform float u_depth_min;
+uniform float u_depth_max;
+uniform int u_render_mode;       // 0 = depth colormap, 1 = image, 2 = plain
+uniform int u_colormap;          // 0 = viridis, 1 = turbo, 2 = gray
+uniform vec3 u_color;
+uniform float u_opacity;
+uniform int u_discard_missing;
+uniform int u_seg_enabled;
+uniform int u_num_selected;
+uniform float u_seg_scale;        // 255.0 for uint8, 1.0 for float/uint16
+uniform int u_selected_segments[16];
+uniform float u_shininess;        // Blinn-Phong specular exponent (plain mode)
+uniform vec3 u_specular;          // Blinn-Phong specular color (plain mode)
+
+${lightPreamble}
+
+${buildDepthColormap()}
+
+bool tangaSegmentSelected(vec2 uv) {
+    if (u_seg_enabled == 0) return true;
+    vec2 snap = (floor(uv * uSegSize) + 0.5) / max(uSegSize, vec2(1.0));
+    int id = int(texture2D(uSegMask, snap).r * u_seg_scale + 0.5);
+    for (int i = 0; i < 16; i++) {
+        if (i >= u_num_selected) break;
+        if (u_selected_segments[i] == id) return true;
+    }
+    return false;
+}
+
+void main() {
+    // Missing depth -> discard (no color, no depth write).
+    if (u_discard_missing == 1 && vValid < 0.5) discard;
+    // Segmentation filter -> discard non-selected segments (no depth write).
+    if (!tangaSegmentSelected(vUv)) discard;
+
+    if (u_render_mode == 1) {
+        vec2 snap = (floor(vUv * uImageSize) + 0.5) / max(uImageSize, vec2(1.0));
+        vec3 rgb = texture2D(uImage0, snap).rgb;
+        gl_FragColor = vec4(rgb, u_opacity);
+    } else if (u_render_mode == 2) {
+        // Blinn-Phong (ambient + directional diffuse + specular), world space.
+        vec3 N = normalize(vNormal);
+        if (!gl_FrontFacing) N = -N;
+        vec3 V = normalize(cameraPosition - vWorldPosition);
+        vec3 ambient = uAmbientColor * u_color;
+        vec3 diffuse = vec3(0.0);
+        vec3 specular = vec3(0.0);
+        for (int i = 0; i < MAX_LIGHTS; i++) {
+            if (i >= uLightCount) break;
+            float ndl = max(dot(N, uLightDir[i]), 0.0);
+            diffuse += uLightColor[i] * u_color * ndl;
+            vec3 H = normalize(uLightDir[i] + V);
+            specular += uLightColor[i] * u_specular * pow(max(dot(N, H), 0.0), u_shininess);
+        }
+        gl_FragColor = vec4(ambient + diffuse + specular, u_opacity);
+    } else {
+        float t = clamp((vDepth - u_depth_min) / max(u_depth_max - u_depth_min, 1e-6), 0.0, 1.0);
+        gl_FragColor = vec4(depthColormap(t, u_colormap), u_opacity);
+    }
+}`;
+}
+
+// Depth image renderer — a decimated grid displaced by the depth texture.
+//
+// The `depth_image` entity carries `frame`, `depth`, `image`, `segmentation`,
+// `shader`, `mesh`, and `uniforms` metadata; pixel bytes arrive as id-keyed
+// binary frames (reusing the image-frame store).  Depth and segmentation are
+// nearest-filtered single-channel textures; the color image uses the standard
+// mipmapped path from image.js.
+
+const MAX_SELECTED_SEGMENTS = 16;
+
+// A nearest-filtered scalar texture (depth / segmentation): reuse the shared
+// decode path, then disable mipmaps and set nearest minification so the
+// sentinel and integer labels are sampled exactly.
+function makeScalarTexture(meta, frame) {
+    return makeEncodedTexture(meta, frame).then((tex) => {
+        tex.generateMipmaps = false;
+        tex.minFilter = THREE.NearestFilter;
+        tex.magFilter = THREE.NearestFilter;
+        tex.needsUpdate = true;
+        return tex;
+    });
+}
+
+function fallbackTexture() {
+    const tex = new THREE.DataTexture(
+        new Uint8Array([255, 255, 255, 255]),
+        1,
+        1,
+        THREE.RGBAFormat,
+        THREE.UnsignedByteType
+    );
+    tex.needsUpdate = true;
+    return tex;
+}
+
+function buildDepthUniforms(ent) {
+    const u = ent.uniforms || {};
+    const depth = ent.depth || {};
+    const image = ent.image || {};
+    const seg = ent.segmentation || {};
+    // Object-space distance between adjacent depth samples (for the vertex
+    // finite-difference normal): the depth grid spans the full world extent.
+    const worldScale = (ent.mesh && ent.mesh.world_scale) ?? 1.0;
+    const frameW = (ent.frame && ent.frame.width) || 1;
+    const frameH = (ent.frame && ent.frame.height) || 1;
+    const worldStep = new THREE.Vector2(
+        (frameW * worldScale) / Math.max(1, (depth.width || 2) - 1),
+        (frameH * worldScale) / Math.max(1, (depth.height || 2) - 1)
+    );
+    const uniforms = {
+        uDepth: { value: fallbackTexture() },
+        uSegMask: { value: fallbackTexture() },
+        uImage0: { value: fallbackTexture() },
+        uDepthSize: { value: new THREE.Vector2(depth.width || 1, depth.height || 1) },
+        uSegSize: { value: new THREE.Vector2(seg.width || 1, seg.height || 1) },
+        uImageSize: { value: new THREE.Vector2(image.width || 1, image.height || 1) },
+        u_render_mode: { value: u.u_render_mode ?? 0 },
+        u_colormap: { value: u.u_colormap ?? 1 },
+        u_depth_scale: { value: u.u_depth_scale ?? 1.0 },
+        u_depth_offset: { value: u.u_depth_offset ?? 0.0 },
+        u_depth_min: { value: u.u_depth_min ?? 0.0 },
+        u_depth_max: { value: u.u_depth_max ?? 1.0 },
+        u_missing_depth: { value: u.u_missing_depth ?? -3.402823466e38 },
+        u_discard_missing: { value: u.u_discard_missing ?? 1 },
+        u_seg_enabled: { value: u.u_seg_enabled ?? 0 },
+        u_num_selected: { value: u.u_num_selected ?? 0 },
+        // uint8 masks are normalized to 0..1 on upload, so the shader rescales
+        // by 255 to recover the integer label; float/uint16 need no rescale.
+        u_seg_scale: { value: (seg.dtype === 0) ? 255.0 : 1.0 },
+        u_selected_segments: {
+            value: (u.u_selected_segments ?? new Array(MAX_SELECTED_SEGMENTS).fill(0)).slice(0, MAX_SELECTED_SEGMENTS),
+        },
+        u_color: { value: new THREE.Vector3(...(u.u_color ?? [1, 1, 1])) },
+        u_opacity: { value: u.u_opacity ?? 1.0 },
+        u_shininess: { value: u.u_shininess ?? 32.0 },
+        u_specular: { value: new THREE.Vector3(...(u.u_specular ?? [1, 1, 1])) },
+        uWorldStep: { value: worldStep },
+        uLightCount: { value: 0 },
+        uLightDir: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
+        uLightColor: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
+        uAmbientColor: { value: new THREE.Vector3() },
+    };
+    // Any custom uniform key (e.g. a custom shader's `u_angle`) rides along.
+    for (const [name, value] of Object.entries(u)) {
+        if (!(name in uniforms)) uniforms[name] = { value };
+    }
+    return uniforms;
+}
+
+// Bind a frame-backed texture (or leave the fallback in place when absent).
+function bindFrameTexture(mesh, key, meta, nearest) {
+    if (!meta) {
+        console.log('[depth-image] bindFrameTexture skip (no meta)', key);
+        return;
+    }
+    const make = nearest ? makeScalarTexture : makeEncodedTexture;
+    const uniforms = mesh.material.uniforms;
+    const has = hasImageFrame(meta.id);
+    console.log('[depth-image] bindFrameTexture', key, meta.id, 'hasFrame=', has, 'nearest=', nearest);
+    try {
+        if (has) {
+            make(meta, takeImageFrame(meta.id))
+                .then((tex) => {
+                    uniforms[key].value = tex;
+                    console.log('[depth-image] bound texture', key, meta.id, tex.image?.width, tex.image?.height);
+                })
+                .catch((e) => console.error('[depth-image] texture failed', key, meta.id, e));
+        } else {
+            registerImageFrameConsumer(meta.id, (frame) => {
+                make(meta, frame)
+                    .then((tex) => {
+                        uniforms[key].value = tex;
+                        console.log('[depth-image] bound texture (late)', key, meta.id, tex.image?.width, tex.image?.height);
+                    })
+                    .catch((e) => console.error('[depth-image] texture failed (late)', key, meta.id, e));
+            });
+        }
+    } catch (e) {
+        console.error('[depth-image] bindFrameTexture threw', key, meta.id, e);
+    }
+}
+
+async function createDepthImage(ent, _opts) {
+    try {
+        console.log(
+            '[depth-image] createDepthImage',
+            ent.id,
+            JSON.stringify({
+                frame: ent.frame,
+                mesh: ent.mesh,
+                depth: ent.depth,
+                image: ent.image,
+                segmentation: ent.segmentation,
+                customFragment: !!ent.shader?.fragment,
+                customVertex: !!ent.shader?.vertex,
+            })
+        );
+
+        const frame = ent.frame || {};
+        const mesh = ent.mesh || {};
+        const worldScale = mesh.world_scale ?? 1.0;
+        const width = (frame.width || 1) * worldScale;
+        const height = (frame.height || 1) * worldScale;
+        const segU = Math.max(1, Math.round(mesh.segments_u || 1));
+        const segV = Math.max(1, Math.round(mesh.segments_v || 1));
+
+        const geometry = new THREE.PlaneGeometry(width, height, segU, segV);
+        // Depth samples live at pixel centers.  Remap the plane's UVs so each
+        // vertex sits on its pixel center: the rasterizer then interpolates
+        // smoothly between adjacent depth samples instead of flat, nearest
+        // blocks.
+        {
+            const pos = geometry.attributes.position;
+            const uv = geometry.attributes.uv;
+            const depthW = segU + 1;
+            const depthH = segV + 1;
+            for (let i = 0; i < uv.count; i++) {
+                const gi = Math.round((pos.getX(i) / width + 0.5) * segU);
+                const gj = Math.round((pos.getY(i) / height + 0.5) * segV);
+                uv.setXY(i, (gi + 0.5) / depthW, (gj + 0.5) / depthH);
+            }
+            uv.needsUpdate = true;
+        }
+        const material = new THREE.ShaderMaterial({
+            vertexShader: ent.shader?.vertex || buildDepthVertex(),
+            fragmentShader: ent.shader?.fragment || buildDepthFragment(),
+            uniforms: buildDepthUniforms(ent),
+            depthWrite: true,
+            side: THREE.DoubleSide,
+        });
+        // Light the plain surface with the shared scene-lighting default for now
+        // (per-scene config plumbing is optional; this makes the plain mode lit).
+        setLightUniforms(material.uniforms, parseLighting(DEFAULT_LIGHTING));
+        const meshObj = new THREE.Mesh(geometry, material);
+
+        bindFrameTexture(meshObj, 'uDepth', ent.depth, true);
+        bindFrameTexture(meshObj, 'uSegMask', ent.segmentation, true);
+        bindFrameTexture(meshObj, 'uImage0', ent.image, false);
+
+        tagEntity(meshObj, ent);
+        console.log(
+            '[depth-image] createDepthImage done',
+            ent.id,
+            'geometry',
+            JSON.stringify(geometry.parameters)
+        );
+        return meshObj;
+    } catch (e) {
+        console.error('[depth-image] createDepthImage threw', ent.id, e);
+        throw e;
+    }
+}
+
+// Structural changes (mesh resolution, texture metadata, shader source) rebuild.
+function updateDepthImage(_mesh, _ent, _prev) {
+    return false;
+}
+
+// Merge a partial `{ uniforms: {...} }` patch (the `depth_image_update` message).
+function applyDepthImageUniforms(mesh, patch) {
+    const material = mesh && mesh.material;
+    if (!material || !material.uniforms) return false;
+    for (const [name, value] of Object.entries(patch || {})) {
+        const uniform = material.uniforms[name];
+        if (!uniform) continue;
+        if (name === 'u_color' && Array.isArray(value)) {
+            uniform.value.fromArray(value);
+        } else if (name === 'u_selected_segments' && Array.isArray(value)) {
+            uniform.value = value.slice(0, MAX_SELECTED_SEGMENTS);
+        } else {
+            uniform.value = value;
+        }
+    }
+    return true;
+}
+
+// Re-light an existing depth surface from the scene config's lighting wire block
+// (falls back to the shared default when absent). Used by `three-view.js` when
+// `scene_config` re-pushes.
+function applyDepthImageLighting(mesh, wireLighting) {
+    const mat = mesh && mesh.material;
+    if (!mat || !mat.uniforms) return false;
+    setLightUniforms(mat.uniforms, parseLighting(wireLighting));
+    return true;
 }
 
 // Entity renderer factory — thin dispatcher importing from per-entity
@@ -3745,6 +4378,10 @@ async function createEntityMesh(ent, opts) {
             mesh = await createImage(ent, opts);
             break;
 
+        case 'depth_image':
+            mesh = await createDepthImage(ent, opts);
+            break;
+
         case 'Hyperbola':
             mesh = createHyperbola(ent);
             break;
@@ -3800,6 +4437,8 @@ function updateEntityMesh(mesh, ent, prev) {
             return updateRayProxy(mesh, ent);
         case 'image':
             return updateImage(mesh, ent, prev);
+        case 'depth_image':
+            return updateDepthImage(mesh, ent, prev);
         case 'Line':
             return updateLine(mesh, ent, prev);
         case 'PointPath':
@@ -3866,82 +4505,6 @@ function removeEntityMesh(mesh) {
             else c.material.dispose();
         }
     });
-}
-
-// Shared SDF lighting model (directional lights + ambient) used by both the
-// fullscreen SDF viewer and the standard viewer's per-object SDF proxies, so
-// both share one source of truth for the light preamble and uniform uploads.
-//
-// Pure module (no three.js / DOM): the light preamble is a GLSL string and the
-// uniform setters operate on whatever uniform objects the caller supplies.
-
-const MAX_LIGHTS = 8;
-
-// Frontend defaults mirror the Python defaults (a white light from the
-// diagonal (1,1,1) at intensity 0.8 plus a white 0.45 ambient).
-const DEFAULT_LIGHTING = {
-    ambient: { color: '#ffffff', intensity: 0.45 },
-    lights: [{ direction: [1, 1, 1], color: '#ffffff', intensity: 0.8 }],
-};
-
-// Declared as a JS template so `MAX_LIGHTS` has a single source of truth, then
-// injected into the assembled fragment before the raymarch body.
-const lightPreamble = `
-const int MAX_LIGHTS = ${MAX_LIGHTS};
-uniform int uLightCount;
-uniform vec3 uLightDir[MAX_LIGHTS];
-uniform vec3 uLightColor[MAX_LIGHTS];
-uniform vec3 uAmbientColor;
-`;
-
-function parseHexColor(hex, fallback = [0.7, 0.6, 0.5]) {
-    if (typeof hex !== 'string') return fallback;
-    const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
-    if (!m) return fallback;
-    const n = parseInt(m[1], 16);
-    return [
-        ((n >> 16) & 255) / 255,
-        ((n >> 8) & 255) / 255,
-        (n & 255) / 255,
-    ];
-}
-
-function parseAmbient(a) {
-    const [r, g, b] = parseHexColor(a && a.color);
-    const i = a && typeof a.intensity === 'number' ? a.intensity : 1.0;
-    return [r * i, g * i, b * i];
-}
-
-function parseLight(l) {
-    const [r, g, b] = parseHexColor(l && l.color);
-    const i = l && typeof l.intensity === 'number' ? l.intensity : 1.0;
-    let d = (l && l.direction) || [0, 0, 1];
-    const len = Math.hypot(d[0], d[1], d[2]);
-    d = len > 1e-9 ? [d[0] / len, d[1] / len, d[2] / len] : [0, 0, 1];
-    return { direction: d, color: [r * i, g * i, b * i] };
-}
-
-function parseLighting(wire) {
-    return {
-        ambient: parseAmbient((wire && wire.ambient) || DEFAULT_LIGHTING.ambient),
-        lights: ((wire && wire.lights) || DEFAULT_LIGHTING.lights).map(parseLight),
-    };
-}
-
-function setLightUniforms(u, lighting) {
-    if (!u) return;
-    u.uLightCount.value = lighting.lights.length;
-    for (let i = 0; i < MAX_LIGHTS; i++) {
-        const l = lighting.lights[i];
-        if (l) {
-            u.uLightDir.value[i].set(l.direction[0], l.direction[1], l.direction[2]);
-            u.uLightColor.value[i].set(l.color[0], l.color[1], l.color[2]);
-        } else {
-            u.uLightDir.value[i].set(0, 0, 0);
-            u.uLightColor.value[i].set(0, 0, 0);
-        }
-    }
-    u.uAmbientColor.value.set(lighting.ambient[0], lighting.ambient[1], lighting.ambient[2]);
 }
 
 // Pure GLSL assembly for the per-object SDF proxy shader (no three.js / DOM).
@@ -4080,7 +4643,7 @@ function buildProxyFragment(ent, shaderParts) {
 // ray-marches that one object's distance field in local space and writes
 // `gl_FragDepth`, so the standard depth buffer occludes it against meshes and
 // other SDF proxies. Reuses the SDF viewer's `emitTree`, GLSL library, and
-// directional-light uniform model (shared via `sdf/lighting.js`).
+// directional-light uniform model (shared via `shader-lighting.js`).
 
 let _shaderParts = null;
 
@@ -4287,6 +4850,16 @@ function disposeSdfProxy(mesh) {
     if (!mesh) return;
     if (mesh.geometry) mesh.geometry.dispose();
     if (mesh.material) mesh.material.dispose();
+}
+
+// Re-light an existing SDF proxy from the scene config's lighting wire block
+// (falls back to the shared default when absent). Used by `three-view.js` when
+// `scene_config` re-pushes.
+function applySdfProxyLighting(mesh, wireLighting) {
+    const mat = mesh && mesh.material;
+    if (!mat || !mat.uniforms) return false;
+    setLightUniforms(mat.uniforms, parseLighting(wireLighting));
+    return true;
 }
 
 // Per-object analytic ray renderer for the standard viewer.

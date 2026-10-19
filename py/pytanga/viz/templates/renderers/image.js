@@ -146,7 +146,7 @@ async function makeTiledDataTexture(img, level) {
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
             jobs.push((async () => {
-                const resp = await fetch(`/image/${img.id}/${img.version ?? 0}/${level}/${x}/${y}?format=zlib`);
+                const resp = await fetch(`/image/${img.id}/${img.tile_version ?? 0}/${level}/${x}/${y}?format=zlib`);
                 if (!resp.ok) return;
                 const compressed = new Uint8Array(await resp.arrayBuffer());
                 const stream = new Blob([compressed]).stream()
@@ -195,7 +195,7 @@ async function makeTiledCanvasTexture(img, level) {
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
             jobs.push((async () => {
-                const resp = await fetch(`/image/${img.id}/${img.version ?? 0}/${level}/${x}/${y}?format=${format}`);
+                const resp = await fetch(`/image/${img.id}/${img.tile_version ?? 0}/${level}/${x}/${y}?format=${format}`);
                 if (!resp.ok) return;
                 const bitmap = await createImageBitmap(await resp.blob());
                 ctx.drawImage(bitmap, x * tileSize, y * tileSize);
@@ -279,6 +279,27 @@ export function buildColorUniforms(u) {
     };
 }
 
+// Per-layer compositing uniform defaults (enabled / opacity / blend / channel
+// mode / value range).  The serialized `uniforms` carry the seeded values; the
+// fallbacks here only apply to a hand-built entity missing them.
+export function buildLayerUniforms(u) {
+    const s = u || {};
+    const out = {};
+    for (let i = 0; i < 4; i++) {
+        // `enabled` must default to 0: a layer with no serialized uniforms has
+        // no image (its `uImage{i}` is null), and enabling it would composite a
+        // black texture over the real layers.  Existing layers always serialize
+        // `u_layer{i}_enabled`, so the fallback only fires for missing layers.
+        out[`u_layer${i}_enabled`] = { value: s[`u_layer${i}_enabled`] ?? 0 };
+        out[`u_layer${i}_opacity`] = { value: s[`u_layer${i}_opacity`] ?? 1.0 };
+        out[`u_layer${i}_blend`] = { value: s[`u_layer${i}_blend`] ?? 0 };
+        out[`u_layer${i}_mode`] = { value: s[`u_layer${i}_mode`] ?? 1 };
+        out[`u_layer${i}_value_min`] = { value: s[`u_layer${i}_value_min`] ?? 0.0 };
+        out[`u_layer${i}_value_max`] = { value: s[`u_layer${i}_value_max`] ?? 1.0 };
+    }
+    return out;
+}
+
 // Add any custom uniforms (keys beyond the standard set, e.g. a custom shader's
 // `u_angle`).  `image_update` / `view_background_uniforms` patches reuse the
 // same keys via `applyImageUniforms`.
@@ -302,6 +323,7 @@ function buildUniforms(ent) {
         uImage3: { value: null },
         uImageSize: { value: new THREE.Vector2(primary.width || 1, primary.height || 1) },
         ...buildColorUniforms(u),
+        ...buildLayerUniforms(u),
     };
     addCustomUniforms(uniforms, u);
     return uniforms;
@@ -421,6 +443,17 @@ export function updateImage(mesh, ent, prev) {
     if (material.uniforms.u_contrast) material.uniforms.u_contrast.value = uniforms.u_contrast ?? 1.0;
     if (material.uniforms.u_midpoint) material.uniforms.u_midpoint.value = uniforms.u_midpoint ?? 0.5;
     if (material.uniforms.u_mode) material.uniforms.u_mode.value = uniforms.u_mode ?? 1;
+    // Apply per-layer compositing uniforms (enabled / opacity / blend / channel
+    // mode / value range).  The serialized `uniforms` always carry them; guard
+    // on presence so an older entity without them leaves the current values.
+    for (let i = 0; i < 4; i++) {
+        for (const key of ['enabled', 'opacity', 'blend', 'mode', 'value_min', 'value_max']) {
+            const name = `u_layer${i}_${key}`;
+            if (material.uniforms[name] && name in uniforms) {
+                material.uniforms[name].value = uniforms[name];
+            }
+        }
+    }
     return true;
 }
 

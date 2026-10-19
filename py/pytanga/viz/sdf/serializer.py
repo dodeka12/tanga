@@ -191,7 +191,7 @@ def serialize_entity_local(
         },
         "transform": {
             "position": list(center),
-            "rotation": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
             "scale": [1.0, 1.0, 1.0],
         },
     }
@@ -344,7 +344,7 @@ def _serialize_sdf_group(
         },
         "transform": {
             "position": list(origin),
-            "rotation": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
             "scale": [1.0, 1.0, 1.0],
         },
     }

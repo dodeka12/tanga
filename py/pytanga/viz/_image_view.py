@@ -20,7 +20,15 @@ from .camera import (
     View2DConfig,
     _validate_stretch,
 )
-from .image import ImageData, default_mode, default_value_range
+from .image import (
+    DEFAULT_IMAGE_LAYER_STYLE,
+    ImageChannelMode,
+    ImageData,
+    ImageLayerStyle,
+    LayerBlendMode,
+    default_mode,
+    default_value_range,
+)
 from ._interaction import MouseButton
 from ._surface import InteractionSurface
 
@@ -46,6 +54,24 @@ _STANDARD_UNIFORM_DEFAULTS: dict[str, float] = {
     "u_contrast": 1.0,
     "u_midpoint": 0.5,
 }
+
+
+def _blend_code(blend: LayerBlendMode | str | int) -> int:
+    """Coerce a blend mode (enum / string / raw code) to its wire int code."""
+    if isinstance(blend, LayerBlendMode):
+        return blend.code
+    if isinstance(blend, str):
+        return LayerBlendMode(blend).code
+    return int(blend)
+
+
+def _channel_code(channel: ImageChannelMode | str | int) -> int:
+    """Coerce a channel mode (enum / string / raw code) to its wire int code."""
+    if isinstance(channel, ImageChannelMode):
+        return int(channel)
+    if isinstance(channel, str):
+        return int(ImageChannelMode.from_str(channel))
+    return int(channel)
 
 
 class ImageView:
@@ -82,48 +108,99 @@ class ImageView:
         """The pixel frame extent ``(width, height)``, or ``(0, 0)`` if empty."""
         return self._frame if self._frame is not None else (0, 0)
 
-    def set_image(self, image: ImageData) -> None:
-        """Replace layer 0 (the primary, frame-defining image) with *image*."""
+    def set_image(
+        self, image: ImageData, style: ImageLayerStyle = DEFAULT_IMAGE_LAYER_STYLE
+    ) -> None:
+        """Replace layer 0 (the primary, frame-defining image) with *image* + *style*."""
         if self._images:
             self._images[0] = image
         else:
             self._images.append(image)
         assert image.width is not None and image.height is not None
         self._frame = (image.width, image.height)
-        self._reset_image_defaults(image)
+        self._apply_layer_style(0, image, style)
 
-    def add_image(self, image: ImageData) -> None:
-        """Append *image* as the next layer (max :data:`MAX_IMAGE_LAYERS`)."""
+    def add_layer(
+        self, image: ImageData, style: ImageLayerStyle = DEFAULT_IMAGE_LAYER_STYLE
+    ) -> int:
+        """Append *image* as a new layer (max ``MAX_IMAGE_LAYERS``) and return its index."""
         if len(self._images) >= MAX_IMAGE_LAYERS:
             raise ValueError(f"ImageView supports at most {MAX_IMAGE_LAYERS} images")
         self._images.append(image)
+        index = len(self._images) - 1
         if self._frame is None:
             assert image.width is not None and image.height is not None
             self._frame = (image.width, image.height)
-        self._seed_image_defaults(image)
+        self._apply_layer_style(index, image, style)
+        return index
 
-    def _seed_image_defaults(self, image: ImageData) -> None:
-        """Seed ``u_mode``/``u_value_min``/``u_value_max`` if not already set."""
+    def set_layer(
+        self,
+        index: int,
+        image: ImageData,
+        style: ImageLayerStyle = DEFAULT_IMAGE_LAYER_STYLE,
+    ) -> None:
+        """Overwrite layer *index* with *image* + *style*."""
+        self._check_layer_index(index)
+        self._images[index] = image
+        if index == 0:
+            assert image.width is not None and image.height is not None
+            self._frame = (image.width, image.height)
+        self._apply_layer_style(index, image, style)
+
+    def set_layer_style(self, index: int, style: ImageLayerStyle) -> None:
+        """Merge *style* into layer *index* (``None`` fields keep current values)."""
+        self._check_layer_index(index)
+        self._merge_layer_style(index, style)
+
+    def _apply_layer_style(
+        self, index: int, image: ImageData, style: ImageLayerStyle
+    ) -> None:
+        """Apply *style* to layer *index*, resolving ``None`` to per-image defaults."""
         assert image.channels is not None and image.dtype is not None
-        self._uniforms.setdefault("u_mode", default_mode(image.channels))
+        enabled = True if style.enabled is None else style.enabled
+        opacity = 1.0 if style.opacity is None else style.opacity
+        blend_code = (
+            LayerBlendMode.NORMAL.code if style.blend is None else _blend_code(style.blend)
+        )
+        channel_code = (
+            default_mode(image.channels)
+            if style.channel is None
+            else _channel_code(style.channel)
+        )
         lo, hi = default_value_range(image.dtype)
-        self._uniforms.setdefault("u_value_min", lo)
-        self._uniforms.setdefault("u_value_max", hi)
+        value_min = lo if style.value_min is None else float(style.value_min)
+        value_max = hi if style.value_max is None else float(style.value_max)
+        self._uniforms.update(
+            {
+                f"u_layer{index}_enabled": int(enabled),
+                f"u_layer{index}_opacity": float(opacity),
+                f"u_layer{index}_blend": blend_code,
+                f"u_layer{index}_mode": channel_code,
+                f"u_layer{index}_value_min": value_min,
+                f"u_layer{index}_value_max": value_max,
+            }
+        )
+        if index == 0:
+            # Keep the legacy global color uniforms in sync with the primary layer.
+            self._uniforms["u_mode"] = channel_code
+            self._uniforms["u_value_min"] = value_min
+            self._uniforms["u_value_max"] = value_max
 
-    def _reset_image_defaults(self, image: ImageData) -> None:
-        """Re-derive the value-range/mode defaults from a replacement image.
-
-        Unlike :meth:`_seed_image_defaults`, this *overwrites* the seeded keys so
-        replacing the primary image with a different dtype/channel count updates
-        the normalization range (e.g. uint8 → uint16 changes ``u_value_max`` from
-        ``1.0`` to ``65535``).  Callers that want a custom range set it via
-        :meth:`set_uniform` *after* :meth:`set_image`.
-        """
-        assert image.channels is not None and image.dtype is not None
-        self._uniforms["u_mode"] = default_mode(image.channels)
-        lo, hi = default_value_range(image.dtype)
-        self._uniforms["u_value_min"] = lo
-        self._uniforms["u_value_max"] = hi
+    def _merge_layer_style(self, index: int, style: ImageLayerStyle) -> None:
+        """Merge *style* into layer *index* (``None`` fields keep current values)."""
+        if style.enabled is not None:
+            self._uniforms[f"u_layer{index}_enabled"] = int(style.enabled)
+        if style.opacity is not None:
+            self._uniforms[f"u_layer{index}_opacity"] = float(style.opacity)
+        if style.blend is not None:
+            self._uniforms[f"u_layer{index}_blend"] = _blend_code(style.blend)
+        if style.channel is not None:
+            self._uniforms[f"u_layer{index}_mode"] = _channel_code(style.channel)
+        if style.value_min is not None:
+            self._uniforms[f"u_layer{index}_value_min"] = float(style.value_min)
+        if style.value_max is not None:
+            self._uniforms[f"u_layer{index}_value_max"] = float(style.value_max)
 
     # -- uniforms -----------------------------------------------------
 
@@ -140,6 +217,39 @@ class ImageView:
         """Register a uniform with a default, keeping an existing value."""
         self._uniforms.setdefault(name, default)
 
+    def _check_layer_index(self, index: int) -> None:
+        """Raise :class:`IndexError` when *index* does not address an image layer."""
+        if not 0 <= index < len(self._images):
+            raise IndexError(
+                f"layer index {index} out of range [0, {len(self._images) - 1}]"
+            )
+
+    def set_layer_enabled(self, index: int, enabled: bool) -> None:
+        """Enable (or disable) the image layer at *index*."""
+        self._check_layer_index(index)
+        self.set_uniform(f"u_layer{index}_enabled", int(enabled))
+
+    def set_layer_opacity(self, index: int, opacity: float) -> None:
+        """Set the image layer opacity at *index* (0..1)."""
+        self._check_layer_index(index)
+        self.set_uniform(f"u_layer{index}_opacity", float(opacity))
+
+    def set_layer_blend(self, index: int, blend: LayerBlendMode | int) -> None:
+        """Set the blend mode of the image layer at *index*."""
+        self._check_layer_index(index)
+        self.set_uniform(f"u_layer{index}_blend", _blend_code(blend))
+
+    def set_layer_value_range(self, index: int, value_min: float, value_max: float) -> None:
+        """Set the normalization value range of the image layer at *index*."""
+        self._check_layer_index(index)
+        self.set_uniform(f"u_layer{index}_value_min", float(value_min))
+        self.set_uniform(f"u_layer{index}_value_max", float(value_max))
+
+    def set_layer_channel(self, index: int, mode: ImageChannelMode | int) -> None:
+        """Set the channel mapping mode of the image layer at *index*."""
+        self._check_layer_index(index)
+        self.set_uniform(f"u_layer{index}_mode", int(mode))
+
     # -- shader -------------------------------------------------------
 
     def register_shader(self, fragment: str, vertex: str | None = None) -> None:
@@ -154,10 +264,14 @@ class ImageView:
 
     # -- serialization ------------------------------------------------
 
+    def serialized_images(self) -> list[dict[str, Any]]:
+        """Serialize every image layer to the canonical per-image metadata."""
+        return [self._serialize_image(img, i) for i, img in enumerate(self._images)]
+
     def _serialize_state(self) -> dict[str, Any]:
         """Serialize the shared image + shader + uniform state (no scene envelope)."""
         return {
-            "images": [self._serialize_image(img) for img in self._images],
+            "images": self.serialized_images(),
             "shader": {"fragment": self._fragment, "vertex": self._vertex},
             "uniforms": dict(self._uniforms),
         }
@@ -175,22 +289,13 @@ class ImageView:
         )
         return result
 
-    def _serialize_image(self, image: ImageData) -> dict[str, Any]:
+    def _serialize_image(self, image: ImageData, index: int) -> dict[str, Any]:
         """Serialize one image layer (metadata only — pixels travel as bytes)."""
-        if image.source == "tiled":
-            return image.tiled_meta
-        assert image.dtype is not None
-        result: dict[str, Any] = {
-            "id": image.id,
-            "width": image.width,
-            "height": image.height,
-            "channels": image.channels,
-            "dtype": image.dtype.value,
-            "source": image.source,
-        }
-        if image.url is not None:
-            result["url"] = image.url
-        return result
+        meta = image.layer_meta()
+        prefix = f"u_layer{index}_"
+        for key in ("enabled", "opacity", "blend", "mode", "value_min", "value_max"):
+            meta[key] = self._uniforms[f"{prefix}{key}"]
+        return meta
 
 
 #: Process-wide counter for auto-generated image ids (``img0``…).
@@ -325,37 +430,83 @@ class ImageCanvas:
         """The underlying :class:`ImageView` (images + shader + uniforms)."""
         return self._image_view
 
-    def set_image(self, image: ImageData) -> None:
-        """Replace the primary image, re-frame the camera, and sync it."""
-        self._image_view.set_image(image)
+    def set_image(
+        self, image: ImageData, style: ImageLayerStyle = DEFAULT_IMAGE_LAYER_STYLE
+    ) -> None:
+        """Replace the primary image (with *style*), re-frame the camera, and sync it."""
+        self._image_view.set_image(image, style)
         self.fit_to_image()
         self._sync_image()
 
-    def add_image(self, image: ImageData) -> None:
-        """Append another image layer (max 4)."""
-        self._image_view.add_image(image)
+    def add_layer(
+        self, image: ImageData, style: ImageLayerStyle = DEFAULT_IMAGE_LAYER_STYLE
+    ) -> int:
+        """Append a new layer (max 4) with *style* and return its index."""
+        index = self._image_view.add_layer(image, style)
         self._sync_image()
+        return index
+
+    def set_layer(
+        self,
+        index: int,
+        image: ImageData,
+        style: ImageLayerStyle = DEFAULT_IMAGE_LAYER_STYLE,
+    ) -> None:
+        """Overwrite layer *index* with *image* + *style* and sync it."""
+        self._image_view.set_layer(index, image, style)
+        self._sync_image()
+
+    def set_layer_style(self, index: int, style: ImageLayerStyle) -> None:
+        """Merge *style* into layer *index* and push a granular uniform patch."""
+        before = self._image_view.uniforms
+        self._image_view.set_layer_style(index, style)
+        after = self._image_view.uniforms
+        patch = {name: value for name, value in after.items() if before.get(name) != value}
+        self._push_uniforms(patch)
 
     def set_uniform(self, name: str, value: float | int) -> None:
         """Set a shader uniform value (JSON ``image_update``, no image bytes)."""
         self._image_view.set_uniform(name, value)
-        if self._transport is not None:
+        self._push_uniforms({name: value})
+
+    def _push_uniforms(self, patch: dict[str, float | int]) -> None:
+        """Send a granular ``image_update`` patch and re-snapshot the node payload."""
+        if patch and self._transport is not None:
             self._transport.send(
                 {
                     "type": "image_update",
                     "scene": self._scene_name,
                     "id": self._image_view.id,
-                    "uniforms": {name: value},
+                    "uniforms": dict(patch),
                 }
             )
+        self._resync_node()
+
+    def _resync_node(self) -> None:
+        """Re-serialize the image node so a full-state push reflects the latest state.
+
+        The granular ``image_update`` patch is the live path; re-snapshotting the
+        node here keeps the authoritative payload (used by the full-state push on
+        connect and by reconnects) in sync with the live uniform dict, so changes
+        made before the server boots are not lost.
+        """
+        if not self._image_view.images:
+            return
+        self._handle.scene.upsert_image(
+            self._image_view.id,
+            self._image_view._serialize(),
+            images=self._image_view.images,
+        )
 
     def register_uniform(self, name: str, default: float | int) -> None:
         """Register a shader uniform with a default (keeps an existing value)."""
         self._image_view.register_uniform(name, default)
+        self._resync_node()
 
     def register_shader(self, fragment: str, vertex: str | None = None) -> None:
         """Register a custom fragment (and optional vertex) shader."""
         self._image_view.register_shader(fragment, vertex)
+        self._resync_node()
 
     # -- overlay --------------------------------------------------
 

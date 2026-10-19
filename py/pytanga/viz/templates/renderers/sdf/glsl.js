@@ -6,7 +6,7 @@
 // material slot 0 (index is always 0.0).
 
 import { emitTree } from '../../sdf/objects/combinators.js';
-import { lightPreamble } from './lighting.js';
+import { lightPreamble } from '../shader-lighting.js';
 
 // Compile-time march cap. `uMaxSteps` clamps the loop at runtime so lowering
 // the budget does not require a shader recompile.

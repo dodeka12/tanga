@@ -20,7 +20,7 @@ import {
     parseHexColor,
     parseLighting,
     setLightUniforms,
-} from './sdf/lighting.js';
+} from './shader-lighting.js';
 
 let _rayShaderParts = null;
 

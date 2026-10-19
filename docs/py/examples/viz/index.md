@@ -11,6 +11,7 @@
 - [Interaction](interaction/index.md)
 - [Jupyter Notebooks](jupyter/index.md)
 - [Labels](labels/index.md)
+- [Lighting](lighting/index.md)
 - [Plotting](plotting/index.md)
 - [Scenes](scenes/index.md)
 - [SDF](sdf/index.md)

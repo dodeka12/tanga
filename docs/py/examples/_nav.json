@@ -360,6 +360,9 @@
             "Animated Camera 3D": "py/examples/viz/export/animated_camera_3d.md"
           },
           {
+            "Animated Circle Transform": "py/examples/viz/export/animated_circle_transform.md"
+          },
+          {
             "Animated Image Stream": "py/examples/viz/export/animated_image_stream.md"
           },
           {
@@ -388,10 +391,16 @@
             "Custom Shader Rgb Rotate": "py/examples/viz/image/custom_shader_rgb_rotate.md"
           },
           {
+            "Depth Surface": "py/examples/viz/image/depth_surface.md"
+          },
+          {
             "Huge Image": "py/examples/viz/image/huge_image.md"
           },
           {
             "Image Canvas": "py/examples/viz/image/image_canvas.md"
+          },
+          {
+            "Image Layers": "py/examples/viz/image/image_layers.md"
           },
           {
             "Load Image From Disk": "py/examples/viz/image/load_image_from_disk.md"
@@ -464,6 +473,16 @@
           },
           {
             "Title Annotation": "py/examples/viz/labels/title_annotation.md"
+          }
+        ]
+      },
+      {
+        "Lighting": [
+          {
+            "Overview": "py/examples/viz/lighting/index.md"
+          },
+          {
+            "Scene Lighting": "py/examples/viz/lighting/scene_lighting.md"
           }
         ]
       },

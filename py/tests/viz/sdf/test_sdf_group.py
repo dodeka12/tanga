@@ -86,6 +86,18 @@ def test_visualizer_add_sdf_group() -> None:
     assert len(obj["members"]) == 2
 
 
+def test_visualizer_sdf_transform_rotation_is_quaternion() -> None:
+    # The node-level ``transform.rotation`` must be a 4-element quaternion
+    # (``[x, y, z, w]``) so the frontend ``applyTransformToObject`` does not
+    # read a missing ``w`` (which produced a NaN matrix and invisible SDF).
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    oid = viz.add(sphere(1.0), style=SdfStyle(color="#44ff44"))
+    objs = viz._scene.full_state(styles_map=viz.styles.kind)
+    obj = next(o for o in objs if o["id"] == oid)
+    assert obj["kind"] == "sdf"
+    assert len(obj["transform"]["rotation"]) == 4
+
+
 def test_sdf_group_member_composed() -> None:
     # A Composed member (nested CSG) is allowed inside a group.
     bead = Composed(sphere(0.7), (capped_cylinder(1.0, 0.45), "subtract"))

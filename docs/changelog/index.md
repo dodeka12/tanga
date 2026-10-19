@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.19.1] — 2026-10-19
+- Depth image (2.5D surface) entity · multi-layer image canvas & calibrated background (enable/opacity/blend + per-layer value-range normalization) · `ImageLayerStyle` layer descriptor · per-scene lighting (ambient + directional + specular) · animated HTML export per-frame entity deltas
+- Breaking: tiled cache key `version` → `tile_version` · `LayerBlendMode` string enum · `add_image` → `add_layer` · Bug fixes: SDF objects render again
+→ [Details](2026/10/19_d66649688.md)
+
 ## [Since 2.19.0] — 2026-10-15
 - View-plane drags use depth (no overshoot under perspective) · polygon Ctrl+drag vertex insert restored · Ctrl+drag only adjusts brightness/contrast · viewport zoom ignored during a drag
 → [Details](2026/10/15_fd2419137.md)

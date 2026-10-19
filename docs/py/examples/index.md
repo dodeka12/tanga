@@ -50,7 +50,7 @@ uv run python py/examples/<path>.py
 
 - **animate_to** — [Keyframe timeline with fade-in and move](viz/animation/timeline.md)
 
-- **animated** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Export an animated noise image stream](viz/export/animated_image_stream.md)
+- **animated** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md), [Export an animated noise image stream](viz/export/animated_image_stream.md)
 
 - **animation** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md), [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md), [Moving point with a color-gradient trail](viz/animation/point_path_trail.md), [Keyframe timeline with fade-in and move](viz/animation/timeline.md), [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md), [Animation](viz/jupyter/animation.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md)
 
@@ -106,6 +106,8 @@ uv run python py/examples/<path>.py
 
 - **BladeMask** — [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md)
 
+- **blend** — [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md)
+
 - **BOP** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md)
 
 - **Box** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
@@ -138,7 +140,7 @@ uv run python py/examples/<path>.py
 
 - **CheckboxView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
-- **Circle** — [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md)
+- **Circle** — [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md)
 
 - **classification** — [classify a noisy quadric within a tolerance](ga/quadric/tolerant_classification.md)
 
@@ -192,7 +194,7 @@ uv run python py/examples/<path>.py
 
 - **control update** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
 
-- **controls** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
+- **controls** — [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
 - **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md)
 
@@ -222,7 +224,7 @@ uv run python py/examples/<path>.py
 
 - **Cylinder** — [the visualization-only Cylinder and Arc entities](viz/entities/viz_entities.md)
 
-- **cylinder** — [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md)
+- **cylinder** — [One lighting config for mesh, SDF, and depth-surface objects](viz/lighting/scene_lighting.md), [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md)
 
 - **dark** — [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
@@ -233,6 +235,10 @@ uv run python py/examples/<path>.py
 - **degenerate** — [degenerate quadric (plane pair) analysis + rendering](ga/quadric/plane_pair_demo.md)
 
 - **delivery** — [Compare the three HTML delivery modes](viz/export/export_delivery.md)
+
+- **depth** — [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md)
+
+- **depth image** — [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [One lighting config for mesh, SDF, and depth-surface objects](viz/lighting/scene_lighting.md)
 
 - **detached** — [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md)
 
@@ -288,7 +294,7 @@ uv run python py/examples/<path>.py
 
 - **explicit** — [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md)
 
-- **export** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md), [Export](viz/jupyter/export.md)
+- **export** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md), [Export](viz/jupyter/export.md)
 
 - **expression** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
@@ -390,7 +396,7 @@ uv run python py/examples/<path>.py
 
 - **homogeneous** — [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md)
 
-- **HTML** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Export](viz/jupyter/export.md)
+- **HTML** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Export](viz/jupyter/export.md)
 
 - **html** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md)
 
@@ -400,13 +406,13 @@ uv run python py/examples/<path>.py
 
 - **icon_only** — [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md)
 
-- **image** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
+- **image** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
 - **image background** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
 
 - **image labeling** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md)
 
-- **ImageCanvas** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
+- **ImageCanvas** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
 - **ImageData** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
@@ -464,6 +470,8 @@ uv run python py/examples/<path>.py
 
 - **LaTeX** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
 
+- **layers** — [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md)
+
 - **layout** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
 - **least-norm** — [Core solver API: inverse and general solve](ga/numerics/solver_basics_03.md)
@@ -504,7 +512,7 @@ uv run python py/examples/<path>.py
 
 - **merge** — [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md)
 
-- **mesh** — [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md)
+- **mesh** — [One lighting config for mesh, SDF, and depth-surface objects](viz/lighting/scene_lighting.md), [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md)
 
 - **meshes** — [Mix standard meshes with SDF-styled objects](viz/sdf/objects.md)
 
@@ -552,6 +560,8 @@ uv run python py/examples/<path>.py
 
 - **nullity** — [fit a conic/quadric from points with the GA primitives](ga/quadric/fit_conic_quadric.md)
 
+- **numpy** — [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md)
+
 - **object model** — [the unified SDF object model in the standard viewer](viz/sdf/object_model.md)
 
 - **offline** — [Compare the three HTML delivery modes](viz/export/export_delivery.md)
@@ -559,6 +569,8 @@ uv run python py/examples/<path>.py
 - **on_close** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md)
 
 - **on_release** — [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md)
+
+- **opacity** — [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md)
 
 - **OpenCV** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md)
 
@@ -636,7 +648,7 @@ uv run python py/examples/<path>.py
 
 - **point-line matching** — [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
-- **PointPath** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md)
+- **PointPath** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md)
 
 - **points** — [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
@@ -730,13 +742,17 @@ uv run python py/examples/<path>.py
 
 - **scene graph** — [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
+- **scene lighting** — [One lighting config for mesh, SDF, and depth-surface objects](viz/lighting/scene_lighting.md)
+
 - **scenes** — [Two named scenes, each shown in its own browser tab](viz/scenes/multi_scene.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
 - **screenshot** — [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md)
 
-- **SDF** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md), [per-object CSG combine modes](viz/sdf/booleans.md), [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md), [Composed SDF objects + the primitive library](viz/sdf/composed.md), [First vertical slice for the SDF viewer](viz/sdf/entities.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md), [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md), [the unified SDF object model in the standard viewer](viz/sdf/object_model.md), [Mix standard meshes with SDF-styled objects](viz/sdf/objects.md), [Smooth CSG in the standard viewer](viz/sdf/smooth_csg.md)
+- **SDF** — [One lighting config for mesh, SDF, and depth-surface objects](viz/lighting/scene_lighting.md), [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md), [per-object CSG combine modes](viz/sdf/booleans.md), [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md), [Composed SDF objects + the primitive library](viz/sdf/composed.md), [First vertical slice for the SDF viewer](viz/sdf/entities.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md), [every solid object as a mesh next to its SDF twin](viz/sdf/mesh_vs_sdf_grid.md), [the unified SDF object model in the standard viewer](viz/sdf/object_model.md), [Mix standard meshes with SDF-styled objects](viz/sdf/objects.md), [Smooth CSG in the standard viewer](viz/sdf/smooth_csg.md)
 
 - **SdfGroup** — [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md)
+
+- **segmentation** — [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md)
 
 - **separator** — [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
@@ -790,11 +806,11 @@ uv run python py/examples/<path>.py
 
 - **Sphere** — [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [All geometric entity types in one scene](viz/entities/all_entities.md)
 
-- **sphere** — [Demo: Texture labels on spheres using plain text and KaTeX formulas](viz/labels/texture_sphere.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
+- **sphere** — [Demo: Texture labels on spheres using plain text and KaTeX formulas](viz/labels/texture_sphere.md), [One lighting config for mesh, SDF, and depth-surface objects](viz/lighting/scene_lighting.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
 
 - **spheres** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **split view** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
+- **split view** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
 - **stack view** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
@@ -819,6 +835,8 @@ uv run python py/examples/<path>.py
 - **sub-sub-menu** — [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **submenu** — [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
+
+- **surface** — [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md)
 
 - **SVD** — [fit a conic/quadric from points with the GA primitives](ga/quadric/fit_conic_quadric.md)
 
@@ -861,6 +879,8 @@ uv run python py/examples/<path>.py
 - **toolbar** — [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
 - **trail** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md)
+
+- **transform** — [Animated export with transform and content changes](viz/export/animated_circle_transform.md)
 
 - **Transform** — [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md)
 

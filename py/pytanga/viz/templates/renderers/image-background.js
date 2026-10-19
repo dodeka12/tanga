@@ -9,8 +9,8 @@
 
 import * as THREE from 'three';
 
-import { addCustomUniforms, applyImageUniforms, buildColorUniforms, makeEncodedTexture, makeStreamTexture, makeTiledTexture } from './image.js';
-import { buildImageColorPipeline } from './image-shader.js';
+import { addCustomUniforms, applyImageUniforms, buildColorUniforms, buildLayerUniforms, makeEncodedTexture, makeStreamTexture, makeTiledTexture } from './image.js';
+import { buildImageLayerPipeline } from './image-shader.js';
 import { hasImageFrame, registerImageFrameConsumer, takeImageFrame } from '../image-frames.js';
 
 const _BG_VERTEX = /* glsl */ `
@@ -23,14 +23,13 @@ void main() {
 const _BG_FRAGMENT = /* glsl */ `
 precision highp float;
 varying vec2 vNdc;
-uniform sampler2D uImage;
 uniform float uImageAspect;   // image width / height
 uniform float uPaneAspect;    // pane width / height
 uniform float uFit;           // 0.0 = letterbox (fit), 1.0 = stretch (fill)
 uniform vec4 uCrop;           // (u0, v0, u1, v1) normalized image coords
 uniform float uHx;            // explicit zoom-scaled letterbox half-extent (NDC)
 uniform float uHy;            // explicit zoom-scaled letterbox half-extent (NDC)
-${buildImageColorPipeline()}
+${buildImageLayerPipeline()}
 
 void main() {
     float hx = uHx > 0.0 ? uHx : (uFit > 0.5 ? 1.0 : min(1.0, uImageAspect / uPaneAspect));
@@ -43,8 +42,10 @@ void main() {
         vec2 uv;
         uv.x = uCrop.x + p.x * (uCrop.z - uCrop.x);
         uv.y = 1.0 - uCrop.w + p.y * (uCrop.w - uCrop.y);
-        vec4 tex = texture2D(uImage, uv);
-        gl_FragColor = vec4(tangaSampleColor(tex), 1.0);
+        vec3 color;
+        float alpha;
+        tangaComposite(uv, color, alpha);
+        gl_FragColor = vec4(color, 1.0);
     }
 }`;
 
@@ -54,7 +55,10 @@ function _buildMaterial(imageMeta) {
     const width = Number(img.width) || 1;
     const height = Number(img.height) || 1;
     const uniforms = {
-        uImage: { value: null },
+        uImage0: { value: null },
+        uImage1: { value: null },
+        uImage2: { value: null },
+        uImage3: { value: null },
         uImageAspect: { value: width / height },
         uPaneAspect: { value: 1.0 },
         uFit: { value: 0.0 },
@@ -62,6 +66,7 @@ function _buildMaterial(imageMeta) {
         uHx: { value: 0.0 },
         uHy: { value: 0.0 },
         ...buildColorUniforms(img.uniforms),
+        ...buildLayerUniforms(img.uniforms),
     };
     addCustomUniforms(uniforms, img.uniforms);
     return new THREE.ShaderMaterial({
@@ -107,6 +112,32 @@ function _backgroundTexture(img) {
     return makeEncodedTexture(img, frame);
 }
 
+// The layer list to render.  `_image_view_meta` always emits `images[]`; fall
+// back to the flat primary metadata for an older single-image background.
+function _layersOf(imageMeta) {
+    const img = imageMeta || {};
+    if (Array.isArray(img.images) && img.images.length) return img.images;
+    return img.source ? [img] : [];
+}
+
+// Bind layer `i`'s texture to `uImage{i}`.  When the pixel frame has not arrived
+// yet (it races the metadata over the wire), register a consumer so the texture
+// is uploaded once the frame lands (mirrors renderers/image.js).
+function _bindLayerTexture(material, img, i) {
+    const key = `uImage${i}`;
+    _backgroundTexture(img).then((tex) => {
+        if (tex) {
+            material.uniforms[key].value = tex;
+        } else {
+            registerImageFrameConsumer(img.id, (frame) => {
+                makeEncodedTexture(img, frame).then((t) => {
+                    if (t) material.uniforms[key].value = t;
+                });
+            });
+        }
+    });
+}
+
 /**
  * Build a screen-space image background quad.
  *
@@ -127,19 +158,10 @@ export function createImageBackground(imageMeta) {
         vertex: img.shader?.vertex ?? null,
     };
 
-    _backgroundTexture(img).then((tex) => {
-        if (tex) {
-            material.uniforms.uImage.value = tex;
-        } else {
-            // The pixel frame hasn't arrived yet (it races the metadata over the
-            // wire); upload the texture once it lands (mirrors renderers/image.js).
-            registerImageFrameConsumer(img.id, (frame) => {
-                makeEncodedTexture(img, frame).then((t) => {
-                    if (t) material.uniforms.uImage.value = t;
-                });
-            });
-        }
-    });
+    const layers = _layersOf(img);
+    for (let i = 0; i < layers.length && i < 4; i++) {
+        _bindLayerTexture(material, layers[i], i);
+    }
 
     return mesh;
 }
@@ -161,9 +183,14 @@ export function updateImageBackground(mesh, imageMeta) {
     mat.uniforms.uImageAspect.value = width / height;
     // Re-apply color-processing + custom uniforms from the new metadata.
     applyImageUniforms(mesh, img.uniforms);
-    _backgroundTexture(img).then((tex) => {
-        if (tex) mat.uniforms.uImage.value = tex;
-    });
+    const layers = _layersOf(img);
+    for (let i = 0; i < layers.length && i < 4; i++) {
+        const layer = layers[i];
+        const key = `uImage${i}`;
+        _backgroundTexture(layer).then((tex) => {
+            if (tex) mat.uniforms[key].value = tex;
+        });
+    }
 }
 
 /**

@@ -5,7 +5,7 @@
 // ray-marches that one object's distance field in local space and writes
 // `gl_FragDepth`, so the standard depth buffer occludes it against meshes and
 // other SDF proxies. Reuses the SDF viewer's `emitTree`, GLSL library, and
-// directional-light uniform model (shared via `sdf/lighting.js`).
+// directional-light uniform model (shared via `shader-lighting.js`).
 
 import * as THREE from 'three';
 import {
@@ -20,7 +20,7 @@ import {
     parseHexColor,
     parseLighting,
     setLightUniforms,
-} from './sdf/lighting.js';
+} from './shader-lighting.js';
 
 let _shaderParts = null;
 
@@ -227,4 +227,14 @@ export function disposeSdfProxy(mesh) {
     if (!mesh) return;
     if (mesh.geometry) mesh.geometry.dispose();
     if (mesh.material) mesh.material.dispose();
+}
+
+// Re-light an existing SDF proxy from the scene config's lighting wire block
+// (falls back to the shared default when absent). Used by `three-view.js` when
+// `scene_config` re-pushes.
+export function applySdfProxyLighting(mesh, wireLighting) {
+    const mat = mesh && mesh.material;
+    if (!mat || !mat.uniforms) return false;
+    setLightUniforms(mat.uniforms, parseLighting(wireLighting));
+    return true;
 }

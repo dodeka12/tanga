@@ -842,21 +842,21 @@ class LayoutHostImpl:
             image_view = camera_view.background_image
             if image_view is None:
                 continue
-            image = image_view.primary_image
-            if image is None or image.data is None:
-                continue
-            seen.add(image.id)
-            if self._background_versions.get(image.id) == image.version:
-                continue
-            frame = encode_image_frame(
-                image.id,
-                image.data,
-                codec=image.codec,
-                jpeg_quality=image.jpeg_quality or 85,
-            )
-            changed[image.id] = frame
-            self._background_frames[image.id] = frame
-            self._background_versions[image.id] = image.version
+            for image in image_view.images:
+                if image.data is None:
+                    continue
+                seen.add(image.id)
+                if self._background_versions.get(image.id) == image.version:
+                    continue
+                frame = encode_image_frame(
+                    image.id,
+                    image.data,
+                    codec=image.codec,
+                    jpeg_quality=image.jpeg_quality or 85,
+                )
+                changed[image.id] = frame
+                self._background_frames[image.id] = frame
+                self._background_versions[image.id] = image.version
 
         stale = (set(self._background_frames) | set(self._background_versions)) - seen
         for image_id in stale:
@@ -899,17 +899,19 @@ class LayoutHostImpl:
                 view.camera_view.background_image = wrapped
 
         image_view = view.camera_view.background_image
-        primary = image_view.primary_image if image_view is not None else None
-        if primary is not None and primary.data is not None:
-            frame = encode_image_frame(
-                primary.id,
-                primary.data,
-                codec=primary.codec,
-                jpeg_quality=primary.jpeg_quality or 85,
-            )
-            self._background_frames[primary.id] = frame
-            self._background_versions[primary.id] = primary.version
-            self._transport.send_bytes(frame)
+        if image_view is not None:
+            for image in image_view.images:
+                if image.data is None:
+                    continue
+                frame = encode_image_frame(
+                    image.id,
+                    image.data,
+                    codec=image.codec,
+                    jpeg_quality=image.jpeg_quality or 85,
+                )
+                self._background_frames[image.id] = frame
+                self._background_versions[image.id] = image.version
+                self._transport.send_bytes(frame)
         self._transport.send(
             {
                 "type": "view_background_image",

@@ -20,7 +20,9 @@ def test_background_image_serialize():  # noqa: ANN201
     assert meta["uniforms"]["u_midpoint"] == 0.5
     assert meta["uniforms"]["u_mode"] == 1  # 3 channels → RGB
     assert meta["uniforms"]["u_value_max"] == 1.0  # uint8 → [0, 1]
-    del meta["version"], meta["shader"], meta["uniforms"]
+    assert meta["images"][0]["id"] == "bg"
+    assert meta["images"][0]["enabled"] == 1
+    del meta["version"], meta["shader"], meta["uniforms"], meta["images"]
     assert meta == {
         "id": "bg",
         "width": 12,
@@ -286,4 +288,48 @@ def test_set_background_image_preserves_shader_and_uniforms():  # noqa: ANN201
     assert image_view.primary_image is img2
     assert image_view.shader["fragment"] == "frag"
     assert image_view.uniforms["u_contrast"] == 1.5
+
+
+def test_multi_layer_background_serializes_images():  # noqa: ANN201
+    from pytanga.viz import ImageView
+
+    view = ImageView("bg")
+    view.set_image(ImageData("img1", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    view.add_layer(ImageData("img2", data=np.zeros((4, 6), dtype=np.uint16)))
+
+    node = SceneView("main", camera_view=CameraView(background_image=view))._serialize()
+    images = node["camera_view"]["background_image"]["images"]
+
+    assert [img["id"] for img in images] == ["img1", "img2"]
+    assert images[1]["value_max"] == 65535.0  # uint16
+    assert images[1]["enabled"] == 1
+
+
+def test_multi_layer_background_sends_two_frames():  # noqa: ANN201
+    from pytanga.viz import ImageView, Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+
+    view = ImageView("bg")
+    view.set_image(ImageData("img1", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    view.add_layer(ImageData("img2", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    viz.set_layout(SceneView("main", camera_view=CameraView(background_image=view)))
+
+    assert len(fake.binary_frames) == 2
+
+
+def test_tiled_background_emits_images_with_tiled_extras():  # noqa: ANN201
+    img = ImageData("bg", data=np.zeros((5000, 100, 3), dtype=np.uint8))  # auto-tiles
+    assert img.source == "tiled"
+
+    node = SceneView("main", camera_view=CameraView(background_image=img))._serialize()
+    images = node["camera_view"]["background_image"]["images"]
+
+    assert len(images) == 1
+    assert images[0]["source"] == "tiled"
+    assert images[0]["tile_version"] == 0
+    assert "tile_size" in images[0]
+    assert "levels" in images[0]
 

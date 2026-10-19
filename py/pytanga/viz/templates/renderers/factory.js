@@ -49,6 +49,7 @@ import { createVizGroup } from './group.js';
 import { createSdfProxy, updateSdfProxy } from './sdf.js';
 import { createRayProxy, updateRayProxy } from './ray.js';
 import { createImage, updateImage } from './image.js';
+import { createDepthImage, updateDepthImage } from './depth-image.js';
 import { applyStyleUpdate, entityRequiresRebuild, tagEntity } from './utils.js';
 
 /**
@@ -192,6 +193,10 @@ export async function createEntityMesh(ent, opts) {
             mesh = await createImage(ent, opts);
             break;
 
+        case 'depth_image':
+            mesh = await createDepthImage(ent, opts);
+            break;
+
         case 'Hyperbola':
             mesh = createHyperbola(ent);
             break;
@@ -247,6 +252,8 @@ export function updateEntityMesh(mesh, ent, prev) {
             return updateRayProxy(mesh, ent);
         case 'image':
             return updateImage(mesh, ent, prev);
+        case 'depth_image':
+            return updateDepthImage(mesh, ent, prev);
         case 'Line':
             return updateLine(mesh, ent, prev);
         case 'PointPath':

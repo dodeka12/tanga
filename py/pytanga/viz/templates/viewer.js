@@ -736,7 +736,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (msg.type === 'scene_config' || msg.type === 'scene_update' || msg.type === 'object_update' || msg.type === 'image_update') {
+    if (msg.type === 'scene_config' || msg.type === 'scene_update' || msg.type === 'object_update' || msg.type === 'image_update' || msg.type === 'depth_image_update') {
         if (!_forMyScene(msg)) return;
     }
     if (msg.type === 'banner_define' || msg.type === 'banner_remove' || msg.type === 'banner_clear') {

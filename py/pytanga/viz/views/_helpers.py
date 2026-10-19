@@ -87,36 +87,22 @@ def _normalize_navigation(navigation: str | Navigation) -> str:
 
 
 def _image_meta(image: Any) -> dict[str, Any]:
-    """Serialize an ``ImageData`` to the ``background_image`` metadata dict."""
-    if image.source == "tiled":
-        return image.tiled_meta
-    meta: dict[str, Any] = {
-        "id": image.id,
-        "width": image.width,
-        "height": image.height,
-        "channels": image.channels,
-        "dtype": int(image.dtype),
-        "source": image.source,
-        "version": image.version,
-    }
-    if image.url is not None:
-        meta["url"] = image.url
-    return meta
+    """Serialize an ``ImageData`` to the canonical per-layer metadata dict."""
+    return image.layer_meta()
 
 
 def _image_view_meta(view: Any) -> dict[str, Any]:
     """Serialize a background ``ImageView`` to ``background_image`` metadata.
 
-    Emits the primary image's metadata (a flat dict, or ``tiled_meta``) plus the
-    shared ``shader``/``uniforms`` state carried by the ``ImageView``.
+    Keeps the flat primary-image fields (for framing/``uImageAspect``) and adds
+    the full ``images`` layer list plus the shared ``shader``/``uniforms`` state.
     """
     primary = view.primary_image
     if primary is None:
         meta: dict[str, Any] = {}
-    elif primary.source == "tiled":
-        meta = dict(primary.tiled_meta)
     else:
-        meta = _image_meta(primary)
+        meta = primary.layer_meta()
+    meta["images"] = view.serialized_images()
     meta["shader"] = dict(view.shader)
     meta["uniforms"] = dict(view.uniforms)
     return meta

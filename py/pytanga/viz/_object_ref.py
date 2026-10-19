@@ -264,6 +264,21 @@ class VizObjectRef:
             self.id, member, position=position, rotation=rotation, scale=scale
         )
 
+    def set_uniform(self, name: str, value: float | int) -> None:
+        """Update one depth image uniform (pushes a granular update).
+
+        Raises :class:`TypeError` when this ref does not point at a
+        ``depth_image`` node.
+        """
+        self._handle.scene.set_depth_image_uniform(self.id, name, value)
+
+    def set_selected_segments(self, ids: list[int] | set[int] | None) -> None:
+        """Update the depth image's selected-segment ids (pushes a granular update).
+
+        Pass ``None``/empty to disable segment filtering (show all).
+        """
+        self._handle.scene.set_depth_image_selected_segments(self.id, ids)
+
     # ── Graph (group refs) ────────────────────────────────────
 
     def add(self, obj: Any = None, **kwargs: Any) -> str:

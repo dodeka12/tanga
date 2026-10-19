@@ -36,11 +36,11 @@ def test_dispatch_defaults() -> None:
     assert (d.event, d.value, d.push) == (None, None, None)
 
 
-def test_handle_event_change_is_pass_through() -> None:
+def test_handle_event_change_mutates_model() -> None:
     slider = Slider(id="s", value=0.25)
     d = slider.handle_event("change", {"value": 0.5})
     assert (d.event, d.value, d.push) == ("change", 0.5, None)
-    assert slider.value == 0.25  # generic dispatch does not mutate the model
+    assert slider.value == 0.5  # the model now tracks the latest user input
 
 
 def test_handle_event_click_returns_no_value() -> None:
@@ -51,13 +51,24 @@ def test_handle_event_click_returns_no_value() -> None:
 def test_handle_event_press_release_pass_through() -> None:
     slider = Slider(id="s")
     assert slider.handle_event("press", {"value": 0.1}).value == 0.1
+    assert slider.value == 0.1
     d = slider.handle_event("release", {"value": 0.9})
     assert (d.event, d.value, d.push) == ("release", 0.9, None)
+    assert slider.value == 0.9
 
 
 def test_handle_event_unknown_falls_back_to_change() -> None:
     d = Dropdown(id="d").handle_event("unknown", {"value": "x"})
     assert (d.event, d.value) == ("change", "x")
+
+
+def test_handle_event_coerces_value_type() -> None:
+    slider = Slider(id="s")
+    slider.handle_event("change", {"value": "2.5"})
+    assert slider.value == 2.5
+    checkbox = Checkbox(id="c")
+    checkbox.handle_event("change", {"value": True})
+    assert checkbox.value is True
 
 
 # ── Test: Table.handle_event ─────────────────────────────────
