@@ -418,9 +418,7 @@ class VizSceneObject(VizNode):
             self.mark("content")
             return
 
-        placement_changed = transforms_differ(
-            self.transform, new_transform, eps
-        )
+        placement_changed = transforms_differ(self.transform, new_transform, eps)
         shape_changed = shapes_differ(
             getattr(self, "_entity_shape", {}), new_shape, eps
         )
@@ -546,7 +544,9 @@ class VizOverlayObject(VizNode):
         payload: Any = None,
         visible: bool = True,
     ) -> None:
-        super().__init__(id or generate_id(), name=name, layer=layer, kind=kind, visible=visible)
+        super().__init__(
+            id or generate_id(), name=name, layer=layer, kind=kind, visible=visible
+        )
         self.position: tuple[float, float, float] = _as_vec3(position)
         self.attach_to: str | None = attach_to
         self.style: Any = style
@@ -665,7 +665,14 @@ class VizImage(VizSceneObject):
     serializer.  Pixel bytes travel separately as binary frames.
     """
 
-    def __init__(self, id: str | None = None, payload: dict[str, Any] | None = None, *, name: str = "image", images: list[Any] | None = None) -> None:
+    def __init__(
+        self,
+        id: str | None = None,
+        payload: dict[str, Any] | None = None,
+        *,
+        name: str = "image",
+        images: list[Any] | None = None,
+    ) -> None:
         super().__init__(id or generate_id(), None, None, name=name, kind="image")
         self.payload = payload
         self.images: list[Any] = list(images) if images else []
@@ -690,3 +697,63 @@ class VizImage(VizSceneObject):
                 "value": {"visible": self.visible},
             }
         raise ValueError(f"Unsupported aspect {aspect!r} for image node")
+
+
+class VizDepthImage(VizSceneObject):
+    """A scene-layer depth image entity (``kind == "depth_image"``).
+
+    Like :class:`VizImage`, the content is a pre-serialized payload (``frame`` /
+    ``depth`` / ``image`` / ``segmentation`` / ``shader`` / ``mesh`` /
+    ``uniforms``) produced by ``DepthImage._build``.  Unlike ``VizImage``, the
+    node adds the standard scene envelope (``parent_id`` / ``transform`` /
+    ``visible``) so it supports parenting and transforms like other entities.
+    Pixel bytes travel separately as binary frames.
+    """
+
+    def __init__(
+        self,
+        id: str | None = None,
+        payload: dict[str, Any] | None = None,
+        *,
+        name: str = "depth_image",
+        images: list[Any] | None = None,
+    ) -> None:
+        super().__init__(id or generate_id(), None, None, name=name, kind="depth_image")
+        self.payload = payload
+        self.images: list[Any] = list(images) if images else []
+
+    def serialize(
+        self,
+        *,
+        styles_map: StylesMap | None = None,
+        props: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Serialize the node envelope merged with the stored content payload."""
+        result: dict[str, Any] = {
+            "id": self.id,
+            "layer": "scene",
+            "kind": "depth_image",
+            "parent_id": self.parent.id if self.parent is not None else None,
+            "transform": self.transform.to_dict(),
+            "visible": self.visible,
+        }
+        result.update(self.payload or {})
+        return result
+
+    def patch(self, aspect: str) -> dict[str, Any]:
+        """Return an aspect-scoped patch for the depth image node."""
+        if aspect == "full":
+            return {"id": self.id, "aspect": "full", "value": self.serialize()}
+        if aspect == "transform":
+            return {
+                "id": self.id,
+                "aspect": "transform",
+                "value": self.transform.to_dict(),
+            }
+        if aspect == "visible":
+            return {
+                "id": self.id,
+                "aspect": "visible",
+                "value": {"visible": self.visible},
+            }
+        raise ValueError(f"Unsupported aspect {aspect!r} for depth image node")

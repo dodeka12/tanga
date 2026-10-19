@@ -14,7 +14,7 @@ import pytest
 from aiohttp import web
 
 from pytanga.viz._image_pyramid import ImagePyramid
-from pytanga.viz.image import ImageData
+from pytanga.viz.image import ImageData, ImageDType
 from pytanga.viz.server import VizServer
 from pytanga.viz.views._helpers import _image_meta
 
@@ -123,7 +123,8 @@ class TestTiledSerialization:
         assert meta["source"] == "tiled"
         assert meta["tile_size"] == 32
         assert meta["levels"] == p.levels
-        assert meta["version"] == 0
+        assert meta["tile_version"] == 0
+        assert meta["version"] == img.version
         assert (meta["width"], meta["height"]) == (64, 64)
 
     def test_register_pyramid_bumps_version(self) -> None:
@@ -145,6 +146,22 @@ class TestTiledSerialization:
     def test_tiled_meta_requires_tiled_source(self) -> None:
         with pytest.raises(ValueError, match="no tiled source"):
             ImageData("n", data=np.zeros((2, 2), dtype=np.uint8)).tiled_meta
+
+    def test_layer_meta_common_base_across_sources(self) -> None:
+        base_keys = {"id", "width", "height", "channels", "dtype", "source", "version"}
+        data = ImageData("d", data=np.zeros((4, 6, 3), dtype=np.uint8))
+        url = ImageData(
+            "u", url="http://x", width=4, height=6, channels=3, dtype=ImageDType.UINT8
+        )
+        tiled = ImageData(
+            "t", tiled=ImagePyramid("t", np.zeros((4, 6, 3), dtype=np.uint8))
+        )
+
+        for img in (data, url, tiled):
+            assert base_keys <= set(img.layer_meta())
+        assert data.layer_meta()["source"] == "data"
+        assert url.layer_meta()["url"] == "http://x"
+        assert tiled.layer_meta()["tile_version"] == 0
 
 
 class TestServerRoute:

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from pytanga.viz import ImageCanvas, ImageData, Visualizer
+from pytanga.viz import ImageCanvas, ImageData, ImageLayerStyle, LayerBlendMode, Visualizer
 from pytanga.viz._image_wire import decode_image_frame
 
 
@@ -83,3 +83,67 @@ class TestSync:
         decoded = decode_image_frame(frame)
         assert decoded["channels"] == 3
         assert decoded["width"] == 4 and decoded["height"] == 3
+
+
+class TestLayerStyle:
+    def test_add_layer_returns_index(self) -> None:
+        _, canvas = _canvas()
+        canvas.set_image(ImageData("img1", data=np.zeros((3, 4), dtype=np.uint8)))
+        assert canvas.add_layer(ImageData("img2", data=np.zeros((3, 4), dtype=np.uint8))) == 1
+
+    def test_set_layer_style_sends_uniform(self) -> None:
+        _, canvas = _canvas()
+        canvas.set_image(ImageData("img1", data=np.zeros((3, 4), dtype=np.uint8)))
+        canvas.add_layer(ImageData("img2", data=np.zeros((3, 4), dtype=np.uint8)))
+        before = len(canvas._transport.binary_frames)
+
+        canvas.set_layer_style(1, ImageLayerStyle(opacity=0.25))
+
+        assert len(canvas._transport.binary_frames) == before
+        msg = canvas._transport.json_messages[-1]
+        assert msg["type"] == "image_update"
+        assert msg["uniforms"] == {"u_layer1_opacity": 0.25}
+
+    def test_set_layer_style_sends_enabled_int(self) -> None:
+        _, canvas = _canvas()
+        canvas.set_image(ImageData("img1", data=np.zeros((3, 4), dtype=np.uint8)))
+
+        canvas.set_layer_style(0, ImageLayerStyle(enabled=False))
+
+        msg = canvas._transport.json_messages[-1]
+        assert msg["type"] == "image_update"
+        assert msg["uniforms"] == {"u_layer0_enabled": 0}
+
+    def test_set_layer_style_sends_blend_int(self) -> None:
+        _, canvas = _canvas()
+        canvas.set_image(ImageData("img1", data=np.zeros((3, 4), dtype=np.uint8)))
+
+        canvas.set_layer_style(0, ImageLayerStyle(blend=LayerBlendMode.MULTIPLY))
+
+        msg = canvas._transport.json_messages[-1]
+        assert msg["type"] == "image_update"
+        assert msg["uniforms"] == {"u_layer0_blend": 2}
+
+    def test_set_layer_style_value_range_sends_both_keys(self) -> None:
+        _, canvas = _canvas()
+        canvas.set_image(ImageData("img1", data=np.zeros((3, 4), dtype=np.uint8)))
+        before = len(canvas._transport.binary_frames)
+
+        canvas.set_layer_style(0, ImageLayerStyle(value_min=2.0, value_max=8.0))
+
+        assert len(canvas._transport.binary_frames) == before
+        msg = canvas._transport.json_messages[-1]
+        assert msg["type"] == "image_update"
+        assert msg["uniforms"] == {"u_layer0_value_min": 2.0, "u_layer0_value_max": 8.0}
+
+    def test_set_layer_style_updates_scene_full_state(self) -> None:
+        _, canvas = _canvas()
+        canvas.set_image(ImageData("img1", data=np.zeros((3, 4), dtype=np.uint8)))
+        canvas.add_layer(ImageData("img2", data=np.zeros((3, 4), dtype=np.uint8)))
+
+        canvas.set_layer_style(1, ImageLayerStyle(enabled=False, opacity=0.5))
+
+        state = canvas.handle.scene.full_state()
+        image = [e for e in state if e.get("kind") == "image"][0]
+        assert image["uniforms"]["u_layer1_enabled"] == 0
+        assert image["uniforms"]["u_layer1_opacity"] == 0.5

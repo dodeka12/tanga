@@ -10,6 +10,9 @@ import { BannerView } from './banner-view.js';
 import { setupControls } from '../controls.js';
 import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../renderers/factory.js';
 import { applyImageUniforms, updateImageLod } from '../renderers/image.js';
+import { applyDepthImageLighting, applyDepthImageUniforms } from '../renderers/depth-image.js';
+import { applySdfProxyLighting } from '../renderers/sdf.js';
+import { DEFAULT_LIGHTING, parseHexColor } from '../renderers/shader-lighting.js';
 import { createImageBackground, setBackgroundAspect, setBackgroundCrop, setBackgroundLetterbox, updateImageBackground } from '../renderers/image-background.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
@@ -125,6 +128,7 @@ export class ThreeJsView extends View {
         this.controls = null;
         this.labelRenderer = null;
         this.sceneConfig = null;
+        this._sceneLights = [];
         this._explicitBackground = null;
         this.cameraPositioned = false;
         this._titleElement = null;
@@ -300,7 +304,7 @@ export class ThreeJsView extends View {
             (this.width || window.innerWidth) / Math.max(1, this.height || window.innerHeight)
         );
 
-        this._addDefaultLights();
+        this._applyLighting(null);
 
         if (webglOk && this.renderer) {
             this.controls = setupControls(this.camera, this.renderer);
@@ -317,14 +321,30 @@ export class ThreeJsView extends View {
         this.el.addEventListener('keydown', (e) => this._handleKeyDown(e));
     }
 
-    _addDefaultLights() {
-        this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-        const d1 = new THREE.DirectionalLight(0xffffff, 0.8);
-        d1.position.set(10, 20, 10);
-        this.scene.add(d1);
-        const d2 = new THREE.DirectionalLight(0xffffff, 0.3);
-        d2.position.set(-5, -2, -8);
-        this.scene.add(d2);
+    _applyLighting(wireLighting) {
+        // Remove lights this method previously added (idempotent re-apply).
+        for (const light of this._sceneLights) {
+            this.scene.remove(light);
+            if (light.dispose) light.dispose();
+        }
+        this._sceneLights = [];
+
+        const wire = wireLighting || DEFAULT_LIGHTING;
+        const ambientColor = new THREE.Color(...parseHexColor(wire.ambient.color));
+        const ambient = new THREE.AmbientLight(ambientColor, wire.ambient.intensity);
+        this.scene.add(ambient);
+        this._sceneLights.push(ambient);
+
+        for (const spec of wire.lights) {
+            const color = new THREE.Color(...parseHexColor(spec.color));
+            const light = new THREE.DirectionalLight(color, spec.intensity);
+            // Position the light far along its direction with the target at the
+            // origin, so the travel direction is -dir, i.e. light comes *from*
+            // the direction vector (matching the "toward the light" convention).
+            light.position.set(spec.direction[0], spec.direction[1], spec.direction[2]).multiplyScalar(1000);
+            this.scene.add(light);
+            this._sceneLights.push(light);
+        }
     }
 
     // ── sizing / render ────────────────────────────────────────
@@ -546,13 +566,29 @@ export class ThreeJsView extends View {
         this._clearBanners();
         this._disposeCoordinateFrame();
         this.cameraPositioned = false;
-        this._addDefaultLights();
+        this._applyLighting(this.sceneConfig && this.sceneConfig.lighting);
     }
 
     // ── scene config / overlays ────────────────────────────────
 
+    _applyShaderLighting(wireLighting) {
+        // Re-light the shader renderers (SDF proxies + depth surfaces) from the
+        // same scene-config lighting block that drives `_applyLighting`.
+        for (const entry of this.sceneObjects.values()) {
+            if (!entry || !entry.mesh) continue;
+            const kind = entry.data && entry.data.kind;
+            if (kind === 'sdf') {
+                applySdfProxyLighting(entry.mesh, wireLighting);
+            } else if (kind === 'depth_image') {
+                applyDepthImageLighting(entry.mesh, wireLighting);
+            }
+        }
+    }
+
     _applySceneConfig(config) {
         this.sceneConfig = config;
+        this._applyLighting(config.lighting);
+        this._applyShaderLighting(config.lighting);
         this._keyBindings = config.keyboard || [];
         const spaceDim = config.space_dim || 3;
         // A per-pane camera override (SceneView(scene, camera=…)) wins over the
@@ -1166,6 +1202,9 @@ export class ThreeJsView extends View {
         } else if (msg.type === 'image_update') {
             const entry = this.sceneObjects.get(msg.id);
             if (entry && entry.mesh) applyImageUniforms(entry.mesh, msg.uniforms);
+        } else if (msg.type === 'depth_image_update') {
+            const entry = this.sceneObjects.get(msg.id);
+            if (entry && entry.mesh) applyDepthImageUniforms(entry.mesh, msg.uniforms);
         }
     }
 

@@ -17,6 +17,7 @@ interaction.
 | [HDR images](hdr-images.md) | `read_exr`/`read_hdr`, linear float32, EXR codecs + Radiance RGBE |
 | [Tiled images](tiled-images.md) | `register_image_pyramid`, tile pyramids for very large images |
 | [Image streams](image-stream.md) | `register_camera_stream`, 15–30 Hz MJPEG camera feeds |
+| [Depth images](depth-image.md) | `DepthImage`/`DepthImageData`, 2.5D heightfield surfaces, segmentation filtering, plain-mode lighting |
 
 ## Runnable examples
 
@@ -33,3 +34,5 @@ interaction.
 - `py/examples/viz/image/huge_image.py` — a programmatic noise image served as
   a tile pyramid.
 - `py/examples/viz/camera/camera_stream.py` — a 30 Hz MJPEG camera feed.
+- `py/examples/viz/image/depth_surface.py` — a 2.5D depth surface from
+  phase-shifted 2D sines, with segment filtering and render-mode cycling.

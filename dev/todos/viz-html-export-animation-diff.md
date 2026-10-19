@@ -1,5 +1,11 @@
 # Standalone HTML export — animation playback efficiency (analysis + improvement ideas)
 
+> **Superseded (export-time diff):** the "export-time diff" idea (item #1) is now
+> implemented by `dev/todos/viz-animation-export-diff/` — animated HTML stores frame
+> 0 plus per-frame entity deltas and expands them back to full frames at load.  The
+> remaining improvement ideas (field-level/aspect diff, short-circuit transform-only
+> frames, keyframe/lazy replay) are still open.
+
 **Created:** 2026-10-06 | **Status:** Analysis / sketch | **Branch:** `fix/viz-control-refactor`
 
 Analysis of the standalone/animated HTML export, prompted by the impression that

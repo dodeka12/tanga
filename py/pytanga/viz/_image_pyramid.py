@@ -133,7 +133,7 @@ class ImagePyramid:
             "levels": self.levels,
             "dtype": self.dtype.value,
             "channels": self.channels,
-            "version": self.version,
+            "tile_version": self.version,
             "source": "tiled",
         }
 

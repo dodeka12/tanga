@@ -95,6 +95,7 @@ from ._interaction import (
 )
 from ._keys import KeyModifier
 from ._label import Label
+from ._lighting import DirectionalLightSpec, LightSpec, SceneLighting
 from .labelme import LabelMeDocument, LabelMeLoadResult, LabelMeStore, LabelShape
 from pytanga.geometry.transform import Transform
 from ._nodes import VizGroup, VizOverlayObject, VizSceneObject
@@ -122,6 +123,7 @@ from ._styles import (
     CylinderLineStyle,
     CylinderStyle,
     DashedWireframe,
+    DepthImageStyle,
     DilatorStyle,
     DirectionStyle,
     DiskStyle,
@@ -216,13 +218,22 @@ from .camera import (
     pinhole_camera,
 )
 from .image import (
+    DEFAULT_IMAGE_LAYER_STYLE,
     EImageCodec,
     ImageChannelMode,
     ImageData,
     ImageDType,
+    ImageLayerStyle,
+    LayerBlendMode,
     default_mode,
     default_value_range,
     pil_to_numpy,
+)
+from .depth_image import (
+    DepthColormap,
+    DepthImage,
+    DepthImageData,
+    DepthImageMode,
 )
 from .export._exporter import SceneExporter
 from .scene import SceneConfig
@@ -324,8 +335,15 @@ __all__ = [
     "CylinderLineStyle",
     "CylinderStyle",
     "DashedWireframe",
+    "DEFAULT_IMAGE_LAYER_STYLE",
+    "DepthColormap",
+    "DepthImage",
+    "DepthImageData",
+    "DepthImageMode",
+    "DepthImageStyle",
     "Dialog",
     "DilatorStyle",
+    "DirectionalLightSpec",
     "DirectionStyle",
     "DiskStyle",
     "DottedWireframe",
@@ -364,7 +382,9 @@ __all__ = [
     "ImageCanvas",
     "ImageData",
     "ImageDType",
+    "ImageLayerStyle",
     "ImageView",
+    "LayerBlendMode",
     "InteractionConfig",
     "InteractionEvent",
     "InteractionEventType",
@@ -383,6 +403,7 @@ __all__ = [
     "LabelShape",
     "LabelStyle",
     "LabelView",
+    "LightSpec",
     "LinePairStyle",
     "LineStyle",
     "LogView",
@@ -426,6 +447,7 @@ __all__ = [
     "SceneConfig",
     "SceneEntity",
     "SceneExporter",
+    "SceneLighting",
     "SceneView",
     "ScrollEvent",
     "SeparatorView",

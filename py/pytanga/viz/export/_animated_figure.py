@@ -35,6 +35,7 @@ from pytanga.viz.export._bootstrap import (
     js_controls_html,
     js_controls_ui,
     js_coordinate_overlay_setup,
+    js_expand_frames,
     js_footer,
     js_tanga_destructure,
     js_reconcile_frame,
@@ -318,6 +319,7 @@ def _build_animated_figure_adapter(
         f"const figContainer = document.getElementById('{fig_id}');",
         f"const sceneConfig = {json.dumps(scene_config)};",
         get_anim_data_js(),
+        js_expand_frames(),
         js_animation_data_init(
             fps,
             extra_map_vars="\nconst labelObjects = new Map();\nconst figRegistry = new Map();",
@@ -459,6 +461,7 @@ def _build_animated_fullpage_adapter(
         f"const figContainer = document.getElementById('{fig_id}');",
         f"const sceneConfig = {json.dumps(scene_config)};",
         get_anim_data_js(),
+        js_expand_frames(),
         js_animation_data_init(
             fps,
             extra_map_vars="\nconst labelObjects = new Map();\nconst figRegistry = new Map();",

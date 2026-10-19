@@ -34,7 +34,7 @@ import {
     parseHexColor,
     parseLight,
     setLightUniforms,
-} from '../renderers/sdf/lighting.js';
+} from '../renderers/shader-lighting.js';
 import {
     overlaySrc,
     buildOverlayUniforms,
@@ -60,7 +60,7 @@ const _frontendVersion =
 
 // ── Lighting (directional lights + ambient) ───────────────
 // The light preamble, parsers, and uniform setter are shared with the standard
-// viewer's per-object SDF proxies (`../renderers/sdf/lighting.js`); the live
+// viewer's per-object SDF proxies (`../renderers/shader-lighting.js`); the live
 // lighting state stays module-local to this viewer.
 
 let lighting = {

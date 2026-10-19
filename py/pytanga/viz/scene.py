@@ -18,7 +18,15 @@ from pytanga.geometry.entities import Entity as GeoEntity
 
 from .camera import CameraAction, CameraConfig, ViewportConfig
 from ._ids import generate_id
-from ._nodes import VizGroup, VizImage, VizNode, VizOverlayObject, VizSceneObject
+from ._lighting import SceneLighting
+from ._nodes import (
+    VizDepthImage,
+    VizGroup,
+    VizImage,
+    VizNode,
+    VizOverlayObject,
+    VizSceneObject,
+)
 from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
 from ._props import _normalize_color
 from ._style_dict import StylesMap, _resolve_label_style, _resolve_tex_label_style
@@ -56,6 +64,8 @@ class SceneConfig:
     viewport: ViewportConfig | None = None
     # Per-scene keyboard shortcuts: list of {"key": str, "modifiers": [str, ...]}.
     keyboard: list[dict[str, Any]] | None = None
+    # Per-scene lighting (ambient + directional).  ``None`` = frontend default.
+    lighting: SceneLighting | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
@@ -87,6 +97,8 @@ class SceneConfig:
             result["viewport"] = self.viewport.to_dict()
         if self.keyboard:
             result["keyboard"] = self.keyboard
+        if self.lighting is not None:
+            result["lighting"] = self.lighting.to_dict()
         return result
 
 
@@ -335,6 +347,154 @@ class Scene:
                         frames.append((img.id, encode_image_frame(img.id, img.data)))
         return frames
 
+    def add_depth_image(
+        self,
+        image_id: str,
+        payload: dict[str, Any],
+        images: list[Any] | None = None,
+    ) -> str:
+        """Register a ``depth_image`` scene node and return its id."""
+        node = VizDepthImage(image_id, payload, images=images)
+        self._nodes[image_id] = node
+        if image_id not in self._order:
+            self._order.append(image_id)
+        # DEBUG
+        frames = [
+            (img.id, None if img.data is None else img.data.shape, img.dtype)
+            for img in (images or [])
+        ]
+        print(
+            f"[depth-image] add_depth_image id={image_id} "
+            f"frame={payload.get('frame')} mesh={payload.get('mesh')} "
+            f"frames={frames}"
+        )
+        self._push_depth_image_frames(node)
+        return image_id
+
+    def upsert_depth_image(
+        self,
+        image_id: str,
+        payload: dict[str, Any],
+        images: list[Any] | None = None,
+    ) -> str:
+        """Update an existing depth image node's payload, or create it."""
+        node = self._nodes.get(image_id)
+        if isinstance(node, VizDepthImage):
+            node.payload = payload
+            if images is not None:
+                node.images = list(images)
+            node.mark("full")
+            return image_id
+        return self.add_depth_image(image_id, payload, images=images)
+
+    def depth_image_frames(self) -> list[tuple[str, bytes]]:
+        """Return ``(id, encoded_frame)`` for every depth image node with pixels."""
+        from ._image_wire import encode_image_frame
+
+        frames: list[tuple[str, bytes]] = []
+        for node in self._dfs_preorder():
+            if isinstance(node, VizDepthImage):
+                for img in node.images:
+                    if img.data is not None:
+                        frame = encode_image_frame(
+                            img.id,
+                            img.data,
+                            codec=img.codec,
+                            jpeg_quality=img.jpeg_quality or 85,
+                        )
+                        print(
+                            f"[depth-image] depth_image_frames id={img.id} "
+                            f"shape={img.data.shape} bytes={len(frame)}"
+                        )
+                        frames.append((img.id, frame))
+        return frames
+
+    def _push_depth_image_frames(self, node: VizDepthImage) -> None:
+        """Send a node's binary frames over the live transport, if connected."""
+        transport = getattr(getattr(self, "_host", None), "_transport", None)
+        if transport is None:
+            return
+        from ._image_wire import encode_image_frame
+
+        for img in node.images:
+            if img.data is not None:
+                transport.send_bytes(
+                    encode_image_frame(
+                        img.id,
+                        img.data,
+                        codec=img.codec,
+                        jpeg_quality=img.jpeg_quality or 85,
+                    )
+                )
+                print(
+                    f"[depth-image] push frame id={img.id} "
+                    f"bytes={img.data.nbytes} codec={img.codec}"
+                )
+
+    def _depth_image_node(self, object_id: str) -> VizDepthImage:
+        node = self._nodes.get(object_id)
+        if not isinstance(node, VizDepthImage):
+            raise TypeError(f"Object {object_id!r} is not a depth image")
+        return node
+
+    def _send_depth_image_uniforms(
+        self, node: VizDepthImage, uniforms: dict[str, Any]
+    ) -> None:
+        """Push a granular ``depth_image_update`` over the live transport."""
+        transport = getattr(getattr(self, "_host", None), "_transport", None)
+        if transport is None:
+            return
+        transport.send(
+            {
+                "type": "depth_image_update",
+                "scene": self.name,
+                "id": node.id,
+                "uniforms": uniforms,
+            }
+        )
+
+    def set_depth_image_uniform(
+        self, object_id: str, name: str, value: float | int
+    ) -> None:
+        """Update one depth image uniform and push a granular update."""
+        node = self._depth_image_node(object_id)
+        if node.payload is None:
+            node.payload = {"uniforms": {}}
+        uniforms = node.payload.setdefault("uniforms", {})
+        uniforms[name] = value
+        self._send_depth_image_uniforms(node, {name: value})
+
+    def set_depth_image_selected_segments(
+        self, object_id: str, ids: list[int] | set[int] | None
+    ) -> None:
+        """Update the selected-segment uniform block and push a granular update."""
+        from .depth_image import MAX_SELECTED_SEGMENTS
+
+        node = self._depth_image_node(object_id)
+        selected = [int(v) for v in (list(ids) if ids else [])]
+        selected = selected[:MAX_SELECTED_SEGMENTS]
+        if node.payload is None:
+            node.payload = {"uniforms": {}}
+        uniforms = node.payload.setdefault("uniforms", {})
+        if selected:
+            uniforms["u_seg_enabled"] = 1
+            uniforms["u_num_selected"] = len(selected)
+            uniforms["u_selected_segments"] = selected + [0] * (
+                MAX_SELECTED_SEGMENTS - len(selected)
+            )
+        else:
+            uniforms["u_seg_enabled"] = 0
+            uniforms["u_num_selected"] = 0
+            uniforms["u_selected_segments"] = [0] * MAX_SELECTED_SEGMENTS
+        self._send_depth_image_uniforms(
+            node,
+            {
+                "u_seg_enabled": uniforms["u_seg_enabled"],
+                "u_num_selected": uniforms["u_num_selected"],
+                "u_selected_segments": uniforms["u_selected_segments"],
+            },
+        )
+
     @property
     def group_ids(self) -> list[str]:
         """IDs of all scene-graph groups."""
@@ -431,6 +591,8 @@ class Scene:
         from ._nodes import VizGroup, VizSceneObject
         from ._scene_handle import VizSceneHandle
         from ._styles import TextureLabelStyle as _TLS
+        from ._styles import _style_to_output
+        from .depth_image import DepthImage
 
         if isinstance(obj, VizGroup):
             from .scene import _generate_id
@@ -443,6 +605,26 @@ class Scene:
                 if isinstance(parent, VizSceneObject):
                     parent.add_child(obj)
             return gid
+
+        if isinstance(obj, DepthImage):
+            eid = entity_id or generate_id()
+            resolved = _style_to_output(
+                style, "DepthImage", styles_map=self.styles.kind
+            )
+            if color is not None:
+                normalized = _normalize_color(color)
+                if isinstance(normalized, tuple):
+                    resolved["color"] = normalized[0]
+                    if opacity is None:
+                        resolved["opacity"] = normalized[1]
+                else:
+                    resolved["color"] = normalized
+            if opacity is not None:
+                resolved["opacity"] = float(opacity)
+            content, frames = obj._build(resolved, eid)
+            self.add_depth_image(eid, content, images=frames)
+            self._attach_to_parent(eid, parent_id)
+            return eid
 
         if isinstance(obj, ActSceneObject):
             properties: dict[str, Any] = {}
@@ -894,7 +1076,14 @@ class Scene:
             dirty_aspects = node.consume_dirty()
             if not dirty_aspects:
                 continue
-            for aspect in ("full", "style", "transform", "content", "interaction", "visible"):
+            for aspect in (
+                "full",
+                "style",
+                "transform",
+                "content",
+                "interaction",
+                "visible",
+            ):
                 if aspect not in dirty_aspects:
                     continue
                 if aspect == "interaction":

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generator_sha256": "839049ee93ac3281bb4309988eca57a551d4decd82f5f9e288632d9a018305cb",
+  "generator_sha256": "87b51a68d790149772706a90ad7137c31dd7b58cdc7ae2a3fd6893618fe18d28",
   "files": [
     {
       "path": "py/pytanga/viz/templates/renderers/style-diff.js",
@@ -188,39 +188,47 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image-shader.js",
-      "sha256": "8be7985dfe3063d46e08e6438a2ede84ac068923e8266b253f2a72a09156ab9c"
+      "sha256": "4f1da1da242d522bedb6c0798772b53874b244ae4b0552bb7fc34d314ca3e5f4"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image.js",
-      "sha256": "c0a885d39d374599e45968035aa0e2d0abcad17dadc9917fb35542acc054f947"
+      "sha256": "4a124c80c6f6da6434fe4d8e99a0f63ef9223a0b3c5b777b13389482ecf671e3"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image-background.js",
-      "sha256": "3914ab54145aa2539903cc7b24f900a3aa9d28520a5e5f06eeada8579a212f26"
+      "sha256": "1b05cb814f76401aab15f770b24f9f7c46bc7ed125a4d424086332af45c15da1"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image-tiles.js",
       "sha256": "95a93b4989abbe65efa56e37f9737534a37b1da3e32b88836306a7a888ba3ed3"
     },
     {
-      "path": "py/pytanga/viz/templates/renderers/factory.js",
-      "sha256": "fd1876ef145c138bf73016b4e745bc23dbfca0e5748788cf39b2cc1c4a3d3073"
+      "path": "py/pytanga/viz/templates/renderers/shader-lighting.js",
+      "sha256": "25009f23bf00f8063e7e0a71fb3b4d5197cb40a4c47fad953f9f07ea563d3788"
     },
     {
-      "path": "py/pytanga/viz/templates/renderers/sdf/lighting.js",
-      "sha256": "e7517775d0becd384d1976024dbd5269c605ded5eea0b2c8650046466e8d6820"
+      "path": "py/pytanga/viz/templates/renderers/depth-shader.js",
+      "sha256": "d17a450c75d2252fc870d518f8595d4ce6432ede7669d8c53ec8726ebb419ad9"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/depth-image.js",
+      "sha256": "a82711690d7d59e59d262b8af65bdd0d49080049187e22e383432d44123f70c3"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/factory.js",
+      "sha256": "a392ce8b5925a73a0d4e5752dd98fe5e8ae04837094549640a2001118c85a63d"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/sdf/glsl.js",
-      "sha256": "15104b365a4c605edbc66062887682ba5b24c9c03ea3042e75f74384d15a014b"
+      "sha256": "f59b40986b0e884d5df366cd6764778812d4d2c5033fa6613622f23c932933b2"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/sdf.js",
-      "sha256": "b6576a92c6c257703b527fcf6452ad1b566970d83c6131fecc6cb487eb89a00c"
+      "sha256": "a489e87deda5cd077c40cee46d4b61761eb6047c1049147684a07821e78b2bb4"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/ray.js",
-      "sha256": "04404ea19dc607c4c768e3416402f502ed43609d7a9a049726bb70ce5f8a9ea8"
+      "sha256": "78cd77c71bf0a0a2ef53b9a0c1ce09a583e28f74a0d0b7fa3d9fbfcb6d262e0b"
     },
     {
       "path": "py/pytanga/viz/templates/nice-ticks.js",
@@ -283,6 +291,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "d9918c39fa63d3f03ef0fe5ddaf55a6e305efad0819a315741b8232927c48d9f",
-  "bundle_sha256": "6e66079238a1dc8ac3c372af425e3150f1d151f847fbea31179198acd6499e08"
+  "fingerprint_sha256": "5e4f0d73212adec58d2034491b7b92136a9be8fbde72b77f4b78e5381d1740ef",
+  "bundle_sha256": "2a02f15bef0ef18ab415aae1121f2e64dd6887233576f91cd7d0903a47d7b5a4"
 }

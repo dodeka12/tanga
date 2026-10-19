@@ -39,7 +39,7 @@ def test_committed_bundle_contains_overlay_modules():  # noqa: ANN201
 
 def test_bundle_defines_lighting_before_use():  # noqa: ANN201
     # Guard against a load-time TDZ in the concatenated bundle: `ray.js` reads
-    # `lightPreamble` (from `sdf/lighting.js`) at module-load time, so the
+    # `lightPreamble` (from `shader-lighting.js`) at module-load time, so the
     # definition must precede its use in the bundle's single scope.
     b = generate_bootstrap_js("")
     assert b.index("const lightPreamble") < b.index("${lightPreamble}")

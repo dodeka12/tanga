@@ -5,7 +5,7 @@
 // emit a `materialColor(float matId)` GLSL function so the raymarch body can
 // resolve the hit object's albedo + opacity by material id.
 
-import { parseHexColor } from '../renderers/sdf/lighting.js';
+import { parseHexColor } from '../renderers/shader-lighting.js';
 
 export { parseHexColor };
 

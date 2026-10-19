@@ -143,8 +143,7 @@ _LABELS_PATH = _DATA_DIR / "labels.json"
 _DEPTH = 0.6
 
 _ATTRIBUTION = (
-    "Image & data: T-LESS (Hodan et al., WACV 2017), BOP benchmark — "
-    "License: CC BY 4.0"
+    "Image & data: T-LESS (Hodan et al., WACV 2017), BOP benchmark — License: CC BY 4.0"
 )
 
 
@@ -362,6 +361,9 @@ class _CalibratedLabeler:
         return ToolbarView(list(self._tool_buttons.values()), border=False)
 
     async def _on_drag_start(self, event: Any, _surface: Any) -> None:
+        if ModifierKey.CTRL in event.modifiers:
+            # Ctrl+drag is the brightness/contrast gesture, not shape creation.
+            return
         preview = self._previews.get(self._mode or "")
         if preview is not None:
             preview.begin(event.world_position)
@@ -376,6 +378,8 @@ class _CalibratedLabeler:
         return True
 
     async def _on_drag_end(self, event: Any, _surface: Any) -> None:
+        if ModifierKey.CTRL in event.modifiers:
+            return
         preview = self._previews.get(self._mode or "")
         if preview is None or preview.anchor is None:
             return

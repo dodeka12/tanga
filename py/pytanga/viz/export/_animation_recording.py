@@ -164,6 +164,26 @@ class AnimationRecording:
             "frame_assets": self._frame_assets,
         }
 
+    def to_diff_dict(self) -> dict[str, Any]:
+        """Serialize the recording to a compact, delta-encoded dict.
+
+        Returns ``initial`` (frame 0 full snapshot) + ``deltas`` (per-frame
+        entity diffs) instead of the full ``frames`` list, plus the same
+        ``frame_count`` / ``cameras`` / ``assets`` / ``frame_assets`` as
+        :meth:`to_dict`.  The playback bootstrap expands ``initial`` +
+        ``deltas`` back to full ``frames`` at load (see
+        ``_bootstrap/_animation.py::js_expand_frames``).
+        """
+        initial, deltas = diff_entity_frames(self._frames)
+        return {
+            "initial": initial,
+            "deltas": deltas,
+            "frame_count": len(self._frames),
+            "cameras": self._cameras,
+            "assets": self._assets,
+            "frame_assets": self._frame_assets,
+        }
+
     def to_json(self, *, compress: bool = False) -> str:
         """Serialize the recording to a JSON string.
 
@@ -226,3 +246,36 @@ def image_hydration_frames(assets: dict[str, dict[str, Any]]) -> list[dict[str, 
                 }
             )
     return frames
+
+
+def diff_entity_frames(
+    frames: list[list[dict[str, Any]]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Reduce full per-frame snapshots to ``(initial, deltas)``.
+
+    ``initial`` is ``frames[0]`` (the full first snapshot).  ``deltas[n]``
+    describes frame ``n + 1`` relative to frame ``n`` as
+    ``{"set": [...], "remove": [...]}``:
+
+    - ``remove`` — ids present in the previous frame but absent in this one.
+    - ``set`` — full entity dicts whose dict differs from the previous frame
+      (added or changed), in this frame's order.
+
+    Unchanged entities are omitted, so static entities are stored once.
+    Equality is exact dict equality keyed by ``id`` (order-independent).
+    """
+    if not frames:
+        return [], []
+
+    initial = frames[0]
+    deltas: list[dict[str, Any]] = []
+
+    prev: dict[str, dict[str, Any]] = {ent["id"]: ent for ent in initial}
+    for curr in frames[1:]:
+        curr_by_id = {ent["id"]: ent for ent in curr}
+        removed = [eid for eid in prev if eid not in curr_by_id]
+        changed = [ent for ent in curr if prev.get(ent["id"]) != ent]
+        deltas.append({"set": changed, "remove": removed})
+        prev = curr_by_id
+
+    return initial, deltas
