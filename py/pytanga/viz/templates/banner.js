@@ -21,6 +21,7 @@ export function handleBannerDefine(msg) {
         align_y: msg.align_y,
         auto_hide: msg.auto_hide,
         dismissable: msg.dismissable,
+        scrollable: msg.scrollable,
         controls: msg.controls || [],
         backdropMode: 'fixed',
         onClose: _notifyClosed,

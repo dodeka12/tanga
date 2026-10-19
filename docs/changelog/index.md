@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.20.0] — 2026-10-19
+- Surface texture mapping (image / custom shader / both) + standard surface shaders · in-place shader uniform updates batched on `flush()` · shader compile error reporting · scrollable banners · layered image views (8 layers, per-layer colormap + RGBA alpha) · pinhole depth mode · `look_at_matrix`
+→ [Details](2026/10/19_05574a546.md)
+
 ## [Since 2.19.1] — 2026-10-19
 - Depth image (2.5D surface) entity · multi-layer image canvas & calibrated background (enable/opacity/blend + per-layer value-range normalization) · `ImageLayerStyle` layer descriptor · per-scene lighting (ambient + directional + specular) · animated HTML export per-frame entity deltas
 - Breaking: tiled cache key `version` → `tile_version` · `LayerBlendMode` string enum · `add_image` → `add_layer` · Bug fixes: SDF objects render again

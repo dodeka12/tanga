@@ -212,7 +212,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             view = new SliderView({
                 id: node.id, label: node.label, tooltip: node.tooltip,
                 min: node.min, max: node.max, step: node.step, value: node.value,
-                variant: node.variant,
+                variant: node.variant, enabled: node.enabled,
             });
         }
     } else if (node.type === 'button_view') {

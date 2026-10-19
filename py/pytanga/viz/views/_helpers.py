@@ -92,20 +92,8 @@ def _image_meta(image: Any) -> dict[str, Any]:
 
 
 def _image_view_meta(view: Any) -> dict[str, Any]:
-    """Serialize a background ``ImageView`` to ``background_image`` metadata.
-
-    Keeps the flat primary-image fields (for framing/``uImageAspect``) and adds
-    the full ``images`` layer list plus the shared ``shader``/``uniforms`` state.
-    """
-    primary = view.primary_image
-    if primary is None:
-        meta: dict[str, Any] = {}
-    else:
-        meta = primary.layer_meta()
-    meta["images"] = view.serialized_images()
-    meta["shader"] = dict(view.shader)
-    meta["uniforms"] = dict(view.uniforms)
-    return meta
+    """Serialize a background ``ImageView`` to ``background_image`` metadata."""
+    return view.background_meta()
 
 
 def _normalize_id_set(values: set[str] | None) -> set[str]:

@@ -20,7 +20,8 @@ void main() {
     gl_Position = vec4(position.xy, 0.999999, 1.0);
 }`;
 
-const _BG_FRAGMENT = /* glsl */ `
+function _buildBackgroundFragment(layerCount) {
+    return /* glsl */ `
 precision highp float;
 varying vec2 vNdc;
 uniform float uImageAspect;   // image width / height
@@ -29,7 +30,7 @@ uniform float uFit;           // 0.0 = letterbox (fit), 1.0 = stretch (fill)
 uniform vec4 uCrop;           // (u0, v0, u1, v1) normalized image coords
 uniform float uHx;            // explicit zoom-scaled letterbox half-extent (NDC)
 uniform float uHy;            // explicit zoom-scaled letterbox half-extent (NDC)
-${buildImageLayerPipeline()}
+${buildImageLayerPipeline(layerCount)}
 
 void main() {
     float hx = uHx > 0.0 ? uHx : (uFit > 0.5 ? 1.0 : min(1.0, uImageAspect / uPaneAspect));
@@ -48,17 +49,15 @@ void main() {
         gl_FragColor = vec4(color, 1.0);
     }
 }`;
+}
 
 /** Build the shared full-viewport background shader material. */
 function _buildMaterial(imageMeta) {
     const img = imageMeta || {};
     const width = Number(img.width) || 1;
     const height = Number(img.height) || 1;
+    const layerCount = Number(img.max_layers) || 8;
     const uniforms = {
-        uImage0: { value: null },
-        uImage1: { value: null },
-        uImage2: { value: null },
-        uImage3: { value: null },
         uImageAspect: { value: width / height },
         uPaneAspect: { value: 1.0 },
         uFit: { value: 0.0 },
@@ -66,12 +65,15 @@ function _buildMaterial(imageMeta) {
         uHx: { value: 0.0 },
         uHy: { value: 0.0 },
         ...buildColorUniforms(img.uniforms),
-        ...buildLayerUniforms(img.uniforms),
+        ...buildLayerUniforms(img.uniforms, layerCount),
     };
+    for (let i = 0; i < layerCount; i++) {
+        uniforms[`uImage${i}`] = { value: null };
+    }
     addCustomUniforms(uniforms, img.uniforms);
     return new THREE.ShaderMaterial({
         vertexShader: img.shader?.vertex || _BG_VERTEX,
-        fragmentShader: img.shader?.fragment || _BG_FRAGMENT,
+        fragmentShader: img.shader?.fragment || _buildBackgroundFragment(layerCount),
         uniforms,
         depthTest: false,
         depthWrite: false,
@@ -125,6 +127,11 @@ function _layersOf(imageMeta) {
 // is uploaded once the frame lands (mirrors renderers/image.js).
 function _bindLayerTexture(material, img, i) {
     const key = `uImage${i}`;
+    if (!img) {
+        // A cleared (stable-index) layer slot: disable its sampler.
+        material.uniforms[key].value = null;
+        return;
+    }
     _backgroundTexture(img).then((tex) => {
         if (tex) {
             material.uniforms[key].value = tex;
@@ -159,7 +166,8 @@ export function createImageBackground(imageMeta) {
     };
 
     const layers = _layersOf(img);
-    for (let i = 0; i < layers.length && i < 4; i++) {
+    const layerCount = Number(img.max_layers) || 8;
+    for (let i = 0; i < layers.length && i < layerCount; i++) {
         _bindLayerTexture(material, layers[i], i);
     }
 
@@ -184,9 +192,14 @@ export function updateImageBackground(mesh, imageMeta) {
     // Re-apply color-processing + custom uniforms from the new metadata.
     applyImageUniforms(mesh, img.uniforms);
     const layers = _layersOf(img);
-    for (let i = 0; i < layers.length && i < 4; i++) {
+    const layerCount = Number(img.max_layers) || 8;
+    for (let i = 0; i < layers.length && i < layerCount; i++) {
         const layer = layers[i];
         const key = `uImage${i}`;
+        if (!layer) {
+            mat.uniforms[key].value = null;
+            continue;
+        }
         _backgroundTexture(layer).then((tex) => {
             if (tex) mat.uniforms[key].value = tex;
         });

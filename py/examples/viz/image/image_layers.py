@@ -99,6 +99,17 @@ def _blend_handler(canvas: ImageCanvas, index: int) -> ControlHandler:
     return handler
 
 
+def _colormap_handler(canvas: ImageCanvas, index: int) -> ControlHandler:
+    async def handler(value: Any, _event: ControlEvent) -> None:
+        canvas.set_layer_style(index, ImageLayerStyle(colormap=str(value)))
+
+    return handler
+
+
+#: Dropdown labels for the per-layer colormap (scalar layers only).
+_COLORMAP_OPTIONS = ["gray", "viridis", "turbo"]
+
+
 def build() -> tuple[Visualizer, ImageCanvas, SplitView]:
     """Build the canvas + per-layer control panel (without showing it)."""
     viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=2)
@@ -124,32 +135,41 @@ def build() -> tuple[Visualizer, ImageCanvas, SplitView]:
 
     controls: list[Any] = []
     for index, (name, enabled, opacity) in enumerate(layer_specs):
-        controls.extend(
-            [
-                CheckboxView(
-                    f"layer{index}_enabled",
-                    label=f"{name} enabled",
-                    value=enabled,
-                    on_change=_enable_handler(canvas, index),
-                ),
-                SliderView(
-                    f"layer{index}_opacity",
-                    label=f"{name} opacity",
-                    min=0.0,
-                    max=1.0,
-                    step=0.05,
-                    value=opacity,
-                    on_change=_opacity_handler(canvas, index),
-                ),
+        layer_controls: list[Any] = [
+            CheckboxView(
+                f"layer{index}_enabled",
+                label=f"{name} enabled",
+                value=enabled,
+                on_change=_enable_handler(canvas, index),
+            ),
+            SliderView(
+                f"layer{index}_opacity",
+                label=f"{name} opacity",
+                min=0.0,
+                max=1.0,
+                step=0.05,
+                value=opacity,
+                on_change=_opacity_handler(canvas, index),
+            ),
+            DropdownView(
+                f"layer{index}_blend",
+                label=f"{name} blend",
+                options=_BLEND_OPTIONS,
+                value="normal",
+                on_change=_blend_handler(canvas, index),
+            ),
+        ]
+        if index == 1:  # the uint16 depth layer supports a colormap
+            layer_controls.append(
                 DropdownView(
-                    f"layer{index}_blend",
-                    label=f"{name} blend",
-                    options=_BLEND_OPTIONS,
-                    value="normal",
-                    on_change=_blend_handler(canvas, index),
-                ),
-            ]
-        )
+                    f"layer{index}_colormap",
+                    label=f"{name} colormap",
+                    options=_COLORMAP_OPTIONS,
+                    value="gray",
+                    on_change=_colormap_handler(canvas, index),
+                )
+            )
+        controls.extend(layer_controls)
 
     layout = SplitView(
         orientation="horizontal",

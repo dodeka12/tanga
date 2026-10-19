@@ -255,8 +255,7 @@ class _CalibratedLabeler:
         fill: str = "#ff4444",
     ) -> None:
         self._world = world
-        self._viz: Any = None
-        self._view: Any = None
+        self._bg: Any = None
         self._mode: str | None = None
         self.selected: Any = None
         self.shapes: list[tuple[Any, Any]] = []  # (act, body_style)
@@ -324,21 +323,17 @@ class _CalibratedLabeler:
 
     def set_background_view(self, viz: Any, view: Any) -> None:
         """Bind the ctrl+drag brightness/contrast handler to *view*'s background."""
-        self._viz = viz
-        self._view = view
+        self._bg = view.camera_view.background_image
 
     async def _on_brightness_contrast_drag(self, event: Any, _surface: Any) -> bool:
         # Ctrl+left drag: horizontal movement → contrast, vertical → brightness.
-        if self._viz is None or self._view is None:
+        if self._bg is None:
             return False
         dx, dy = event.delta_pixels
-        u = self._view.camera_view.background_image.uniforms
-        self._viz.set_background_uniform(
-            self._view, "u_contrast", max(0.0, u["u_contrast"] + 0.005 * dx)
-        )
-        self._viz.set_background_uniform(
-            self._view, "u_brightness", u["u_brightness"] + 0.005 * dy
-        )
+        u = self._bg.uniforms
+        self._bg.set_uniform("u_contrast", max(0.0, u["u_contrast"] + 0.005 * dx))
+        self._bg.set_uniform("u_brightness", u["u_brightness"] + 0.005 * dy)
+        return True
         return True
 
     def toolbar(self) -> ToolbarView:
@@ -604,7 +599,7 @@ def main() -> None:
             )
         else:
             background.update(data=default_data)
-        viz.set_background_image(left, background)
+        left.camera_view.background_image.set_image(background)
 
     async def _on_swap(_value: Any, _event: ControlEvent) -> None:
         # Reordering the split re-pushes the layout; the reused `background`

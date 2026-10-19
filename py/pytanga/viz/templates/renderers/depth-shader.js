@@ -20,6 +20,36 @@ uniform float u_depth_offset; // subtracted from depth before scaling
 uniform float u_missing_depth; // sentinel for non-finite depth
 uniform float u_depth_min;    // clamp lower bound (also the missing-depth height)
 uniform float u_depth_max;    // clamp upper bound
+uniform float u_depth_kind;   // 0 = orthographic, 1 = pinhole axial, 2 = pinhole radial, 3 = pinhole inverse
+uniform float u_fx;           // pinhole intrinsics (pixels of the reference frame)
+uniform float u_fy;
+uniform float u_cx;
+uniform float u_cy;
+uniform vec2 u_frame_size;    // reference (full-resolution) frame
+
+// Raw depth sample → axial depth Z (camera frame, world units), per depth_kind.
+float axialDepthZ(vec2 uvSample, float dSample) {
+    float metric = (dSample - u_depth_offset) * u_depth_scale;
+    if (u_depth_kind > 2.5) {
+        // Inverse depth: d = 1/Z.
+        return (abs(metric) > 1e-9) ? (1.0 / metric) : u_depth_max;
+    }
+    if (u_depth_kind > 1.5) {
+        // Radial depth: d = Euclidean distance along the projection ray.
+        vec2 pixel = uvSample * u_frame_size;
+        float xn = (pixel.x - u_cx) / u_fx;
+        float yn = (pixel.y - u_cy) / u_fy;
+        return metric / sqrt(xn * xn + yn * yn + 1.0);
+    }
+    // Axial depth: d = distance along the optical axis.
+    return metric;
+}
+
+// Camera-frame vertex (x right, y down, z forward) from axial depth Z.
+vec3 pinholeVertex(vec2 uvSample, float z) {
+    vec2 pixel = uvSample * u_frame_size;
+    return vec3((pixel.x - u_cx) / u_fx * z, (pixel.y - u_cy) / u_fy * z, z);
+}
 
 void main() {
     vUv = uv;
@@ -28,21 +58,45 @@ void main() {
     float d = texture2D(uDepth, snap).r;
     bool missing = (d == u_missing_depth);
     vValid = missing ? 0.0 : 1.0;
-    vDepth = missing ? u_depth_min : clamp(d, u_depth_min, u_depth_max);
-    vec3 p = position;
-    p.z += (vDepth - u_depth_offset) * u_depth_scale;
 
-    // World-space surface normal by finite differences on the depth field.
     vec2 du = vec2(1.0 / max(uDepthSize.x, 1.0), 0.0);
     vec2 dv = vec2(0.0, 1.0 / max(uDepthSize.y, 1.0));
     float dU = texture2D(uDepth, snap + du).r;
     float dV = texture2D(uDepth, snap + dv).r;
-    float cU = (dU == u_missing_depth) ? u_depth_min : clamp(dU, u_depth_min, u_depth_max);
-    float cV = (dV == u_missing_depth) ? u_depth_min : clamp(dV, u_depth_min, u_depth_max);
-    float hC = (vDepth - u_depth_offset) * u_depth_scale;
-    vec3 tX = vec3(uWorldStep.x, 0.0, (cU - u_depth_offset) * u_depth_scale - hC);
-    vec3 tY = vec3(0.0, uWorldStep.y, (cV - u_depth_offset) * u_depth_scale - hC);
-    vec3 n = normalize(cross(tX, tY));
+    bool missingU = (dU == u_missing_depth);
+    bool missingV = (dV == u_missing_depth);
+
+    vec3 p;
+    vec3 n;
+    if (u_depth_kind > 0.5) {
+        // Pinhole: depth_min/depth_max are axial depth (Z) in world units, so
+        // convert the raw sample to Z first, then clamp.
+        float zC  = missing  ? u_depth_min : clamp(axialDepthZ(snap, d), u_depth_min, u_depth_max);
+        float zCU = missingU ? u_depth_min : clamp(axialDepthZ(snap + du, dU), u_depth_min, u_depth_max);
+        float zCV = missingV ? u_depth_min : clamp(axialDepthZ(snap + dv, dV), u_depth_min, u_depth_max);
+        vDepth = zC;
+
+        vec3 pc = pinholeVertex(snap, zC);
+        vec3 pcU = pinholeVertex(snap + du, zCU);
+        vec3 pcV = pinholeVertex(snap + dv, zCV);
+        vec3 nCam = normalize(cross(pcU - pc, pcV - pc));
+        p = pc;
+        n = nCam;
+    } else {
+        // Orthographic: clamp the raw depth value (legacy heightfield), then
+        // apply depth_scale/depth_offset.
+        float zC  = missing  ? u_depth_min : clamp(d, u_depth_min, u_depth_max);
+        float zCU = missingU ? u_depth_min : clamp(dU, u_depth_min, u_depth_max);
+        float zCV = missingV ? u_depth_min : clamp(dV, u_depth_min, u_depth_max);
+        vDepth = zC;
+
+        p = position;
+        p.z += (zC - u_depth_offset) * u_depth_scale;
+        float hC = (zC - u_depth_offset) * u_depth_scale;
+        vec3 tX = vec3(uWorldStep.x, 0.0, (zCU - u_depth_offset) * u_depth_scale - hC);
+        vec3 tY = vec3(0.0, uWorldStep.y, (zCV - u_depth_offset) * u_depth_scale - hC);
+        n = normalize(cross(tX, tY));
+    }
 
     vNormal = normalize(mat3(modelMatrix) * n);
     vWorldPosition = (modelMatrix * vec4(p, 1.0)).xyz;

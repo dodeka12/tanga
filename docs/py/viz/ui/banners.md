@@ -34,6 +34,23 @@ bid = viz.show_banner(
 For **global** banners the container is the viewport; for **per-scene** banners
 it is the scene pane.
 
+## Scrollable banners
+
+For long-form content (compile errors, logs, tracebacks), pass
+`scrollable=True` to keep the title pinned at the top while the markdown body
+becomes a dedicated scroll region filling most of the banner:
+
+```python
+viz.show_banner(
+    "**Shader compile failed**\n\n```\n" + error + "\n```",
+    title="Shader error",
+    scrollable=True,
+)
+```
+
+The banner is sized larger and the body scrolls independently of the title and
+any controls.
+
 ## Global vs per-scene
 
 - `scene_name=None` (default) → **global**, full-screen.

@@ -102,6 +102,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         tex_label_style: TextureLabelStyle | None = None,
         parent_id: str | None = None,
         attach_to: str | None = None,
+        surface: Any = None,
     ) -> str:
         """Add an entity, operator, MV, or label to this scene.
 
@@ -121,6 +122,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             tex_label_style=tex_label_style,
             parent_id=parent_id,
             attach_to=attach_to,
+            surface=surface,
         )
 
     def new(
@@ -140,6 +142,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         tex_label_style: TextureLabelStyle | None = None,
         parent_id: str | None = None,
         attach_to: str | None = None,
+        surface: Any = None,
     ) -> Any:
         """Like :meth:`add`, but returns a :class:`VizObjectRef` for the node."""
         from ._object_ref import VizObjectRef
@@ -156,6 +159,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             tex_label_style=tex_label_style,
             parent_id=parent_id,
             attach_to=attach_to,
+            surface=surface,
         )
         return VizObjectRef(self, self._scene().get_node(eid))
 
@@ -387,6 +391,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         align_y: float = 0.5,
         auto_hide: bool = True,
         dismissable: bool = True,
+        scrollable: bool = False,
         controls: Any = None,
         on_close: Any = None,
     ) -> str:
@@ -399,6 +404,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             align_y=align_y,
             auto_hide=auto_hide,
             dismissable=dismissable,
+            scrollable=scrollable,
             controls=controls,
             on_close=on_close,
             scene_name=self._name,
@@ -468,6 +474,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         align_y: float = 0.5,
         auto_hide: bool = True,
         dismissable: bool = True,
+        scrollable: bool = False,
         controls: Any = None,
         on_close: Any = None,
     ) -> str:
@@ -480,6 +487,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             align_y=align_y,
             auto_hide=auto_hide,
             dismissable=dismissable,
+            scrollable=scrollable,
             controls=controls,
             on_close=on_close,
             scene_name=self._name,

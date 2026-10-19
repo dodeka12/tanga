@@ -27,6 +27,7 @@ __all__ = [
     "EImageCodec",
     "ImageData",
     "ImageChannelMode",
+    "ImageColormap",
     "LayerBlendMode",
     "ImageLayerStyle",
     "DEFAULT_IMAGE_LAYER_STYLE",
@@ -160,6 +161,33 @@ class LayerBlendMode(StrEnum):
             raise ValueError(f"Unknown layer blend code: {code!r}") from exc
 
 
+class ImageColormap(IntEnum):
+    """Built-in per-layer color maps for scalar (1-channel) image layers.
+
+    Mirrors :class:`~pytanga.viz.DepthColormap` codes: ``GRAY`` leaves the
+    scalar unchanged, ``VIRIDIS``/``TURBO`` map a normalized ``[0, 1]`` value
+    through the matching color ramp.
+    """
+
+    GRAY = 0
+    VIRIDIS = 1
+    TURBO = 2
+
+    @classmethod
+    def from_str(cls, value: str) -> "ImageColormap":
+        """Resolve a ``"gray"``/``"viridis"``/``"turbo"`` string to its code."""
+        mapping = {
+            "gray": cls.GRAY,
+            "grayscale": cls.GRAY,
+            "viridis": cls.VIRIDIS,
+            "turbo": cls.TURBO,
+        }
+        try:
+            return mapping[value]
+        except KeyError as exc:
+            raise ValueError(f"Unknown image colormap {value!r}") from exc
+
+
 @dataclass(slots=True)
 class ImageLayerStyle:
     """Per-layer compositing style for an image layer.
@@ -176,6 +204,7 @@ class ImageLayerStyle:
     opacity: float | None = None
     blend: LayerBlendMode | str | None = None
     channel: ImageChannelMode | str | None = None
+    colormap: ImageColormap | str | None = None
     value_min: float | None = None
     value_max: float | None = None
 
@@ -184,6 +213,8 @@ class ImageLayerStyle:
             self.blend = LayerBlendMode(self.blend)
         if self.channel is not None and isinstance(self.channel, str):
             self.channel = ImageChannelMode.from_str(self.channel)
+        if self.colormap is not None and isinstance(self.colormap, str):
+            self.colormap = ImageColormap.from_str(self.colormap)
         if self.opacity is not None and not 0.0 <= self.opacity <= 1.0:
             raise ValueError(f"opacity must be within [0, 1], got {self.opacity!r}")
         if self.value_min is not None and self.value_max is not None:

@@ -129,6 +129,7 @@ class OverlayContainer:
         align_y: float,
         auto_hide: bool,
         dismissable: bool,
+        scrollable: bool,
         controls: list[Any] | None,
         on_close: Any,
         scene_name: str | None,
@@ -152,6 +153,7 @@ class OverlayContainer:
             align_y=align_y,
             auto_hide=auto_hide,
             dismissable=dismissable,
+            scrollable=scrollable,
             controls=ctrl_list,
             on_close=on_close,
         )
@@ -175,6 +177,7 @@ class OverlayContainer:
         align_y: float = 0.5,
         auto_hide: bool = True,
         dismissable: bool = True,
+        scrollable: bool = False,
         controls: list[Any] | None = None,
         on_close: Any = None,
         scene_name: str | None = None,
@@ -187,6 +190,9 @@ class OverlayContainer:
         :class:`Slider` / :class:`Dropdown` objects (the same controls usable
         in a control group) rendered as the banner's options; their
         ``on_click`` / ``on_change`` handlers are registered automatically.
+
+        ``scrollable`` makes the markdown body a dedicated scroll region filling
+        most of the banner (see :class:`~pytanga.viz._banner.Banner`).
         """
         banner = self._register_banner(
             text,
@@ -196,6 +202,7 @@ class OverlayContainer:
             align_y=align_y,
             auto_hide=auto_hide,
             dismissable=dismissable,
+            scrollable=scrollable,
             controls=controls,
             on_close=on_close,
             scene_name=scene_name,
@@ -336,6 +343,7 @@ class OverlayContainer:
         align_y: float = 0.5,
         auto_hide: bool = True,
         dismissable: bool = True,
+        scrollable: bool = False,
         controls: list[Any] | None = None,
         on_close: Any = None,
         scene_name: str | None = None,
@@ -354,6 +362,7 @@ class OverlayContainer:
             align_y=align_y,
             auto_hide=auto_hide,
             dismissable=dismissable,
+            scrollable=scrollable,
             controls=controls,
             on_close=on_close,
             scene_name=scene_name,
@@ -820,7 +829,23 @@ class LayoutHostImpl:
         self._sync_overlays()
         for frame in self._collect_background_frames(root).values():
             self._transport.send_bytes(frame)
+        self._bind_background_images(root)
         return name
+
+    def _bind_background_images(self, root: View) -> None:
+        """Bind each background ``ImageView`` in *root* to its pane transport."""
+        from ._image_view import ImageView
+        from .views import iter_scene_views
+
+        for scene_view in iter_scene_views(root):
+            camera_view = scene_view.camera_view
+            if camera_view is None:
+                continue
+            image_view = camera_view.background_image
+            if isinstance(image_view, ImageView):
+                image_view._bind_background(
+                    self._transport, scene_view.id, self._record_background_frame
+                )
 
     def _collect_background_frames(self, root: View) -> dict[str, bytes]:
         """Encode any changed ``CameraView.background_image`` frames.
@@ -869,6 +894,17 @@ class LayoutHostImpl:
         """Return ``(id, encoded_frame)`` for every background image (re-sent on connect)."""
         return list(self._background_frames.items())
 
+    def _record_background_frame(self, image_id: str, frame: bytes | None) -> None:
+        """Update (or prune) the reconnect frame cache for one background image."""
+        if frame is None:
+            self._background_frames.pop(image_id, None)
+            self._background_versions.pop(image_id, None)
+        else:
+            self._background_frames[image_id] = frame
+            # The live self-push path does not carry a version, so drop the
+            # cached version to force a re-encode on the next full sync.
+            self._background_versions.pop(image_id, None)
+
     def push_background_image(self, view: SceneView, image: Any) -> None:
         """Swap one pane's ``CameraView.background_image`` in place.
 
@@ -884,6 +920,13 @@ class LayoutHostImpl:
 
         if not isinstance(view, SceneView):
             raise TypeError(f"view must be a SceneView, got {type(view).__name__}")
+
+        previous = (
+            view.camera_view.background_image if view.camera_view is not None else None
+        )
+        if isinstance(previous, ImageView):
+            previous._unbind_background()
+
         if view.camera_view is None:
             view.camera_view = CameraView(background_image=image)
         elif image is None or isinstance(image, ImageView):
@@ -891,7 +934,8 @@ class LayoutHostImpl:
         else:
             existing = view.camera_view.background_image
             if isinstance(existing, ImageView):
-                # Preserve the existing shader/uniform state across a pixel swap.
+                # Preserve the existing shader/uniform state across a pixel swap
+                # (it is unbound here, so this does not self-push).
                 existing.set_image(image)
             else:
                 wrapped = ImageView(image.id)
@@ -899,6 +943,11 @@ class LayoutHostImpl:
                 view.camera_view.background_image = wrapped
 
         image_view = view.camera_view.background_image
+        if isinstance(image_view, ImageView):
+            image_view._bind_background(
+                self._transport, view.id, self._record_background_frame
+            )
+
         if image_view is not None:
             for image in image_view.images:
                 if image.data is None:

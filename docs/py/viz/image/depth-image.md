@@ -58,12 +58,15 @@ depth values (NaN/±inf) are replaced with a `missing_depth` sentinel (default
 | `max_mesh_size` | `int` | `512` | Cap on the longest grid side (cells) |
 | `image_scale` | `float` | `None` | Transmitted image resolution fraction (`None` = full) |
 | `segmentation_scale` | `float` | `None` | Transmitted segmentation fraction (`None` = follow image) |
+| `camera` | `CameraCalibration`/`PinholeCamera` | `None` | Pinhole intrinsics (from `K` or `fx`/`fy`/`cx`/`cy`) + optional pose |
+| `depth_kind` | `str` | `"axial"` | `"axial"` (depth along optical axis), `"radial"` (distance along ray), or `"inverse"` (inverse depth `1/Z`) |
+| `apply_pose` | `bool` | `True` | Auto-apply a `CameraCalibration`'s `camera_to_world()` pose |
 | `codec` | `EImageCodec` | `None` | `RAW`/`JPEG`/`ZLIB`; `None` auto-selects per frame |
 | `jpeg_quality` | `int` | `None` | JPEG quality when JPEG is used |
 | `world_scale` | `float` | `1.0` | World units per reference pixel |
 | `depth_scale` | `float` | `1.0` | World units per depth unit (negative inverts) |
 | `depth_offset` | `float` | `0.0` | Depth subtracted before scaling |
-| `depth_min` / `depth_max` | `float` | `0.0`/`1.0` | Colormap/clamp range |
+| `depth_min` / `depth_max` | `float` | `0.0`/`1.0` | Colormap/clamp range (axial metres in pinhole mode; raw depth units in orthographic mode) |
 | `discard_missing` | `bool` | `True` | Discard missing-depth fragments |
 | `double_sided` | `bool` | `True` | Render both sides |
 | `color` / `opacity` | `str`/`float` | `#ffffff`/`1.0` | Plain-mode color / surface opacity |
@@ -81,6 +84,49 @@ reuses `EImageCodec`: `None` auto-selects (JPEG for a uint8 1/3-channel color
 image, ZLIB otherwise); an explicit `JPEG` applies only to the color image —
 depth/segmentation are always
 lossless.
+
+## Pinhole camera mode
+
+For a calibrated depth map, `DepthImageStyle(camera=…)` switches the surface from
+an orthographic heightfield to a **pinhole** surface whose vertices live in the
+camera frame (x right, y down, z forward, as in `CameraCalibration`):
+
+```python
+from pytanga.geometry import Matrix, OpenCVFrame
+from pytanga.viz import CameraCalibration, DepthImage, DepthImageData, DepthImageStyle
+
+calib = CameraCalibration(K=..., R=..., t=..., image_size=(w, h),
+                          frame=OpenCVFrame(), units=1.0)
+
+viz.new(
+    DepthImage(DepthImageData(depth=np_depth)),
+    style=DepthImageStyle(camera=calib, depth_kind="z"),
+)
+```
+
+- Intrinsics come from `K` (a `CameraCalibration`) or `fx`/`fy`/`cx`/`cy` (a
+  `PinholeCamera`), in pixels of the **full-resolution reference frame**
+  (`DepthImageData.frame`, the image if present else the depth), so a downscaled
+  mesh/depth still uses the original intrinsics.
+- `depth_kind` selects the raw-depth interpretation — `"axial"` (depth along the
+  optical axis, `Z = (depth − depth_offset) · depth_scale`), `"radial"`
+  (Euclidean distance along the ray), or `"inverse"` (inverse depth `1/Z`, e.g.
+  disparity).  Aliases `"z"`, `"range"`, `"disparity"` are accepted.  Vertex
+  `X = (u−cx)/fx·Z`, `Y = (v−cy)/fy·Z`.
+- `depth_scale`/`depth_offset` stay as the unit conversion; `world_scale` is
+  ignored in this mode.
+- `depth_min`/`depth_max` are always expressed in **axial metres** (world units
+  of `Z`), regardless of `depth_kind` — the raw value is converted to `Z` first,
+  then clamped for the colormap and surface extent.
+- `apply_pose=True` (default) applies a `CameraCalibration`'s
+  `camera_to_world()` so the surface lands at its true world pose.  The surface
+  is always placed **relative to the camera** — the intrinsics give the ray
+  through each pixel, the depth gives the distance along it, and the calibration
+  pose (whatever its rotation and translation) places the result in the world —
+  so it moves correctly with arbitrary extrinsics.  Set `apply_pose=False` to
+  leave it in the camera frame and place it with the entity `transform`.
+  Normals, segmentation selection, and the plain/image/depth render modes keep
+  working.
 
 ## Segmentation filtering
 
@@ -120,3 +166,8 @@ a custom shader.  The renderer always provides:
 phase-shifted 2D sines, a higher-resolution color image, and a synthetic
 segmentation mask; press `m` to cycle the render mode and `s` to cycle the
 segment selection.
+
+`py/examples/viz/image/pinhole_depth.py` places a calibrated camera at the world
+origin and renders one constant depth map, with a control pane to switch
+`depth_kind` (`axial`/`radial`/`inverse`) live — the same raw depth values then
+produce a flat wall, a dome, or a nearer flat wall.

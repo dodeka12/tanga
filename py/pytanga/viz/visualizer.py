@@ -349,6 +349,25 @@ class Visualizer(_JupyterDisplayMixin):
         self._client_log.on_log = handler
         self._client_log.register_handlers(self._transport)
 
+    def on_shader_error(self, handler: Any) -> None:
+        """Register a handler for shader compile errors reported by the frontend.
+
+        *handler* is an ``async def(record, event)`` receiving a
+        :class:`~pytanga.viz._controls.ClientLogRecord` whose ``source`` is
+        ``"shader"``.  Non-shader client-log records keep going to the current
+        :meth:`on_client_log` sink.
+        """
+        previous = self._client_log.on_log
+
+        async def _filtered(record: Any, event: Any) -> None:
+            if getattr(record, "source", None) == "shader":
+                await handler(record, event)
+            else:
+                await previous(record, event)
+
+        self._client_log.on_log = _filtered
+        self._client_log.register_handlers(self._transport)
+
     # ── Facade: file chooser ───────────────────────────────
 
     def open_file_chooser(
@@ -664,6 +683,7 @@ class Visualizer(_JupyterDisplayMixin):
         tex_label_style: "TextureLabelStyle | None" = None,
         parent_id: str | None = None,
         attach_to: str | None = None,
+        surface: Any = None,
     ) -> str: ...
     def add(
         self,
@@ -682,6 +702,7 @@ class Visualizer(_JupyterDisplayMixin):
         tex_label_style: "TextureLabelStyle | None" = None,
         parent_id: str | None = None,
         attach_to: str | None = None,
+        surface: Any = None,
     ) -> str | None:
         """Add an entity to the main scene, or a :class:`View` to the overlay.
 
@@ -716,6 +737,7 @@ class Visualizer(_JupyterDisplayMixin):
             tex_label_style=tex_label_style,
             parent_id=parent_id,
             attach_to=attach_to,
+            surface=surface,
         )
 
     def new(
@@ -735,6 +757,7 @@ class Visualizer(_JupyterDisplayMixin):
         tex_label_style: "TextureLabelStyle | None" = None,
         parent_id: str | None = None,
         attach_to: str | None = None,
+        surface: Any = None,
     ) -> "VizObjectRef":
         """Like :meth:`add`, but returns a :class:`VizObjectRef` instead of a ``str``."""
         from ._object_ref import VizObjectRef
@@ -751,6 +774,7 @@ class Visualizer(_JupyterDisplayMixin):
             tex_label_style=tex_label_style,
             parent_id=parent_id,
             attach_to=attach_to,
+            surface=surface,
         )
         node = self._layout.scenes[""].get_node(eid)
         return VizObjectRef(VizSceneHandle(self, ""), node)
@@ -772,6 +796,7 @@ class Visualizer(_JupyterDisplayMixin):
         tex_label_style: "TextureLabelStyle | None" = None,
         parent_id: str | None = None,
         attach_to: str | None = None,
+        surface: Any = None,
     ) -> "VizObjectRef":
         """Shorthand for :meth:`new`: ``viz(point, color=...)``.
 
@@ -796,6 +821,7 @@ class Visualizer(_JupyterDisplayMixin):
             tex_label_style=tex_label_style,
             parent_id=parent_id,
             attach_to=attach_to,
+            surface=surface,
         )
 
     def add_group(
@@ -863,6 +889,17 @@ class Visualizer(_JupyterDisplayMixin):
         :meth:`flush` to push the change to the browser.
         """
         self._layout.scenes[scene_name].set_visible(entity_id, visible)
+
+    def set_surface_uniform(
+        self,
+        entity_id: str,
+        name: str,
+        value: float | int | list[float],
+        *,
+        scene_name: str = "",
+    ) -> None:
+        """Queue a surface shader's uniform change; applied on flush (no rebuild)."""
+        self._layout.scenes[scene_name].set_surface_uniform(entity_id, name, value)
 
     def hide(self, entity_id: str, *, scene_name: str = "") -> None:
         """Hide an entity (shorthand for ``set_visible(entity_id, False)``)."""
@@ -1375,7 +1412,11 @@ class Visualizer(_JupyterDisplayMixin):
         scene = self._layout.scenes.get(scene_name)
         if scene is None:
             return []
-        frames = scene.image_frames() + scene.depth_image_frames()
+        frames = (
+            scene.image_frames()
+            + scene.depth_image_frames()
+            + scene.surface_texture_frames()
+        )
         print(
             f"[depth-image] _image_frames_for scene={scene_name!r} "
             f"n_frames={len(frames)} ids={[fid for fid, _ in frames]}"
@@ -2612,6 +2653,7 @@ class Visualizer(_JupyterDisplayMixin):
         align_y: float = 0.5,
         auto_hide: bool = True,
         dismissable: bool = True,
+        scrollable: bool = False,
         controls: list[Any] | None = None,
         on_close: Any = None,
         scene_name: str | None = None,
@@ -2625,6 +2667,7 @@ class Visualizer(_JupyterDisplayMixin):
             align_y=align_y,
             auto_hide=auto_hide,
             dismissable=dismissable,
+            scrollable=scrollable,
             controls=controls,
             on_close=on_close,
             scene_name=scene_name,
@@ -2704,6 +2747,7 @@ class Visualizer(_JupyterDisplayMixin):
         align_y: float = 0.5,
         auto_hide: bool = True,
         dismissable: bool = True,
+        scrollable: bool = False,
         controls: list[Any] | None = None,
         on_close: Any = None,
         scene_name: str | None = None,
@@ -2717,6 +2761,7 @@ class Visualizer(_JupyterDisplayMixin):
             align_y=align_y,
             auto_hide=auto_hide,
             dismissable=dismissable,
+            scrollable=scrollable,
             controls=controls,
             on_close=on_close,
             scene_name=scene_name,

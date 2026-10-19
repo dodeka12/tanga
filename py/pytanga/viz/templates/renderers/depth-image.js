@@ -63,6 +63,9 @@ function buildDepthUniforms(ent) {
         (frameW * worldScale) / Math.max(1, (depth.width || 2) - 1),
         (frameH * worldScale) / Math.max(1, (depth.height || 2) - 1)
     );
+    const cam = (ent.mesh && ent.mesh.camera) || null;
+    const _DEPTH_KIND_CODES = { axial: 1, radial: 2, inverse: 3 };
+    const depthKind = cam ? (_DEPTH_KIND_CODES[cam.depth_kind] ?? 1) : 0;
     const uniforms = {
         uDepth: { value: fallbackTexture() },
         uSegMask: { value: fallbackTexture() },
@@ -76,6 +79,12 @@ function buildDepthUniforms(ent) {
         u_depth_offset: { value: u.u_depth_offset ?? 0.0 },
         u_depth_min: { value: u.u_depth_min ?? 0.0 },
         u_depth_max: { value: u.u_depth_max ?? 1.0 },
+        u_depth_kind: { value: depthKind },
+        u_fx: { value: cam ? cam.fx : 1.0 },
+        u_fy: { value: cam ? cam.fy : 1.0 },
+        u_cx: { value: cam ? cam.cx : 0.0 },
+        u_cy: { value: cam ? cam.cy : 0.0 },
+        u_frame_size: { value: new THREE.Vector2(frameW, frameH) },
         u_missing_depth: { value: u.u_missing_depth ?? -3.402823466e38 },
         u_discard_missing: { value: u.u_discard_missing ?? 1 },
         u_seg_enabled: { value: u.u_seg_enabled ?? 0 },
@@ -154,9 +163,25 @@ export async function createDepthImage(ent, _opts) {
 
         const frame = ent.frame || {};
         const mesh = ent.mesh || {};
+        const u = ent.uniforms || {};
         const worldScale = mesh.world_scale ?? 1.0;
-        const width = (frame.width || 1) * worldScale;
-        const height = (frame.height || 1) * worldScale;
+        const cam = mesh.camera || null;
+        let width;
+        let height;
+        if (cam) {
+            // Pinhole mode: size the plane to the camera-frame footprint at the
+            // clamp upper bound so the scene bounds match the rendered surface
+            // (the shader derives the true positions from UV + intrinsics).
+            const depthScale = u.u_depth_scale ?? 1.0;
+            const depthOffset = u.u_depth_offset ?? 0.0;
+            const depthMax = Math.abs(u.u_depth_max ?? 1.0) || 1.0;
+            const zRef = Math.max(Math.abs((depthMax - depthOffset) * depthScale), 1e-6);
+            width = (frame.width || 1) / (cam.fx || 1.0) * zRef;
+            height = (frame.height || 1) / (cam.fy || 1.0) * zRef;
+        } else {
+            width = (frame.width || 1) * worldScale;
+            height = (frame.height || 1) * worldScale;
+        }
         const segU = Math.max(1, Math.round(mesh.segments_u || 1));
         const segV = Math.max(1, Math.round(mesh.segments_v || 1));
 

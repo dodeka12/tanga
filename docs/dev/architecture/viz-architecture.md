@@ -259,6 +259,7 @@ The frontend has **one live-view registry** and reuses views by their stable
 | `_image_io.py` | dependency-free HDR readers — `read_hdr` (Radiance RGBE) and `read_exr` (EXR `NONE`/`RLE`/`ZIPS`/`ZIP`/`PIZ` → `float32`) + `register_loading_progress_handler` / per-call `on_progress`; PIZ decode dispatches to the compiled `binding_piz` extension (via `codegen._piz_cache`) with a numpy fallback |
 | `_image_view.py` | `ImageView` (plane + textures + shader/uniform state) + `ImageCanvas` (dedicated 2D scene) |
 | `_image_wire.py` | binary image-frame codec (server → client), v2 with a `codec` byte |
+| `surface/` | `SurfaceShader`/`SurfaceTexture`/`SurfaceMaterial` + standard surface shaders |
 | `_image_pyramid.py` | `ImagePyramid` — on-demand tile pyramid (level/tile geometry + encode + LRU) |
 | `_camera_stream.py` | `CameraStream` — MJPEG publisher (JPEG encode + latest-frame fan-out) |
 | `_scale.py` | `Scale`/`nice_linear_ticks`/`log_ticks` — data↔world + tick math |
@@ -267,6 +268,9 @@ The frontend has **one live-view registry** and reuses views by their stable
 | `templates/axes-overlay-math.js` | pure world↔data + tick/px layout math (Node-testable) |
 | `templates/axes-overlay.js` | SVG axes-frame renderer (overlay layer) |
 | `templates/grid-underlay.js` | SVG grid renderer (underlay layer) |
+| `templates/renderers/surface-shader.js` | surface GLSL assembly (varyings + lighting preamble + `surfaceColor`) |
+| `templates/renderers/surface-material.js` | `ShaderMaterial` factory, texture binding, in-place uniform updates |
+| `templates/renderers/shader-error.js` | `formatShaderError` + `installShaderErrorHook` |
 
 ### Image canvas (extension recipe)
 
@@ -320,10 +324,13 @@ to full `frames[]` at load via `_expandFrames`
 scrubbing are unchanged.  `to_dict()` still emits the full `frames` list for
 legacy consumers.
 
-`ImageView` supports **up to `MAX_IMAGE_LAYERS` (4) layers**.  Each layer is an
+`ImageView` supports up to `max_layers` image layers (**default 8** — the WebGL 1
+fragment-texture-unit floor; serialized as `max_layers` so the frontend can later
+adopt the runtime `MAX_TEXTURE_IMAGE_UNITS`).  Each layer is an
 `ImageData` (any `source`) plus per-layer compositing uniforms — `u_layer{i}_enabled`,
 `u_layer{i}_opacity`, `u_layer{i}_blend` (`LayerBlendMode`: normal / add /
-multiply / screen), `u_layer{i}_mode`, and
+multiply / screen), `u_layer{i}_mode`, `u_layer{i}_colormap`
+(`ImageColormap`: gray / viridis / turbo for scalar layers), and
 `u_layer{i}_value_min`/`u_layer{i}_value_max` (per-layer normalization, so a
 uint16 depth map or uint8 segmentation normalizes independently of the primary
 image).  Layers are composited bottom-up by the default shader and sampled by
@@ -333,10 +340,12 @@ into the serialized `images[]` entries by `ImageView.serialized_images()` /
 `ImageData.layer_meta()` — one canonical per-image dict whose base is identical
 for `data`/`url`/`tiled` (`tiled` adds `tile_size`/`levels`/`tile_version`;
 `version` is always the `ImageData` uuid).  The per-layer state is bundled in
-`ImageLayerStyle` (`enabled`/`opacity`/`blend`/`channel`/`value_min`/`value_max`,
+`ImageLayerStyle` (`enabled`/`opacity`/`blend`/`channel`/`colormap`/`value_min`/`value_max`,
 all `None`-defaulted) and applied via `ImageView.set_image`/`add_layer` (returns
-the new layer index)/`set_layer` (full apply, `None` → per-image default) and
-`set_layer_style` (partial merge, `None` → keep current).  `ImageCanvas` mirrors
+the new layer index)/`set_layer` (full apply, `None` → per-image default; `image=None`
+clears in place) and `set_layer_style` (partial merge, `None` → keep current).
+`remove_layer(i)` clears a non-primary layer **in place** (stable index — the slot
+serializes as `null`, no re-numbering).  `ImageCanvas` mirrors
 these and drives the granular `image_update` message.  `LayerBlendMode` is a
 `StrEnum` (`"normal"`/`"add"`/`"multiply"`/`"screen"`) whose `.code` int feeds the
 wire uniform.
@@ -368,7 +377,12 @@ resolutions (only the extent matches); `DepthImage` adds the presentation fields
 (custom shader/uniforms + initial `selected_segments`) and `DepthImageStyle`
 (`_styles/_entity_styles.py`) holds the appearance knobs (`render_mode`,
 `colormap`, `mesh_scale`, `image_scale`/`segmentation_scale`, `codec`, depth
-mapping, …).
+mapping, …).  A **pinhole mode** (`DepthImageStyle.camera` = a
+`CameraCalibration` or `PinholeCamera`, `depth_kind="axial"|"radial"|"inverse"`,
+`apply_pose=True`) renders camera-frame vertices
+`((u−cx)/fx·z, (v−cy)/fy·z, z)` instead of the orthographic heightfield; the mesh
+payload carries `mesh.camera` (`fx`/`fy`/`cx`/`cy`/`depth_kind`) and, when a
+calibration pose is applied, `mesh.camera_to_world` (16 floats).
 
 It follows the `image` entity pattern end to end, with two differences:
 
@@ -423,6 +437,51 @@ one light setup.
   lights with `AmbientLight` + `DirectionalLight`s built from the config, and
   `_applyShaderLighting` re-lights existing SDF/depth materials on a
   `scene_config` re-push.
+
+### Surface material (extension recipe)
+
+A solid surface entity (`Plane`, `Sphere`, `Ellipsoid`, `Disk`, `Box`,
+`Cylinder`, `Cone`) can be textured by an image, a custom GLSL program, or both.
+The contract lives in `py/pytanga/viz/surface/` (Python) and
+`renderers/surface-shader.js` + `surface-material.js` (frontend).
+
+- **Python model** — `SurfaceShader` (a GLSL fragment defining
+  `vec3 surfaceColor(vec3 baseColor, vec3 n, vec3 p)` + optional uniforms),
+  `SurfaceTexture` (an `ImageData` + a sampler `uniform` name + UV
+  wrap/repeat/offset), and `SurfaceMaterial(shader=…, textures=[…])`.  The seven
+  solid styles carry a `surface: SurfaceMaterial | None` field;
+  `Scene.add_viz(..., surface=…)` (reached via `Visualizer.add`/`new`/`__call__`
+  and `VizSceneHandle.add`/`new`) normalizes a shader/texture/list into a
+  `SurfaceMaterial`.
+- **Semantics** — no `surface` → the standard `MeshPhongMaterial`; textures only
+  → the **first** texture is sampled by the standard texture shader; a shader
+  replaces the standard shader; a shader + textures binds each texture to its
+  declared `uniform` sampler.  Surface materials are **opaque** (they ignore the
+  entity's translucent "shell" opacity).
+- **Image delivery** — texture pixels are `ImageData` binary frames
+  (`encode_image_frame`; codec auto-selects JPEG for `uint8` 1/3-channel).
+  `Scene.surface_texture_frames()` feeds `Visualizer._image_frames_for`, and
+  `_push_surface_texture_frames` pushes them live on add.
+- **Frontend** — `surface-shader.js` assembles the GLSL (varyings `vUv`/
+  `vNormal`/`vWorldPosition`/`vLocalPos`, the `shader-lighting.js` light
+  preamble, a `tangaLight(albedo, n, p)` helper, and the user `surfaceColor`).
+  `surface-material.js` builds the `ShaderMaterial` and binds textures via
+  `makeEncodedTexture` + `image-frames.js`.  The seven solid renderers branch on
+  `ent.style?.surface`.
+- **Lighting** — the standard texture shader and custom surface shaders consume
+  the shared `shader-lighting.js` uniforms (`uLightCount`/`uLightDir[]`/
+  `uLightColor[]`/`uAmbientColor`), re-lit by
+  `three-view.js::_applyShaderLighting`.
+- **Granular uniform updates** — `Scene.set_surface_uniform(id, name, value)` /
+  `_send_surface_uniforms` pushes a `surface_update` message (and stores the
+  value back into the node's `style.surface.shader.uniforms`);
+  `surface-material.js::applySurfaceMaterialUniforms` applies it in place (no
+  mesh rebuild).  Exposed as `Visualizer.set_surface_uniform(entity_id, …)` and
+  `VizObjectRef.set_surface_uniform(name, value)`.
+- **Errors** — `three-view.js` installs `renderer.debug.onShaderError` (from
+  `renderers/shader-error.js`) and forwards a formatted driver log as a
+  `source: "shader"` client-log record; `Visualizer.on_shader_error(handler)`
+  filters it for apps (e.g. to show a banner).
 
 ### Overlay coordinate system (extension recipe)
 
@@ -506,7 +565,12 @@ pane through a clean three-layer model — camera data → camera view → pane:
   the letterbox/crop quad — `Visualizer.register_background_shader` /
   `register_background_uniform` / `set_background_uniform` drive it via a
   granular `view_background_uniforms` message (no pixel re-send, no layout
-  re-push).
+  re-push).  Once a layout is registered, the background `ImageView` is
+  **bound** to its pane transport (`LayoutHost.set_layout` →
+  `_bind_background_images`), so its mutators (`set_image`/`add_layer`/
+  `set_layer`/`set_layer_style`/`set_uniform`/`remove_layer`) push the granular
+  `view_background_uniforms` / `view_background_image` updates themselves —
+  per-layer pixel changes re-send only the changed layer's frame.
 - **Per-pane visibility** — `SceneView(hide=…, show=…)` filters which entities a
   pane builds (each pane has its own object registry, so no scene duplication).
 - **Runtime entity visibility** — `Scene.set_visible` /

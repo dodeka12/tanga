@@ -10,6 +10,7 @@ import {
     addWireframeOverlay,
     createTextureLabel,
 } from './utils.js';
+import { createSurfaceMaterial } from './surface-material.js';
 
 export async function createSphere(ent) {
     const color = parseColor(ent, '#ffaa00');
@@ -19,7 +20,8 @@ export async function createSphere(ent) {
     // Canonical: a sphere at the origin; placement rides on the node transform.
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
     const doubleSided = styleParam(ent, 'double_sided', false);
-    const material = makeMaterial(color, opacity, doubleSided);
+    const fallback = makeMaterial(color, opacity, doubleSided);
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: fallback });
     const mesh = new THREE.Mesh(geometry, material);
 
     // ── Texture label ──
@@ -31,12 +33,12 @@ export async function createSphere(ent) {
         }
         const texture = await createTextureLabel(texLabel.text, texLabel);
         if (texture) {
-            material.map = texture;
+            fallback.map = texture;
             // Set material color to white so the texture's own colors
             // pass through unmodified (MeshPhongMaterial multiplies
             // material.color * texture pixel values).
-            material.color.set(0xffffff);
-            material.needsUpdate = true;
+            fallback.color.set(0xffffff);
+            fallback.needsUpdate = true;
         }
     }
 

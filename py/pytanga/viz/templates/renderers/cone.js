@@ -15,6 +15,7 @@ import {
     contentChanged,
 } from './utils.js';
 import { styleNeedsRebuild } from './style-diff.js';
+import { createSurfaceMaterial } from './surface-material.js';
 
 function resolveHeight(ent) {
     return Math.max(styleParam(ent, 'extent', 2.0), 0.001);
@@ -29,12 +30,13 @@ export function createCone(ent) {
     const wireframe = styleParam(ent, 'wireframe', false);
 
     const group = new THREE.Group();
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: makeMaterial(color, opacity) });
 
     for (const sign of [1, -1]) {
         const d = new THREE.Vector3(0, sign, 0);
         const mesh = new THREE.Mesh(
             new THREE.ConeGeometry(radius, height, 48, 1, true),
-            makeMaterial(color, opacity)
+            material
         );
         // ConeGeometry apex is at +height/2 along +y; orient +y along `d` and
         // place the apex at the origin.

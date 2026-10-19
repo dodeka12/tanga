@@ -23,6 +23,7 @@ from .camera import (
 from .image import (
     DEFAULT_IMAGE_LAYER_STYLE,
     ImageChannelMode,
+    ImageColormap,
     ImageData,
     ImageLayerStyle,
     LayerBlendMode,
@@ -45,8 +46,12 @@ if TYPE_CHECKING:
 
 __all__ = ["ImageView", "ImageCanvas"]
 
-#: Fixed number of image layers (the wire contract).
-MAX_IMAGE_LAYERS = 4
+#: Default number of image layers (the wire contract).  WebGL 1 guarantees at
+#: least 8 fragment-shader texture units, so 8 is the safe portable floor.
+DEFAULT_MAX_IMAGE_LAYERS = 8
+
+#: Backward-compatible alias for the default layer count.
+MAX_IMAGE_LAYERS = DEFAULT_MAX_IMAGE_LAYERS
 
 #: Standard-shader uniform defaults (brightness / contrast / contrast mid-point).
 _STANDARD_UNIFORM_DEFAULTS: dict[str, float] = {
@@ -82,36 +87,53 @@ class ImageView:
     is pure data + validation; it serializes to the ``image`` entity dict.
     """
 
-    def __init__(self, image_id: str) -> None:
+    def __init__(
+        self, image_id: str, *, max_layers: int = DEFAULT_MAX_IMAGE_LAYERS
+    ) -> None:
+        if not isinstance(max_layers, int) or isinstance(max_layers, bool) or max_layers < 1:
+            raise ValueError(f"max_layers must be a positive integer, got {max_layers!r}")
         self.id = image_id
-        self._images: list[ImageData] = []
+        self._max_layers = max_layers
+        self._images: list[ImageData | None] = []
         self._uniforms: dict[str, float | int] = {}
         self._fragment: str | None = None
         self._vertex: str | None = None
         self._frame: tuple[int, int] | None = None
         self._uniforms.update(_STANDARD_UNIFORM_DEFAULTS)
+        self._transport: Any = None
+        self._view_id: str | None = None
+        self._record_frame: Any = None
 
     # -- image layers -------------------------------------------------
 
     @property
     def images(self) -> list[ImageData]:
-        """A copy of the current image layers."""
-        return list(self._images)
+        """A copy of the current (non-cleared) image layers."""
+        return [img for img in self._images if img is not None]
 
     @property
     def primary_image(self) -> ImageData | None:
         """The primary (layer 0, frame-defining) image, or ``None`` if empty."""
-        return self._images[0] if self._images else None
+        for img in self._images:
+            if img is not None:
+                return img
+        return None
 
     @property
     def frame(self) -> tuple[int, int]:
         """The pixel frame extent ``(width, height)``, or ``(0, 0)`` if empty."""
         return self._frame if self._frame is not None else (0, 0)
 
+    @property
+    def max_layers(self) -> int:
+        """The configured maximum number of image layers."""
+        return self._max_layers
+
     def set_image(
         self, image: ImageData, style: ImageLayerStyle = DEFAULT_IMAGE_LAYER_STYLE
     ) -> None:
         """Replace layer 0 (the primary, frame-defining image) with *image* + *style*."""
+        old = self._images[0] if self._images else None
         if self._images:
             self._images[0] = image
         else:
@@ -119,39 +141,136 @@ class ImageView:
         assert image.width is not None and image.height is not None
         self._frame = (image.width, image.height)
         self._apply_layer_style(0, image, style)
+        prune = [old.id] if old is not None and old.id != image.id else []
+        self._push_background_pixels([image.id], prune)
 
     def add_layer(
         self, image: ImageData, style: ImageLayerStyle = DEFAULT_IMAGE_LAYER_STYLE
     ) -> int:
-        """Append *image* as a new layer (max ``MAX_IMAGE_LAYERS``) and return its index."""
-        if len(self._images) >= MAX_IMAGE_LAYERS:
-            raise ValueError(f"ImageView supports at most {MAX_IMAGE_LAYERS} images")
+        """Append *image* as a new layer (max ``max_layers``) and return its index."""
+        if len(self._images) >= self._max_layers:
+            raise ValueError(f"ImageView supports at most {self._max_layers} images")
         self._images.append(image)
         index = len(self._images) - 1
         if self._frame is None:
             assert image.width is not None and image.height is not None
             self._frame = (image.width, image.height)
         self._apply_layer_style(index, image, style)
+        self._push_background_pixels([image.id], [])
         return index
 
     def set_layer(
         self,
         index: int,
-        image: ImageData,
+        image: ImageData | None,
         style: ImageLayerStyle = DEFAULT_IMAGE_LAYER_STYLE,
     ) -> None:
-        """Overwrite layer *index* with *image* + *style*."""
+        """Overwrite layer *index* with *image* + *style*.
+
+        ``image=None`` clears the layer in place (see :meth:`remove_layer`).
+        """
+        if image is None:
+            self.remove_layer(index)
+            return
         self._check_layer_index(index)
+        old = self._images[index]
         self._images[index] = image
         if index == 0:
             assert image.width is not None and image.height is not None
             self._frame = (image.width, image.height)
         self._apply_layer_style(index, image, style)
+        prune = [old.id] if old is not None and old.id != image.id else []
+        self._push_background_pixels([image.id], prune)
+
+    def remove_layer(self, index: int) -> None:
+        """Clear layer *index* in place (stable index — no re-numbering).
+
+        The slot becomes ``None`` and ``u_layer{index}_enabled`` is set to 0.
+        Layer 0 is the frame-defining primary and cannot be removed; replace it
+        with :meth:`set_image`.
+        """
+        if index == 0:
+            raise ValueError(
+                "cannot remove layer 0 (the frame-defining primary); "
+                "use set_image to replace it"
+            )
+        self._check_layer_index(index)
+        old = self._images[index]
+        self._images[index] = None
+        self._uniforms[f"u_layer{index}_enabled"] = 0
+        prune = [old.id] if old is not None else []
+        self._push_background_pixels([], prune)
+
+    # -- background binding / push ---------------------------------
+
+    def _bind_background(self, transport: Any, view_id: str, record_frame: Any) -> None:
+        """Bind this view to a pane background so mutators push their own updates.
+
+        *record_frame* is a callback ``(image_id, frame_or_none)`` the layout
+        host supplies to keep its reconnect frame cache in sync (``None`` prunes).
+        """
+        self._transport = transport
+        self._view_id = view_id
+        self._record_frame = record_frame
+
+    def _unbind_background(self) -> None:
+        """Detach from the pane background (mutators become local-only again)."""
+        self._transport = None
+        self._view_id = None
+        self._record_frame = None
+
+    def _push_background_uniforms(self, patch: dict[str, float | int]) -> None:
+        """Send a granular ``view_background_uniforms`` patch (no pixel bytes)."""
+        if patch and self._transport is not None and self._view_id is not None:
+            self._transport.send(
+                {
+                    "type": "view_background_uniforms",
+                    "view_id": self._view_id,
+                    "uniforms": dict(patch),
+                }
+            )
+
+    def _push_background_pixels(
+        self, changed_ids: list[str], prune_ids: list[str]
+    ) -> None:
+        """Send changed-layer frames + one ``view_background_image`` message."""
+        if self._transport is None or self._view_id is None:
+            return
+        from ._image_wire import encode_image_frame
+
+        for image in self._images:
+            if image is None or image.data is None or image.id not in changed_ids:
+                continue
+            frame = encode_image_frame(
+                image.id,
+                image.data,
+                codec=image.codec,
+                jpeg_quality=image.jpeg_quality or 85,
+            )
+            self._transport.send_bytes(frame)
+            if self._record_frame is not None:
+                self._record_frame(image.id, frame)
+        for image_id in prune_ids:
+            if self._record_frame is not None:
+                self._record_frame(image_id, None)
+        self._transport.send(
+            {
+                "type": "view_background_image",
+                "view_id": self._view_id,
+                "image": self.background_meta(),
+            }
+        )
 
     def set_layer_style(self, index: int, style: ImageLayerStyle) -> None:
         """Merge *style* into layer *index* (``None`` fields keep current values)."""
         self._check_layer_index(index)
+        before = dict(self._uniforms)
         self._merge_layer_style(index, style)
+        after = self._uniforms
+        patch = {
+            name: value for name, value in after.items() if before.get(name) != value
+        }
+        self._push_background_uniforms(patch)
 
     def _apply_layer_style(
         self, index: int, image: ImageData, style: ImageLayerStyle
@@ -171,12 +290,16 @@ class ImageView:
         lo, hi = default_value_range(image.dtype)
         value_min = lo if style.value_min is None else float(style.value_min)
         value_max = hi if style.value_max is None else float(style.value_max)
+        colormap_code = (
+            int(ImageColormap.GRAY) if style.colormap is None else int(style.colormap)
+        )
         self._uniforms.update(
             {
                 f"u_layer{index}_enabled": int(enabled),
                 f"u_layer{index}_opacity": float(opacity),
                 f"u_layer{index}_blend": blend_code,
                 f"u_layer{index}_mode": channel_code,
+                f"u_layer{index}_colormap": colormap_code,
                 f"u_layer{index}_value_min": value_min,
                 f"u_layer{index}_value_max": value_max,
             }
@@ -197,6 +320,8 @@ class ImageView:
             self._uniforms[f"u_layer{index}_blend"] = _blend_code(style.blend)
         if style.channel is not None:
             self._uniforms[f"u_layer{index}_mode"] = _channel_code(style.channel)
+        if style.colormap is not None:
+            self._uniforms[f"u_layer{index}_colormap"] = int(style.colormap)
         if style.value_min is not None:
             self._uniforms[f"u_layer{index}_value_min"] = float(style.value_min)
         if style.value_max is not None:
@@ -212,6 +337,7 @@ class ImageView:
     def set_uniform(self, name: str, value: float | int) -> None:
         """Set a uniform value (emitted as a JSON ``image_update`` later)."""
         self._uniforms[name] = value
+        self._push_background_uniforms({name: value})
 
     def register_uniform(self, name: str, default: float | int) -> None:
         """Register a uniform with a default, keeping an existing value."""
@@ -264,8 +390,12 @@ class ImageView:
 
     # -- serialization ------------------------------------------------
 
-    def serialized_images(self) -> list[dict[str, Any]]:
-        """Serialize every image layer to the canonical per-image metadata."""
+    def serialized_images(self) -> list[dict[str, Any] | None]:
+        """Serialize every image layer slot to the canonical per-image metadata.
+
+        Cleared slots serialize as ``None`` so the frontend keeps ``images[i]``
+        aligned with ``uImage{i}`` (stable-index removal).
+        """
         return [self._serialize_image(img, i) for i, img in enumerate(self._images)]
 
     def _serialize_state(self) -> dict[str, Any]:
@@ -274,7 +404,25 @@ class ImageView:
             "images": self.serialized_images(),
             "shader": {"fragment": self._fragment, "vertex": self._vertex},
             "uniforms": dict(self._uniforms),
+            "max_layers": self._max_layers,
         }
+
+    def background_meta(self) -> dict[str, Any]:
+        """Serialize this view as ``CameraView.background_image`` metadata.
+
+        Keeps the flat primary-image fields (for framing/``uImageAspect``) and
+        adds the full ``images`` layer list plus the shared ``shader`` /
+        ``uniforms`` / ``max_layers`` state.  Mirrors ``_image_view_meta`` but
+        lives on ``ImageView`` so a bound background can emit
+        ``view_background_image`` without importing ``views._helpers``.
+        """
+        primary = self.primary_image
+        meta: dict[str, Any] = {} if primary is None else primary.layer_meta()
+        meta["images"] = self.serialized_images()
+        meta["shader"] = dict(self.shader)
+        meta["uniforms"] = dict(self.uniforms)
+        meta["max_layers"] = self.max_layers
+        return meta
 
     def _serialize(self) -> dict[str, Any]:
         """Serialize to the canonical ``image`` entity dict (README contract)."""
@@ -289,11 +437,23 @@ class ImageView:
         )
         return result
 
-    def _serialize_image(self, image: ImageData, index: int) -> dict[str, Any]:
+    def _serialize_image(
+        self, image: ImageData | None, index: int
+    ) -> dict[str, Any] | None:
         """Serialize one image layer (metadata only — pixels travel as bytes)."""
+        if image is None:
+            return None
         meta = image.layer_meta()
         prefix = f"u_layer{index}_"
-        for key in ("enabled", "opacity", "blend", "mode", "value_min", "value_max"):
+        for key in (
+            "enabled",
+            "opacity",
+            "blend",
+            "mode",
+            "colormap",
+            "value_min",
+            "value_max",
+        ):
             meta[key] = self._uniforms[f"{prefix}{key}"]
         return meta
 

@@ -106,4 +106,19 @@
     padding: 2px 6px;
 }
 
+/* Scrollable banner: a large panel whose markdown body fills the remaining
+   height and scrolls independently (title and controls stay pinned). */
+.tanga-banner--scrollable {
+    width: min(760px, 90vw);
+    height: min(520px, 70vh);
+    max-width: none;
+    max-height: none;
+}
+
+.tanga-banner--scrollable .tanga-banner-text {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
 

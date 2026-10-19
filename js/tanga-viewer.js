@@ -1162,7 +1162,8 @@ async function createPlane(ent) {
 
     const spanGeometry = _planeGeometry(ent);
     const geometry = spanGeometry || new THREE.PlaneGeometry(extent * 2, extent * 2);
-    const material = makeMaterial(color, opacity, true);
+    const fallback = makeMaterial(color, opacity, true);
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: fallback });
     const mesh = new THREE.Mesh(geometry, material);
 
     // ── Texture label ──
@@ -1200,9 +1201,9 @@ async function createPlane(ent) {
                     texture.repeat.set(1, 1);
                     break;
             }
-            material.map = texture;
-            material.color.set(0xffffff);
-            material.needsUpdate = true;
+            fallback.map = texture;
+            fallback.color.set(0xffffff);
+            fallback.needsUpdate = true;
         }
     }
 
@@ -1422,12 +1423,13 @@ function createCone(ent) {
     const wireframe = styleParam(ent, 'wireframe', false);
 
     const group = new THREE.Group();
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: makeMaterial(color, opacity) });
 
     for (const sign of [1, -1]) {
         const d = new THREE.Vector3(0, sign, 0);
         const mesh = new THREE.Mesh(
             new THREE.ConeGeometry(radius, height, 48, 1, true),
-            makeMaterial(color, opacity)
+            material
         );
         // ConeGeometry apex is at +height/2 along +y; orient +y along `d` and
         // place the apex at the origin.
@@ -1485,7 +1487,8 @@ function createCylinder(ent) {
 
     // CylinderGeometry is centered at its own origin along +Y.
     const geometry = new THREE.CylinderGeometry(radius, radius, length, 24, 1);
-    const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: makeMaterial(color, opacity) });
+    const mesh = new THREE.Mesh(geometry, material);
 
     const wireframe = styleParam(ent, 'wireframe', false);
     if (wireframe) {
@@ -1526,7 +1529,8 @@ function createBox(ent) {
     // Canonical: an axis-aligned box centered at the origin; placement (center
     // + rotation quaternion) rides on the node transform.
     const geometry = new THREE.BoxGeometry(size[0], size[1], size[2]);
-    const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: makeMaterial(color, opacity) });
+    const mesh = new THREE.Mesh(geometry, material);
 
     const wireframe = styleParam(ent, 'wireframe', false);
     if (wireframe) {
@@ -1559,7 +1563,8 @@ function createDisk(ent) {
     const normal = [0, 0, 1];
 
     const geometry = new THREE.CylinderGeometry(radius, radius, thickness, 48, 1);
-    const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: makeMaterial(color, opacity) });
+    const mesh = new THREE.Mesh(geometry, material);
     mesh.setRotationFromQuaternion(
         rotationFromDirection(normal[0], normal[1], normal[2])
     );
@@ -1643,7 +1648,8 @@ function createEllipsoid(ent) {
     // Canonical: a unit sphere scaled by per-axis radii at the origin;
     // placement (center + rotation quaternion) rides on the node transform.
     const geometry = new THREE.SphereGeometry(1, 32, 32);
-    const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: makeMaterial(color, opacity) });
+    const mesh = new THREE.Mesh(geometry, material);
     mesh.scale.set(radii[0], radii[1], radii[2]);
 
     const wireframe = styleParam(ent, 'wireframe', false);
@@ -2105,7 +2111,8 @@ async function createSphere(ent) {
     // Canonical: a sphere at the origin; placement rides on the node transform.
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
     const doubleSided = styleParam(ent, 'double_sided', false);
-    const material = makeMaterial(color, opacity, doubleSided);
+    const fallback = makeMaterial(color, opacity, doubleSided);
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: fallback });
     const mesh = new THREE.Mesh(geometry, material);
 
     // ── Texture label ──
@@ -2117,12 +2124,12 @@ async function createSphere(ent) {
         }
         const texture = await createTextureLabel(texLabel.text, texLabel);
         if (texture) {
-            material.map = texture;
+            fallback.map = texture;
             // Set material color to white so the texture's own colors
             // pass through unmodified (MeshPhongMaterial multiplies
             // material.color * texture pixel values).
-            material.color.set(0xffffff);
-            material.needsUpdate = true;
+            fallback.color.set(0xffffff);
+            fallback.needsUpdate = true;
         }
     }
 
@@ -2867,16 +2874,54 @@ vec3 tangaSampleColor(vec4 tex) {
 }`;
 }
 
+// Built-in per-layer color maps (selectable via u_layer{i}_colormap), mirroring
+// the depth colormap math in depth-shader.js.
+function buildImageColormap() {
+    return /* glsl */ `
+vec3 _imageViridis(float t) {
+    const vec3 c0 = vec3(0.2777273272234177, 0.005407344544966578, 0.3340998053353061);
+    const vec3 c1 = vec3(0.1050930431085774, 1.404613529898575, 1.384590162594685);
+    const vec3 c2 = vec3(-0.3308618287255563, 0.214847559468213, 0.09509516302823659);
+    const vec3 c3 = vec3(-4.634230498983486, -5.799100973351585, -19.33244095627987);
+    const vec3 c4 = vec3(6.228269936347081, 14.17993336680509, 56.69055260068105);
+    const vec3 c5 = vec3(4.776384997670288, -13.74514537774601, -65.35303263337234);
+    const vec3 c6 = vec3(-5.435455855934631, 4.645852612178535, 26.3124352495832);
+    return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
+}
+
+vec3 _imageTurbo(float x) {
+    const vec4 kRedVec4 = vec4(0.13572138, 4.61539260, -42.66032258, 132.13108234);
+    const vec4 kGreenVec4 = vec4(0.09140261, 2.19418839, 4.84296658, -14.18503333);
+    const vec4 kBlueVec4 = vec4(0.10667330, 12.64194608, -60.58204836, 110.36276771);
+    const vec2 kRedVec2 = vec2(-152.94239396, 59.28637943);
+    const vec2 kGreenVec2 = vec2(4.27729857, 2.82956604);
+    const vec2 kBlueVec2 = vec2(-89.90310912, 27.34824973);
+    vec4 v4 = vec4(1.0, x, x * x, x * x * x);
+    vec2 v2 = v4.zw * v4.z;
+    return vec3(
+        dot(v4, kRedVec4) + dot(v2, kRedVec2),
+        dot(v4, kGreenVec4) + dot(v2, kGreenVec2),
+        dot(v4, kBlueVec4) + dot(v2, kBlueVec2)
+    );
+}
+
+vec3 imageColormap(float t, int m) {
+    if (m == 1) return _imageViridis(t);
+    if (m == 2) return _imageTurbo(t);
+    return vec3(t);
+}`;
+}
+
 // Per-layer compositing pipeline shared by the image plane and the background
 // quad.  It declares the four texture samplers, the per-layer uniforms, the
 // shared brightness/contrast/midpoint uniforms, and the helpers that sample a
 // layer (`tangaSampleLayer`), blend one layer over another (`tangaBlend`), and
 // composite every enabled layer bottom-up (`tangaComposite`).
-function buildImageLayerPipeline() {
+function buildImageLayerPipeline(layerCount = 8) {
     const samplers = [];
     const decls = [];
     const steps = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < layerCount; i++) {
         samplers.push(`uniform sampler2D uImage${i};`);
         decls.push(layerUniformDecl(i));
         steps.push(layerComposite(i));
@@ -2888,8 +2933,12 @@ uniform float u_brightness;
 uniform float u_contrast;
 uniform float u_midpoint;
 
-vec3 tangaSampleLayer(vec4 tex, int chmode, float vmin, float vmax) {
+${buildImageColormap()}
+
+vec4 tangaSampleLayer(vec4 tex, int chmode, int colormap, float vmin, float vmax) {
     vec3 color;
+    float alpha = 1.0;
+    bool scalar = (chmode == 0 || chmode == 2 || chmode == 3);
     if (chmode == 0) {
         color = vec3(tex.r);            // channel 1 as grayscale
     } else if (chmode == 2) {
@@ -2898,10 +2947,17 @@ vec3 tangaSampleLayer(vec4 tex, int chmode, float vmin, float vmax) {
         color = vec3(tex.a);            // channel 4 as grayscale
     } else {
         color = tex.rgb;                // RGB
+        alpha = tex.a;                  // 4-channel alpha is respected
     }
 
-    vec3 n = (color - vmin) / max(vmax - vmin, 1e-6);
-    return clamp((n - u_midpoint) * u_contrast + u_midpoint + u_brightness, 0.0, 1.0);
+    vec3 n;
+    if (scalar) {
+        float t = (color.r - vmin) / max(vmax - vmin, 1e-6);
+        n = imageColormap(clamp(t, 0.0, 1.0), colormap);
+    } else {
+        n = (color - vmin) / max(vmax - vmin, 1e-6);
+    }
+    return vec4(clamp((n - u_midpoint) * u_contrast + u_midpoint + u_brightness, 0.0, 1.0), alpha);
 }
 
 vec3 tangaBlend(vec3 dst, vec3 src, float alpha, int mode) {
@@ -2930,33 +2986,37 @@ uniform int u_layer${i}_enabled;
 uniform float u_layer${i}_opacity;
 uniform int u_layer${i}_blend;
 uniform int u_layer${i}_mode;
+uniform int u_layer${i}_colormap;
 uniform float u_layer${i}_value_min;
 uniform float u_layer${i}_value_max;`;
 }
 
 function layerComposite(i) {
     const sample = `tangaSampleLayer(texture2D(uImage${i}, uv), `
-        + `u_layer${i}_mode, u_layer${i}_value_min, u_layer${i}_value_max)`;
+        + `u_layer${i}_mode, u_layer${i}_colormap, u_layer${i}_value_min, u_layer${i}_value_max)`;
     if (i === 0) {
         return `
     if (u_layer${i}_enabled == 1) {
-        acc = ${sample};
-        accA = u_layer${i}_opacity;
+        vec4 s${i} = ${sample};
+        acc = s${i}.rgb;
+        accA = u_layer${i}_opacity * s${i}.a;
     }`;
     }
     return `
     if (u_layer${i}_enabled == 1) {
-        vec3 c${i} = ${sample};
-        acc = accA > 0.0 ? tangaBlend(acc, c${i}, u_layer${i}_opacity, u_layer${i}_blend) : c${i};
-        accA = accA > 0.0 ? max(accA, u_layer${i}_opacity) : u_layer${i}_opacity;
+        vec4 s${i} = ${sample};
+        vec3 c${i} = s${i}.rgb;
+        float a${i} = u_layer${i}_opacity * s${i}.a;
+        acc = accA > 0.0 ? tangaBlend(acc, c${i}, a${i}, u_layer${i}_blend) : c${i};
+        accA = accA > 0.0 ? max(accA, a${i}) : a${i};
     }`;
 }
 
-function buildImageFragment() {
+function buildImageFragment(layerCount = 8) {
     return /* glsl */ `
 precision highp float;
 varying vec2 vUv;
-${buildImageLayerPipeline()}
+${buildImageLayerPipeline(layerCount)}
 
 void main() {
     // Hardware sampling: mipmapped textures + linear minification give smooth
@@ -3246,10 +3306,10 @@ function buildColorUniforms(u) {
 // Per-layer compositing uniform defaults (enabled / opacity / blend / channel
 // mode / value range).  The serialized `uniforms` carry the seeded values; the
 // fallbacks here only apply to a hand-built entity missing them.
-function buildLayerUniforms(u) {
+function buildLayerUniforms(u, layerCount = 8) {
     const s = u || {};
     const out = {};
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < layerCount; i++) {
         // `enabled` must default to 0: a layer with no serialized uniforms has
         // no image (its `uImage{i}` is null), and enabling it would composite a
         // black texture over the real layers.  Existing layers always serialize
@@ -3258,6 +3318,7 @@ function buildLayerUniforms(u) {
         out[`u_layer${i}_opacity`] = { value: s[`u_layer${i}_opacity`] ?? 1.0 };
         out[`u_layer${i}_blend`] = { value: s[`u_layer${i}_blend`] ?? 0 };
         out[`u_layer${i}_mode`] = { value: s[`u_layer${i}_mode`] ?? 1 };
+        out[`u_layer${i}_colormap`] = { value: s[`u_layer${i}_colormap`] ?? 0 };
         out[`u_layer${i}_value_min`] = { value: s[`u_layer${i}_value_min`] ?? 0.0 };
         out[`u_layer${i}_value_max`] = { value: s[`u_layer${i}_value_max`] ?? 1.0 };
     }
@@ -3280,15 +3341,15 @@ function buildUniforms(ent) {
     const u = ent.uniforms || {};
     const images = ent.images || [];
     const primary = images[0] || {};
+    const layerCount = ent.max_layers ?? 8;
     const uniforms = {
-        uImage0: { value: null },
-        uImage1: { value: null },
-        uImage2: { value: null },
-        uImage3: { value: null },
         uImageSize: { value: new THREE.Vector2(primary.width || 1, primary.height || 1) },
         ...buildColorUniforms(u),
-        ...buildLayerUniforms(u),
+        ...buildLayerUniforms(u, layerCount),
     };
+    for (let i = 0; i < layerCount; i++) {
+        uniforms[`uImage${i}`] = { value: null };
+    }
     addCustomUniforms(uniforms, u);
     return uniforms;
 }
@@ -3297,11 +3358,12 @@ async function createImage(ent, opts) {
     const frame = ent.frame || {};
     const width = frame.width || 1;
     const height = frame.height || 1;
+    const layerCount = ent.max_layers ?? 8;
 
     const geometry = new THREE.PlaneGeometry(width, height);
     const uniforms = buildUniforms(ent);
 
-    const fragment = ent.shader?.fragment || buildImageFragment();
+    const fragment = ent.shader?.fragment || buildImageFragment(layerCount);
     const vertex = ent.shader?.vertex || buildImageVertex();
 
     const material = new THREE.ShaderMaterial({
@@ -3323,7 +3385,7 @@ async function createImage(ent, opts) {
 
     const maxDim = opts?.maxDim;
     const images = ent.images || [];
-    for (let i = 0; i < images.length && i < 4; i++) {
+    for (let i = 0; i < images.length && i < layerCount; i++) {
         const img = images[i];
         const key = `uImage${i}`;
         if (img.source === 'url') {
@@ -3401,6 +3463,7 @@ function updateImage(mesh, ent, prev) {
     const material = mesh.material;
     if (!material || !material.uniforms) return false;
     const uniforms = ent.uniforms || {};
+    const layerCount = ent.max_layers ?? prev?.max_layers ?? 8;
     if (material.uniforms.u_value_min) material.uniforms.u_value_min.value = uniforms.u_value_min ?? 0.0;
     if (material.uniforms.u_value_max) material.uniforms.u_value_max.value = uniforms.u_value_max ?? 1.0;
     if (material.uniforms.u_brightness) material.uniforms.u_brightness.value = uniforms.u_brightness ?? 0.0;
@@ -3410,8 +3473,8 @@ function updateImage(mesh, ent, prev) {
     // Apply per-layer compositing uniforms (enabled / opacity / blend / channel
     // mode / value range).  The serialized `uniforms` always carry them; guard
     // on presence so an older entity without them leaves the current values.
-    for (let i = 0; i < 4; i++) {
-        for (const key of ['enabled', 'opacity', 'blend', 'mode', 'value_min', 'value_max']) {
+    for (let i = 0; i < layerCount; i++) {
+        for (const key of ['enabled', 'opacity', 'blend', 'mode', 'colormap', 'value_min', 'value_max']) {
             const name = `u_layer${i}_${key}`;
             if (material.uniforms[name] && name in uniforms) {
                 material.uniforms[name].value = uniforms[name];
@@ -3447,7 +3510,8 @@ void main() {
     gl_Position = vec4(position.xy, 0.999999, 1.0);
 }`;
 
-const _BG_FRAGMENT = /* glsl */ `
+function _buildBackgroundFragment(layerCount) {
+    return /* glsl */ `
 precision highp float;
 varying vec2 vNdc;
 uniform float uImageAspect;   // image width / height
@@ -3456,7 +3520,7 @@ uniform float uFit;           // 0.0 = letterbox (fit), 1.0 = stretch (fill)
 uniform vec4 uCrop;           // (u0, v0, u1, v1) normalized image coords
 uniform float uHx;            // explicit zoom-scaled letterbox half-extent (NDC)
 uniform float uHy;            // explicit zoom-scaled letterbox half-extent (NDC)
-${buildImageLayerPipeline()}
+${buildImageLayerPipeline(layerCount)}
 
 void main() {
     float hx = uHx > 0.0 ? uHx : (uFit > 0.5 ? 1.0 : min(1.0, uImageAspect / uPaneAspect));
@@ -3475,17 +3539,15 @@ void main() {
         gl_FragColor = vec4(color, 1.0);
     }
 }`;
+}
 
 /** Build the shared full-viewport background shader material. */
 function _buildMaterial(imageMeta) {
     const img = imageMeta || {};
     const width = Number(img.width) || 1;
     const height = Number(img.height) || 1;
+    const layerCount = Number(img.max_layers) || 8;
     const uniforms = {
-        uImage0: { value: null },
-        uImage1: { value: null },
-        uImage2: { value: null },
-        uImage3: { value: null },
         uImageAspect: { value: width / height },
         uPaneAspect: { value: 1.0 },
         uFit: { value: 0.0 },
@@ -3493,12 +3555,15 @@ function _buildMaterial(imageMeta) {
         uHx: { value: 0.0 },
         uHy: { value: 0.0 },
         ...buildColorUniforms(img.uniforms),
-        ...buildLayerUniforms(img.uniforms),
+        ...buildLayerUniforms(img.uniforms, layerCount),
     };
+    for (let i = 0; i < layerCount; i++) {
+        uniforms[`uImage${i}`] = { value: null };
+    }
     addCustomUniforms(uniforms, img.uniforms);
     return new THREE.ShaderMaterial({
         vertexShader: img.shader?.vertex || _BG_VERTEX,
-        fragmentShader: img.shader?.fragment || _BG_FRAGMENT,
+        fragmentShader: img.shader?.fragment || _buildBackgroundFragment(layerCount),
         uniforms,
         depthTest: false,
         depthWrite: false,
@@ -3552,6 +3617,11 @@ function _layersOf(imageMeta) {
 // is uploaded once the frame lands (mirrors renderers/image.js).
 function _bindLayerTexture(material, img, i) {
     const key = `uImage${i}`;
+    if (!img) {
+        // A cleared (stable-index) layer slot: disable its sampler.
+        material.uniforms[key].value = null;
+        return;
+    }
     _backgroundTexture(img).then((tex) => {
         if (tex) {
             material.uniforms[key].value = tex;
@@ -3586,7 +3656,8 @@ function createImageBackground(imageMeta) {
     };
 
     const layers = _layersOf(img);
-    for (let i = 0; i < layers.length && i < 4; i++) {
+    const layerCount = Number(img.max_layers) || 8;
+    for (let i = 0; i < layers.length && i < layerCount; i++) {
         _bindLayerTexture(material, layers[i], i);
     }
 
@@ -3611,9 +3682,14 @@ function updateImageBackground(mesh, imageMeta) {
     // Re-apply color-processing + custom uniforms from the new metadata.
     applyImageUniforms(mesh, img.uniforms);
     const layers = _layersOf(img);
-    for (let i = 0; i < layers.length && i < 4; i++) {
+    const layerCount = Number(img.max_layers) || 8;
+    for (let i = 0; i < layers.length && i < layerCount; i++) {
         const layer = layers[i];
         const key = `uImage${i}`;
+        if (!layer) {
+            mat.uniforms[key].value = null;
+            continue;
+        }
         _backgroundTexture(layer).then((tex) => {
             if (tex) mat.uniforms[key].value = tex;
         });
@@ -3842,6 +3918,334 @@ function setLightUniforms(u, lighting) {
     u.uAmbientColor.value.set(lighting.ambient[0], lighting.ambient[1], lighting.ambient[2]);
 }
 
+// Shader compile/link error reporting — shared between the live viewer and the
+// standalone SDF viewer.
+//
+// three.js reports shader failures through `renderer.debug.onShaderError` when a
+// program first compiles/links.  `installShaderErrorHook` formats the driver
+// info log with source context and forwards it to `onError` (which the main
+// viewer routes through `sendLog` to the backend `on_shader_error` handler).
+
+function formatShaderError(gl, shader, type) {
+    const log = gl.getShaderInfoLog(shader).trim();
+    const source = gl.getShaderSource(shader);
+    const m = /ERROR: 0:(\d+)/.exec(log);
+    if (!m) return `${type}\n\n${log}`;
+    const errLine = parseInt(m[1], 10);
+    const lines = source.split('\n');
+    const from = Math.max(errLine - 6, 0);
+    const to = Math.min(errLine + 6, lines.length);
+    const ctx = [];
+    for (let i = from; i < to; i++) {
+        ctx.push(`${i + 1 === errLine ? '>' : ' '} ${i + 1}: ${lines[i]}`);
+    }
+    return `${type}\n\n${log}\n\n${ctx.join('\n')}`;
+}
+
+function installShaderErrorHook(renderer, onError) {
+    if (!renderer || !renderer.debug) return () => {};
+    const prev = renderer.debug.onShaderError;
+    renderer.debug.onShaderError = (gl, program, glVertexShader, glFragmentShader) => {
+        const parts = [
+            'THREE.WebGLProgram: Shader Error',
+            'VALIDATE_STATUS ' + gl.getProgramParameter(program, gl.VALIDATE_STATUS),
+            'Program Info Log: ' + gl.getProgramInfoLog(program).trim(),
+            formatShaderError(gl, glVertexShader, 'VERTEX'),
+            formatShaderError(gl, glFragmentShader, 'FRAGMENT'),
+        ];
+        onError(parts.join('\n\n'));
+    };
+    return () => {
+        renderer.debug.onShaderError = prev;
+    };
+}
+
+// Surface shader — vertex/fragment GLSL assembly for textured and custom-shaded
+// solid surfaces.  Pure GLSL string building (Node-testable, mirrors
+// image-shader.js / depth-shader.js).
+//
+// Custom fragment contract (documented for users):
+//   - The host declares the varyings `vUv`, `vNormal`, `vWorldPosition`,
+//     `vLocalPos`, the uniforms `u_color` / `u_opacity`, the texture samplers
+//     listed in `textureSamplers`, and the scene-lighting preamble
+//     (`MAX_LIGHTS`, `uLightCount`, `uLightDir[]`, `uLightColor[]`,
+//     `uAmbientColor`) plus a `tangaLight(albedo, n, p)` helper.
+//   - The fragment must define
+//     `vec3 surfaceColor(vec3 baseColor, vec3 n, vec3 p)`, which the host
+//     `main()` calls.  `baseColor` is `u_color` for a custom shader, or the
+//     sampled first texture for the standard texture map.
+
+function buildSurfaceVertex() {
+    return `
+out vec3 vLocalPos;
+out vec3 vNormal;
+out vec3 vWorldPosition;
+out vec2 vUv;
+
+void main() {
+    vUv = uv;
+    vLocalPos = position;
+    vNormal = normalize(normalMatrix * normal);
+    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = worldPosition.xyz;
+    gl_Position = projectionMatrix * viewMatrix * worldPosition;
+}`;
+}
+
+// The standard texture-map surface color: light the sampled albedo with the
+// scene's global ambient + directional lights (shared with custom shaders).
+function buildStandardTextureSurfaceColor() {
+    return `
+vec3 surfaceColor(vec3 baseColor, vec3 n, vec3 p) {
+    return tangaLight(baseColor, n, p);
+}`;
+}
+
+function buildSurfaceFragment({
+    userFragment = null,
+    textureSamplers = [],
+    sampleTexture = null,
+} = {}) {
+    const samplerDecls = textureSamplers
+        .map((name) => `uniform sampler2D ${name};`)
+        .join('\n');
+    const baseColorExpr = sampleTexture
+        ? `texture2D(${sampleTexture}, vUv).rgb`
+        : 'u_color';
+    const surfaceColorBody = userFragment || buildStandardTextureSurfaceColor();
+
+    return `
+in vec3 vLocalPos;
+in vec3 vNormal;
+in vec3 vWorldPosition;
+in vec2 vUv;
+
+out vec4 fragColor;
+
+${lightPreamble}
+
+uniform vec3 u_color;
+uniform float u_opacity;
+
+${samplerDecls}
+
+vec3 tangaLight(vec3 albedo, vec3 n, vec3 p) {
+    vec3 col = albedo * uAmbientColor;
+    for (int i = 0; i < MAX_LIGHTS; i++) {
+        if (i >= uLightCount) break;
+        vec3 L = normalize(uLightDir[i]);
+        float dif = max(dot(n, L), 0.0);
+        col += albedo * uLightColor[i] * dif;
+    }
+    return col;
+}
+
+${surfaceColorBody}
+
+void main() {
+    vec3 baseColor = ${baseColorExpr};
+    vec3 n = normalize(vNormal);
+    vec3 p = vWorldPosition;
+    fragColor = vec4(surfaceColor(baseColor, n, p), u_opacity);
+}`;
+}
+
+// Surface material factory — turns `ent.style.surface` into a THREE material.
+//
+// Semantics (mirror py/pytanga/viz/surface):
+//   - no surface            → the caller's `fallbackMaterial`
+//   - textures only (≥1)    → a ShaderMaterial sampling the FIRST texture with
+//                              the standard texture-map surface color (lit by
+//                              the shared scene lighting)
+//   - shader                → a ShaderMaterial running the custom GLSL program
+//   - shader + textures     → the same, with every texture bound to its
+//                              declared `uniform` sampler
+
+const WRAP_MODES = {
+    repeat: THREE.RepeatWrapping,
+    clamp: THREE.ClampToEdgeWrapping,
+    mirror: THREE.MirroredRepeatWrapping,
+};
+
+function _wrapMode(value) {
+    return WRAP_MODES[value] ?? THREE.RepeatWrapping;
+}
+
+function _applyTextureWrapping(texture, tex) {
+    texture.wrapS = _wrapMode(tex.wrap_s);
+    texture.wrapT = _wrapMode(tex.wrap_t);
+    texture.repeat.set(tex.repeat_u ?? 1, tex.repeat_v ?? 1);
+    texture.offset.set(tex.offset_u ?? 0, tex.offset_v ?? 0);
+    texture.needsUpdate = true;
+}
+
+function _uniformValue(value) {
+    if (Array.isArray(value) && value.length === 2) return new THREE.Vector2(value[0], value[1]);
+    if (Array.isArray(value) && value.length === 3) return new THREE.Vector3(value[0], value[1], value[2]);
+    if (Array.isArray(value) && value.length === 4) return new THREE.Vector4(value[0], value[1], value[2], value[3]);
+    return value;
+}
+
+function _seedUniforms(uniforms, values) {
+    for (const [name, value] of Object.entries(values || {})) {
+        uniforms[name] = { value: _uniformValue(value) };
+    }
+}
+
+function _lightUniforms() {
+    return {
+        uLightCount: { value: 0 },
+        uLightDir: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
+        uLightColor: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector3()) },
+        uAmbientColor: { value: new THREE.Vector3() },
+    };
+}
+
+function _fallbackTexture() {
+    const tex = new THREE.DataTexture(
+        new Uint8Array([255, 255, 255, 255]),
+        1,
+        1,
+        THREE.RGBAFormat,
+        THREE.UnsignedByteType
+    );
+    tex.needsUpdate = true;
+    return tex;
+}
+
+function _textureSlots(textures) {
+    const slots = {};
+    for (const tex of textures || []) {
+        slots[tex.uniform] = { value: _fallbackTexture() };
+    }
+    return slots;
+}
+
+function _bindTexture(slot, tex) {
+    if (!slot || !tex || tex.source === 'url' || tex.source === 'tiled') return;
+    const apply = (texture) => {
+        slot.value = texture;
+        _applyTextureWrapping(texture, tex);
+    };
+    // Peek (not take) so the same texture id can be shared across several
+    // surface entities without the first consumer removing it.
+    const frame = peekImageFrame(tex.id);
+    if (frame) {
+        makeEncodedTexture(tex, frame)
+            .then(apply)
+            .catch((e) => console.error('[surface-material] texture failed', tex.id, e));
+    } else {
+        registerImageFrameConsumer(tex.id, (late) => {
+            makeEncodedTexture(tex, late)
+                .then(apply)
+                .catch((e) => console.error('[surface-material] texture failed (late)', tex.id, e));
+        });
+    }
+}
+
+function bindSurfaceTextures(material, textures) {
+    if (!material || !material.uniforms) return;
+    for (const tex of textures || []) {
+        const slot = material.uniforms[tex.uniform];
+        if (slot) _bindTexture(slot, tex);
+    }
+}
+
+function applySurfaceMaterialLighting(material, wireLighting) {
+    if (!material || !material.uniforms || !material.uniforms.uAmbientColor) return false;
+    setLightUniforms(material.uniforms, parseLighting(wireLighting));
+    return true;
+}
+
+// Merge a partial `{ name: value }` patch into a surface ShaderMaterial's
+// uniforms in place (the `surface_update` message), so shader parameters change
+// without rebuilding the mesh.  Array values are re-wrapped as vector types.
+function applySurfaceMaterialUniforms(mesh, patch) {
+    if (!mesh || !patch) return false;
+    let changed = false;
+    mesh.traverse((child) => {
+        const material = child && child.material;
+        if (!material || !material.uniforms) return;
+        for (const [name, value] of Object.entries(patch)) {
+            if (!material.uniforms[name]) continue;
+            material.uniforms[name].value = _uniformValue(value);
+            changed = true;
+        }
+    });
+    return changed;
+}
+
+function createSurfaceMaterial(ent, { fallbackMaterial } = {}) {
+    const surface = ent.style && ent.style.surface;
+    if (!surface) return fallbackMaterial;
+
+    // Surface materials are opaque: the entity's canonical "shell" opacity
+    // (e.g. a translucent Plane) does not apply to a textured/shader surface.
+    const opacity = 1.0;
+    const [r, g, b] = parseHexColor(ent.color, [1, 1, 1]);
+
+    const hasShader = !!(surface.shader && surface.shader.fragment);
+    const textures = surface.textures || [];
+
+    if (hasShader) {
+        const uniforms = {
+            u_color: { value: new THREE.Vector3(r, g, b) },
+            u_opacity: { value: opacity },
+            ..._lightUniforms(),
+            ..._textureSlots(textures),
+        };
+        _seedUniforms(uniforms, surface.shader.uniforms);
+        setLightUniforms(uniforms, parseLighting(DEFAULT_LIGHTING));
+
+        const material = new THREE.ShaderMaterial({
+            vertexShader: surface.shader.vertex || buildSurfaceVertex(),
+            fragmentShader: buildSurfaceFragment({
+                userFragment: surface.shader.fragment,
+                textureSamplers: textures.map((t) => t.uniform),
+                sampleTexture: null,
+            }),
+            uniforms,
+            glslVersion: THREE.GLSL3,
+            transparent: opacity < 1.0,
+            depthWrite: opacity >= 0.99,
+            depthTest: true,
+            side: THREE.DoubleSide,
+        });
+        bindSurfaceTextures(material, textures);
+        return material;
+    }
+
+    if (textures.length) {
+        const uniforms = {
+            u_color: { value: new THREE.Vector3(r, g, b) },
+            u_opacity: { value: opacity },
+            ..._lightUniforms(),
+            uTexture: { value: _fallbackTexture() },
+        };
+        setLightUniforms(uniforms, parseLighting(DEFAULT_LIGHTING));
+
+        const material = new THREE.ShaderMaterial({
+            vertexShader: buildSurfaceVertex(),
+            fragmentShader: buildSurfaceFragment({
+                userFragment: null,
+                textureSamplers: ['uTexture'],
+                sampleTexture: 'uTexture',
+            }),
+            uniforms,
+            glslVersion: THREE.GLSL3,
+            transparent: opacity < 1.0,
+            depthWrite: opacity >= 0.99,
+            depthTest: true,
+            side: THREE.DoubleSide,
+        });
+        // Only the first texture drives the standard texture map.
+        _bindTexture(uniforms.uTexture, textures[0]);
+        return material;
+    }
+
+    return fallbackMaterial;
+}
+
 // Depth image shader — vertex/fragment shaders for the 2.5D depth surface.
 // Pure GLSL string building (Node-testable, mirrors image-shader.js).
 
@@ -3862,6 +4266,36 @@ uniform float u_depth_offset; // subtracted from depth before scaling
 uniform float u_missing_depth; // sentinel for non-finite depth
 uniform float u_depth_min;    // clamp lower bound (also the missing-depth height)
 uniform float u_depth_max;    // clamp upper bound
+uniform float u_depth_kind;   // 0 = orthographic, 1 = pinhole axial, 2 = pinhole radial, 3 = pinhole inverse
+uniform float u_fx;           // pinhole intrinsics (pixels of the reference frame)
+uniform float u_fy;
+uniform float u_cx;
+uniform float u_cy;
+uniform vec2 u_frame_size;    // reference (full-resolution) frame
+
+// Raw depth sample → axial depth Z (camera frame, world units), per depth_kind.
+float axialDepthZ(vec2 uvSample, float dSample) {
+    float metric = (dSample - u_depth_offset) * u_depth_scale;
+    if (u_depth_kind > 2.5) {
+        // Inverse depth: d = 1/Z.
+        return (abs(metric) > 1e-9) ? (1.0 / metric) : u_depth_max;
+    }
+    if (u_depth_kind > 1.5) {
+        // Radial depth: d = Euclidean distance along the projection ray.
+        vec2 pixel = uvSample * u_frame_size;
+        float xn = (pixel.x - u_cx) / u_fx;
+        float yn = (pixel.y - u_cy) / u_fy;
+        return metric / sqrt(xn * xn + yn * yn + 1.0);
+    }
+    // Axial depth: d = distance along the optical axis.
+    return metric;
+}
+
+// Camera-frame vertex (x right, y down, z forward) from axial depth Z.
+vec3 pinholeVertex(vec2 uvSample, float z) {
+    vec2 pixel = uvSample * u_frame_size;
+    return vec3((pixel.x - u_cx) / u_fx * z, (pixel.y - u_cy) / u_fy * z, z);
+}
 
 void main() {
     vUv = uv;
@@ -3870,21 +4304,45 @@ void main() {
     float d = texture2D(uDepth, snap).r;
     bool missing = (d == u_missing_depth);
     vValid = missing ? 0.0 : 1.0;
-    vDepth = missing ? u_depth_min : clamp(d, u_depth_min, u_depth_max);
-    vec3 p = position;
-    p.z += (vDepth - u_depth_offset) * u_depth_scale;
 
-    // World-space surface normal by finite differences on the depth field.
     vec2 du = vec2(1.0 / max(uDepthSize.x, 1.0), 0.0);
     vec2 dv = vec2(0.0, 1.0 / max(uDepthSize.y, 1.0));
     float dU = texture2D(uDepth, snap + du).r;
     float dV = texture2D(uDepth, snap + dv).r;
-    float cU = (dU == u_missing_depth) ? u_depth_min : clamp(dU, u_depth_min, u_depth_max);
-    float cV = (dV == u_missing_depth) ? u_depth_min : clamp(dV, u_depth_min, u_depth_max);
-    float hC = (vDepth - u_depth_offset) * u_depth_scale;
-    vec3 tX = vec3(uWorldStep.x, 0.0, (cU - u_depth_offset) * u_depth_scale - hC);
-    vec3 tY = vec3(0.0, uWorldStep.y, (cV - u_depth_offset) * u_depth_scale - hC);
-    vec3 n = normalize(cross(tX, tY));
+    bool missingU = (dU == u_missing_depth);
+    bool missingV = (dV == u_missing_depth);
+
+    vec3 p;
+    vec3 n;
+    if (u_depth_kind > 0.5) {
+        // Pinhole: depth_min/depth_max are axial depth (Z) in world units, so
+        // convert the raw sample to Z first, then clamp.
+        float zC  = missing  ? u_depth_min : clamp(axialDepthZ(snap, d), u_depth_min, u_depth_max);
+        float zCU = missingU ? u_depth_min : clamp(axialDepthZ(snap + du, dU), u_depth_min, u_depth_max);
+        float zCV = missingV ? u_depth_min : clamp(axialDepthZ(snap + dv, dV), u_depth_min, u_depth_max);
+        vDepth = zC;
+
+        vec3 pc = pinholeVertex(snap, zC);
+        vec3 pcU = pinholeVertex(snap + du, zCU);
+        vec3 pcV = pinholeVertex(snap + dv, zCV);
+        vec3 nCam = normalize(cross(pcU - pc, pcV - pc));
+        p = pc;
+        n = nCam;
+    } else {
+        // Orthographic: clamp the raw depth value (legacy heightfield), then
+        // apply depth_scale/depth_offset.
+        float zC  = missing  ? u_depth_min : clamp(d, u_depth_min, u_depth_max);
+        float zCU = missingU ? u_depth_min : clamp(dU, u_depth_min, u_depth_max);
+        float zCV = missingV ? u_depth_min : clamp(dV, u_depth_min, u_depth_max);
+        vDepth = zC;
+
+        p = position;
+        p.z += (zC - u_depth_offset) * u_depth_scale;
+        float hC = (zC - u_depth_offset) * u_depth_scale;
+        vec3 tX = vec3(uWorldStep.x, 0.0, (zCU - u_depth_offset) * u_depth_scale - hC);
+        vec3 tY = vec3(0.0, uWorldStep.y, (zCV - u_depth_offset) * u_depth_scale - hC);
+        n = normalize(cross(tX, tY));
+    }
 
     vNormal = normalize(mat3(modelMatrix) * n);
     vWorldPosition = (modelMatrix * vec4(p, 1.0)).xyz;
@@ -4057,6 +4515,9 @@ function buildDepthUniforms(ent) {
         (frameW * worldScale) / Math.max(1, (depth.width || 2) - 1),
         (frameH * worldScale) / Math.max(1, (depth.height || 2) - 1)
     );
+    const cam = (ent.mesh && ent.mesh.camera) || null;
+    const _DEPTH_KIND_CODES = { axial: 1, radial: 2, inverse: 3 };
+    const depthKind = cam ? (_DEPTH_KIND_CODES[cam.depth_kind] ?? 1) : 0;
     const uniforms = {
         uDepth: { value: fallbackTexture() },
         uSegMask: { value: fallbackTexture() },
@@ -4070,6 +4531,12 @@ function buildDepthUniforms(ent) {
         u_depth_offset: { value: u.u_depth_offset ?? 0.0 },
         u_depth_min: { value: u.u_depth_min ?? 0.0 },
         u_depth_max: { value: u.u_depth_max ?? 1.0 },
+        u_depth_kind: { value: depthKind },
+        u_fx: { value: cam ? cam.fx : 1.0 },
+        u_fy: { value: cam ? cam.fy : 1.0 },
+        u_cx: { value: cam ? cam.cx : 0.0 },
+        u_cy: { value: cam ? cam.cy : 0.0 },
+        u_frame_size: { value: new THREE.Vector2(frameW, frameH) },
         u_missing_depth: { value: u.u_missing_depth ?? -3.402823466e38 },
         u_discard_missing: { value: u.u_discard_missing ?? 1 },
         u_seg_enabled: { value: u.u_seg_enabled ?? 0 },
@@ -4148,9 +4615,25 @@ async function createDepthImage(ent, _opts) {
 
         const frame = ent.frame || {};
         const mesh = ent.mesh || {};
+        const u = ent.uniforms || {};
         const worldScale = mesh.world_scale ?? 1.0;
-        const width = (frame.width || 1) * worldScale;
-        const height = (frame.height || 1) * worldScale;
+        const cam = mesh.camera || null;
+        let width;
+        let height;
+        if (cam) {
+            // Pinhole mode: size the plane to the camera-frame footprint at the
+            // clamp upper bound so the scene bounds match the rendered surface
+            // (the shader derives the true positions from UV + intrinsics).
+            const depthScale = u.u_depth_scale ?? 1.0;
+            const depthOffset = u.u_depth_offset ?? 0.0;
+            const depthMax = Math.abs(u.u_depth_max ?? 1.0) || 1.0;
+            const zRef = Math.max(Math.abs((depthMax - depthOffset) * depthScale), 1e-6);
+            width = (frame.width || 1) / (cam.fx || 1.0) * zRef;
+            height = (frame.height || 1) / (cam.fy || 1.0) * zRef;
+        } else {
+            width = (frame.width || 1) * worldScale;
+            height = (frame.height || 1) * worldScale;
+        }
         const segU = Math.max(1, Math.round(mesh.segments_u || 1));
         const segV = Math.max(1, Math.round(mesh.segments_v || 1));
 
@@ -6170,6 +6653,12 @@ function takeImageFrame(id) {
     const frame = _pending.get(id);
     if (frame !== undefined) _pending.delete(id);
     return frame;
+}
+
+// Return the frame with `id` without removing it (for textures shared across
+// several consumers, e.g. one surface texture applied to multiple entities).
+function peekImageFrame(id) {
+    return _pending.get(id);
 }
 
 // Register a one-shot consumer to be invoked when the frame with `id` arrives.

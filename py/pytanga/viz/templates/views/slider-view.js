@@ -4,13 +4,14 @@ import { ControlView } from './control-view.js';
 import { createSlider } from '../controls/slider.js';
 
 export class SliderView extends ControlView {
-    constructor({ id, label = '', tooltip = '', min = 0, max = 1, step = 0.01, value = undefined, variant = 'default' } = {}) {
+    constructor({ id, label = '', tooltip = '', min = 0, max = 1, step = 0.01, value = undefined, variant = 'default', enabled = undefined } = {}) {
         super({ id, label, tooltip });
         this.min = min;
         this.max = max;
         this.step = step;
         this.value = value !== undefined ? value : min;
         this.variant = variant;
+        this.enabled = enabled !== undefined ? !!enabled : true;
     }
 
     update(node) {
@@ -19,6 +20,7 @@ export class SliderView extends ControlView {
         this.step = node.step ?? this.step;
         this.value = node.value ?? this.value;
         this.variant = node.variant ?? this.variant;
+        this.enabled = node.enabled ?? this.enabled;
         super.update(node);
     }
 
@@ -33,6 +35,7 @@ export class SliderView extends ControlView {
             step: this.step,
             value: this.value,
             variant: this.variant,
+            enabled: this.enabled,
         });
     }
 }

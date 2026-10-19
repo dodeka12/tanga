@@ -9,6 +9,7 @@ import {
     tagEntity,
     addWireframeOverlay,
 } from './utils.js';
+import { createSurfaceMaterial } from './surface-material.js';
 
 export function createEllipsoid(ent) {
     const color = parseColor(ent, '#ffaa00');
@@ -18,7 +19,8 @@ export function createEllipsoid(ent) {
     // Canonical: a unit sphere scaled by per-axis radii at the origin;
     // placement (center + rotation quaternion) rides on the node transform.
     const geometry = new THREE.SphereGeometry(1, 32, 32);
-    const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: makeMaterial(color, opacity) });
+    const mesh = new THREE.Mesh(geometry, material);
     mesh.scale.set(radii[0], radii[1], radii[2]);
 
     const wireframe = styleParam(ent, 'wireframe', false);

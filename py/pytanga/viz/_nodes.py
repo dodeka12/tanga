@@ -717,8 +717,16 @@ class VizDepthImage(VizSceneObject):
         *,
         name: str = "depth_image",
         images: list[Any] | None = None,
+        transform: Transform | None = None,
     ) -> None:
-        super().__init__(id or generate_id(), None, None, name=name, kind="depth_image")
+        super().__init__(
+            id or generate_id(),
+            None,
+            None,
+            name=name,
+            kind="depth_image",
+            transform=transform,
+        )
         self.payload = payload
         self.images: list[Any] = list(images) if images else []
 

@@ -131,3 +131,45 @@ def test_dispatch_routes_to_client_log() -> None:
     assert len(captured) == 1
     assert captured[0].level == "error"
     assert captured[0].message == "boom"
+
+
+def test_on_shader_error_routes_by_source() -> None:
+    from pytanga.viz.visualizer import Visualizer
+
+    class _Fake:
+        def __init__(self) -> None:
+            self._client_log = ClientLog(CLIENT_LOG_ID)
+            self._transport = _FakeTransport()
+            self._client_log.register_handlers(self._transport)
+
+    fake = _Fake()
+    shader_calls: list[ClientLogRecord] = []
+    other_calls: list[ClientLogRecord] = []
+
+    async def shader(record: ClientLogRecord, event: ControlEvent) -> None:
+        shader_calls.append(record)
+
+    async def other(record: ClientLogRecord, event: ControlEvent) -> None:
+        other_calls.append(record)
+
+    Visualizer.on_client_log(fake, other)
+    Visualizer.on_shader_error(fake, shader)
+
+    handler = fake._transport.get(CLIENT_LOG_ID, "log")
+    assert handler is not None
+
+    async def _dispatch() -> None:
+        await handler(  # type: ignore[misc]
+            ClientLogRecord(level="error", message="bad", source="shader"),
+            ControlEvent(),
+        )
+        await handler(  # type: ignore[misc]
+            ClientLogRecord(level="warn", message="other", source="three-view.js"),
+            ControlEvent(),
+        )
+
+    asyncio.run(_dispatch())
+    assert len(shader_calls) == 1
+    assert shader_calls[0].source == "shader"
+    assert len(other_calls) == 1
+    assert other_calls[0].source == "three-view.js"

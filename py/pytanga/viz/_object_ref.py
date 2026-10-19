@@ -272,6 +272,10 @@ class VizObjectRef:
         """
         self._handle.scene.set_depth_image_uniform(self.id, name, value)
 
+    def set_surface_uniform(self, name: str, value: float | int | list[float]) -> None:
+        """Queue one surface-shader uniform change (applied on flush)."""
+        self._handle.scene.set_surface_uniform(self.id, name, value)
+
     def set_selected_segments(self, ids: list[int] | set[int] | None) -> None:
         """Update the depth image's selected-segment ids (pushes a granular update).
 

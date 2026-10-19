@@ -42,8 +42,19 @@ class TestLayers:
         view = ImageView("img1")
         for i in range(MAX_IMAGE_LAYERS):
             view.add_layer(_img(f"img{i}"))
-        with pytest.raises(ValueError, match="at most 4"):
+        with pytest.raises(ValueError, match=f"at most {MAX_IMAGE_LAYERS}"):
             view.add_layer(_img("overflow"))
+
+    def test_custom_max_layers_cap(self) -> None:
+        view = ImageView("img1", max_layers=3)
+        for i in range(3):
+            view.add_layer(_img(f"img{i}"))
+        with pytest.raises(ValueError, match="at most 3"):
+            view.add_layer(_img("overflow"))
+
+    def test_invalid_max_layers(self) -> None:
+        with pytest.raises(ValueError, match="max_layers"):
+            ImageView("img1", max_layers=0)
 
     def test_per_layer_defaults_seeded(self) -> None:
         view = ImageView("img1")
@@ -231,10 +242,11 @@ class TestSerialize:
         view = ImageView("img1")
         view.set_image(_img("img1", channels=3))
         state = view._serialize_state()
-        assert set(state) == {"images", "shader", "uniforms"}
+        assert set(state) == {"images", "shader", "uniforms", "max_layers"}
         assert state["shader"] == {"fragment": None, "vertex": None}
         assert state["uniforms"]["u_mode"] == 1
         assert state["images"][0]["channels"] == 3
+        assert state["max_layers"] == 8
 
     def test_serialize_multilayer_per_layer_fields(self) -> None:
         view = ImageView("img1")
@@ -253,3 +265,17 @@ class TestSerialize:
         assert layer1["mode"] == 0  # 1 channel → gray
         assert layer1["value_max"] == 65535.0
         assert layer1["opacity"] == 0.25
+
+    def test_serialize_colormap_projected(self) -> None:
+        view = ImageView("img1")
+        view.set_image(_img("img1", channels=1), ImageLayerStyle(colormap="turbo"))
+        result = view._serialize()
+        assert result["uniforms"]["u_layer0_colormap"] == 2
+        assert result["images"][0]["colormap"] == 2
+
+    def test_rgba_layer_defaults_rgb_and_gray_colormap(self) -> None:
+        view = ImageView("img1")
+        view.set_image(_img("img1", channels=4))
+        result = view._serialize()
+        assert result["images"][0]["mode"] == 1  # RGB; alpha handled by shader
+        assert result["images"][0]["colormap"] == 0
