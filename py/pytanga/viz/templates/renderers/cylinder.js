@@ -14,6 +14,7 @@ import {
     addWireframeOverlay,
 } from './utils.js';
 import { styleNeedsRebuild } from './style-diff.js';
+import { createSurfaceMaterial } from './surface-material.js';
 
 function resolveCylinderLength(ent) {
     return Math.max(ent.length || 1.0, 0.001);
@@ -31,7 +32,8 @@ export function createCylinder(ent) {
 
     // CylinderGeometry is centered at its own origin along +Y.
     const geometry = new THREE.CylinderGeometry(radius, radius, length, 24, 1);
-    const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: makeMaterial(color, opacity) });
+    const mesh = new THREE.Mesh(geometry, material);
 
     const wireframe = styleParam(ent, 'wireframe', false);
     if (wireframe) {

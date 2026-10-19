@@ -203,6 +203,7 @@ nav:
     - Styling:
       - Overview: py/viz/styling/index.md
       - Style System: py/viz/styling/styles.md
+      - Surface Textures & Shaders: py/viz/styling/surface.md
     - SDF Viewer:
       - Overview: py/viz/sdf/index.md
       - SDF Viewer: py/viz/sdf/sdf-viewer.md

@@ -4,8 +4,9 @@
 """Tests for the per-pane image background (`CameraView.background_image`)."""
 
 import numpy as np
+import pytest
 
-from pytanga.viz.image import ImageData, ImageDType
+from pytanga.viz.image import ImageData, ImageDType, ImageLayerStyle
 from pytanga.viz.views import CameraView, SceneView
 
 
@@ -22,7 +23,8 @@ def test_background_image_serialize():  # noqa: ANN201
     assert meta["uniforms"]["u_value_max"] == 1.0  # uint8 → [0, 1]
     assert meta["images"][0]["id"] == "bg"
     assert meta["images"][0]["enabled"] == 1
-    del meta["version"], meta["shader"], meta["uniforms"], meta["images"]
+    assert meta["max_layers"] == 8
+    del meta["version"], meta["shader"], meta["uniforms"], meta["images"], meta["max_layers"]
     assert meta == {
         "id": "bg",
         "width": 12,
@@ -332,4 +334,114 @@ def test_tiled_background_emits_images_with_tiled_extras():  # noqa: ANN201
     assert images[0]["tile_version"] == 0
     assert "tile_size" in images[0]
     assert "levels" in images[0]
+
+
+def test_bound_set_layer_style_pushes_uniform_patch():  # noqa: ANN201
+    from pytanga.viz import ImageView, Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+
+    bg = ImageView("bg")
+    bg.set_image(ImageData("img1", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    bg.add_layer(ImageData("img2", data=np.zeros((8, 12), dtype=np.uint8)))
+    view = SceneView("main", camera_view=CameraView(background_image=bg))
+    viz.set_layout(view)
+    fake.json_messages.clear()
+
+    bg.set_layer_style(1, ImageLayerStyle(opacity=0.3))
+
+    uniforms_msgs = [
+        m for m in fake.json_messages if m["type"] == "view_background_uniforms"
+    ]
+    assert len(uniforms_msgs) == 1
+    assert uniforms_msgs[0]["view_id"] == view.id
+    assert uniforms_msgs[0]["uniforms"] == {"u_layer1_opacity": 0.3}
+
+
+def test_bound_set_layer_pushes_only_changed_frame():  # noqa: ANN201
+    from pytanga.viz import ImageView, Visualizer
+    from pytanga.viz._image_wire import decode_image_frame
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+
+    bg = ImageView("bg")
+    bg.set_image(ImageData("img1", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    bg.add_layer(ImageData("img2", data=np.zeros((8, 12), dtype=np.uint8)))
+    view = SceneView("main", camera_view=CameraView(background_image=bg))
+    viz.set_layout(view)
+    fake.binary_frames.clear()
+    fake.json_messages.clear()
+
+    bg.set_layer(1, ImageData("img3", data=np.ones((8, 12), dtype=np.uint8)))
+
+    assert len(fake.binary_frames) == 1
+    assert decode_image_frame(fake.binary_frames[0])["id"] == "img3"
+
+    img_msgs = [
+        m for m in fake.json_messages if m["type"] == "view_background_image"
+    ]
+    assert len(img_msgs) == 1
+    assert img_msgs[0]["view_id"] == view.id
+    assert img_msgs[0]["image"]["images"][0]["id"] == "img1"
+    assert img_msgs[0]["image"]["images"][1]["id"] == "img3"
+
+
+def test_bound_remove_layer_updates_meta_and_prunes_cache():  # noqa: ANN201
+    from pytanga.viz import ImageView, Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+
+    bg = ImageView("bg")
+    bg.set_image(ImageData("img1", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    bg.add_layer(ImageData("img2", data=np.zeros((8, 12), dtype=np.uint8)))
+    view = SceneView("main", camera_view=CameraView(background_image=bg))
+    viz.set_layout(view)
+    fake.json_messages.clear()
+
+    bg.remove_layer(1)
+
+    img_msgs = [
+        m for m in fake.json_messages if m["type"] == "view_background_image"
+    ]
+    assert len(img_msgs) == 1
+    meta = img_msgs[0]["image"]
+    assert meta["images"][1] is None
+    assert meta["uniforms"]["u_layer1_enabled"] == 0
+    assert "img2" not in viz._layout._background_frames
+
+
+def test_bound_remove_layer_zero_raises():  # noqa: ANN201
+    from pytanga.viz import ImageView, Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+
+    bg = ImageView("bg")
+    bg.set_image(ImageData("img1", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    view = SceneView("main", camera_view=CameraView(background_image=bg))
+    viz.set_layout(view)
+
+    with pytest.raises(ValueError, match="layer 0"):
+        bg.remove_layer(0)
+
+
+def test_unbound_mutators_emit_nothing():  # noqa: ANN201
+    from pytanga.viz import ImageView
+
+    bg = ImageView("bg")
+    bg.set_image(ImageData("img1", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    bg.add_layer(ImageData("img2", data=np.zeros((8, 12), dtype=np.uint8)))
+    # No transport bound: mutators change local state and never raise.
+    bg.set_layer_style(1, ImageLayerStyle(opacity=0.3))
+    bg.set_layer(1, ImageData("img3", data=np.ones((8, 12), dtype=np.uint8)))
+    bg.set_uniform("u_brightness", 0.2)
+    bg.remove_layer(1)
+    assert bg.uniforms["u_layer1_enabled"] == 0
 

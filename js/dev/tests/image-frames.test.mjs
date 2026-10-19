@@ -1,7 +1,7 @@
 // Tanga — unit tests for the binary image-frame decoder (node --test).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decodeImageFrame, hasImageFrame, registerImageFrameConsumer, storeImageFrame, takeImageFrame } from '../../../py/pytanga/viz/templates/image-frames.js';
+import { decodeImageFrame, hasImageFrame, peekImageFrame, registerImageFrameConsumer, storeImageFrame, takeImageFrame } from '../../../py/pytanga/viz/templates/image-frames.js';
 
 // Build a little-endian frame by hand (magic "TGI\0" + header + id + payload).
 function buildFrame({ version = 2, codec = 0, width = 2, height = 3, channels = 1, dtype = 0, id = 'img1', payload = new Uint8Array([1, 2, 3, 4, 5, 6]) }) {
@@ -86,6 +86,14 @@ test('storeImageFrame / hasImageFrame / takeImageFrame round-trip', () => {
     assert.equal(hasImageFrame('rt1'), true);
     assert.equal(takeImageFrame('rt1'), frame);
     assert.equal(hasImageFrame('rt1'), false);
+});
+
+test('peekImageFrame returns the frame without removing it', () => {
+    const frame = { id: 'peek1', width: 1, height: 1, channels: 3, dtype: 0, codec: 'jpeg', bytes: new Uint8Array([4]) };
+    storeImageFrame(frame);
+    assert.equal(peekImageFrame('peek1'), frame);
+    assert.equal(hasImageFrame('peek1'), true);
+    takeImageFrame('peek1');
 });
 
 test('registerImageFrameConsumer is invoked once when the frame arrives', () => {

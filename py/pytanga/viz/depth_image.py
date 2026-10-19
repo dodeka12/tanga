@@ -22,6 +22,8 @@ from typing import Any
 
 import numpy as np
 
+from pytanga.geometry.transform import Transform
+
 from .image import EImageCodec, ImageData
 
 __all__ = [
@@ -29,6 +31,7 @@ __all__ = [
     "DepthColormap",
     "DepthImageData",
     "DepthImage",
+    "compute_pinhole_positions",
     "MAX_SELECTED_SEGMENTS",
     "DEFAULT_MISSING_DEPTH",
 ]
@@ -230,6 +233,132 @@ def _image_meta(img: ImageData) -> dict[str, Any]:
     }
 
 
+def _resolve_camera(camera: Any) -> tuple[float, float, float, float]:
+    """Resolve ``(fx, fy, cx, cy)`` from a camera value.
+
+    Accepts a ``CameraCalibration`` (``K``) or a ``PinholeCamera``
+    (``fx``/``fy``/``cx``/``cy`` fields).
+    """
+    if hasattr(camera, "K"):
+        k = camera.K.data
+        return (float(k[0, 0]), float(k[1, 1]), float(k[0, 2]), float(k[1, 2]))
+    return (
+        float(camera.fx),
+        float(camera.fy),
+        float(camera.cx),
+        float(camera.cy),
+    )
+
+
+def camera_transform(camera: Any, apply_pose: bool = True) -> Transform | None:
+    """Return the camera→world :class:`Transform` for a ``CameraCalibration``.
+
+    Returns ``None`` when *camera* is ``None``, *apply_pose* is ``False``, or the
+    camera carries no pose (e.g. a bare ``PinholeCamera``).  The matrix→TRS
+    decomposition reuses :class:`pytanga.geometry.Transform`.
+    """
+    if camera is None or not apply_pose or not hasattr(camera, "camera_to_world"):
+        return None
+    return Transform.from_matrix(camera.camera_to_world())
+
+
+#: Depth-kind aliases → canonical name.  The canonical names are "axial"
+#: (depth along the optical axis), "radial" (distance along the projection ray),
+#: and "inverse" (inverse depth 1/Z).
+_DEPTH_KIND_ALIASES = {
+    "axial": "axial",
+    "z": "axial",
+    "orthogonal": "axial",
+    "radial": "radial",
+    "range": "radial",
+    "inverse": "inverse",
+    "disparity": "inverse",
+}
+
+
+def normalize_depth_kind(value: str) -> str:
+    """Resolve a depth-kind string (or alias) to its canonical name.
+
+    Canonical kinds: ``"axial"`` (depth along the optical axis, i.e. ``Z_c``),
+    ``"radial"`` (Euclidean distance along the projection ray), and
+    ``"inverse"`` (inverse depth ``1/Z``).  Accepted aliases: ``"z"`` /
+    ``"orthogonal"`` → axial, ``"range"`` → radial, ``"disparity"`` → inverse.
+    """
+    key = value.lower()
+    try:
+        return _DEPTH_KIND_ALIASES[key]
+    except KeyError as exc:
+        raise ValueError(
+            f"depth_kind must be one of {sorted(_DEPTH_KIND_ALIASES)}, got {value!r}"
+        ) from exc
+
+
+def compute_pinhole_positions(
+    depth: np.ndarray,
+    fx: float,
+    fy: float,
+    cx: float,
+    cy: float,
+    *,
+    depth_kind: str = "axial",
+    depth_scale: float = 1.0,
+    depth_offset: float = 0.0,
+    mesh_scale: float = 1.0,
+    max_mesh_size: int | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Compute camera-frame vertex positions for the pinhole depth mode.
+
+    ``depth`` is the depth array (its resolution is treated as the reference
+    frame here).  Pixel ``(u, v)`` are reference-frame pixel centers.  Returns
+    ``(positions, u, v)`` where ``positions`` is ``(N, 3)`` in camera frame
+    (x right, y down, z forward).  This is the canonical reference for the
+    frontend vertex math.
+
+    ``depth_kind`` selects the raw-depth interpretation — ``"axial"`` (depth
+    along the optical axis), ``"radial"`` (Euclidean distance along the
+    projection ray), or ``"inverse"`` (inverse depth ``1/Z``); aliases ``"z"``,
+    ``"range"``, ``"disparity"`` are accepted.  ``depth_scale``/``depth_offset``
+    convert the raw depth value to world units first (``depth_scale`` is "world
+    units per depth unit").  The returned positions are **unclamped** (pure
+    unprojection); the frontend additionally clamps the axial depth ``Z`` to
+    ``[depth_min, depth_max]``, which are always expressed in axial metres.
+    """
+    kind = normalize_depth_kind(depth_kind)
+
+    depth_h, depth_w = depth.shape
+    scale = max(0.0, min(1.0, float(mesh_scale)))
+    vert_w = max(2, int(round(depth_w * scale)))
+    vert_h = max(2, int(round(depth_h * scale)))
+    if max_mesh_size is not None:
+        longest = max(vert_w, vert_h)
+        if longest > int(max_mesh_size):
+            factor = int(max_mesh_size) / longest
+            vert_w = max(2, int(round(vert_w * factor)))
+            vert_h = max(2, int(round(vert_h * factor)))
+
+    us = (np.arange(vert_w) + 0.5) * (depth_w / vert_w)
+    vs = (np.arange(vert_h) + 0.5) * (depth_h / vert_h)
+
+    d = _nearest_downscale(depth, vert_w, vert_h)
+    metric = (d.astype(np.float64) - depth_offset) * depth_scale
+    xnorm = (us[None, :] - cx) / fx
+    ynorm = (vs[:, None] - cy) / fy
+    if kind == "radial":
+        z = metric / np.sqrt(xnorm**2 + ynorm**2 + 1.0)
+    elif kind == "inverse":
+        with np.errstate(divide="ignore", invalid="ignore"):
+            z = np.where(np.abs(metric) > 1e-9, 1.0 / metric, 0.0)
+    else:  # axial
+        z = metric
+
+    x = xnorm * z
+    y = ynorm * z
+
+    positions = np.stack([x.ravel(), y.ravel(), z.ravel()], axis=1)
+    uu, vv = np.meshgrid(us, vs)
+    return positions, uu.ravel(), vv.ravel()
+
+
 @dataclass
 class DepthImageData:
     """Bundle of source arrays for a depth image.
@@ -344,11 +473,22 @@ class DepthImage:
                 factor = int(max_size) / longest
                 vert_w = max(2, int(round(vert_w * factor)))
                 vert_h = max(2, int(round(vert_h * factor)))
-        return {
+        mesh: dict[str, Any] = {
             "segments_u": vert_w - 1,
             "segments_v": vert_h - 1,
             "world_scale": float(style["world_scale"]),
         }
+        camera = style.get("camera")
+        if camera is not None:
+            fx, fy, cx, cy = _resolve_camera(camera)
+            mesh["camera"] = {
+                "fx": fx,
+                "fy": fy,
+                "cx": cx,
+                "cy": cy,
+                "depth_kind": normalize_depth_kind(style.get("depth_kind") or "axial"),
+            }
+        return mesh
 
     def _build(
         self, style: dict[str, Any], entity_id: str

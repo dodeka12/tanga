@@ -69,6 +69,9 @@ let _sceneRoutes = new Map();  // scene -> {sceneViews, controlViews}
 let _viewById = new Map();     // view_id -> ThreeJsView (per-pane camera)
 let _viewRegistry = new Map(); // view_id -> View (single live-view orphan registry)
 let _globalOverlayViews = [];  // views mounted into the global overlay singleton
+// Scenes for which a dropped `scene_config`/`scene_update` already triggered a
+// `scene_sync_request` resync (cleared on every layout rebuild).
+const _syncRequested = new Set();
 
 // Per-scene browser-side animation stop binding.
 let _animationStopConfig = { enabled: false, key: null, modifiers: [] };
@@ -798,6 +801,7 @@ function _buildLayout(msg) {
     _layoutRoot.mount(window._viewerContainer);
     _sceneRoutes = collectSceneRoutes(_layoutRoot);
     _viewById = collectViewByIds(_layoutRoot);
+    _syncRequested.clear();
 
     // Unmount the previous tree and destroy orphaned views (not reused).
     if (oldRoot && oldRoot !== _layoutRoot) oldRoot.unmount();
@@ -852,7 +856,34 @@ async function _routeToScene(msg, sceneName) {
         return;
     }
     const route = _sceneRoutes.get(sceneName);
-    if (!route) return;
+    if (!route) {
+        // Diagnostic (calibrated-pane orbit-fallback repro): a scene-scoped
+        // message that arrives before its pane route exists is dropped here.
+        // A missed `scene_config` is exactly what leaves a calibrated `2d`
+        // pane on its default orbit camera + grid/axes, so surface it.
+        const known = Array.from(_sceneRoutes.keys());
+        console.warn(
+            '[tanga:route] dropped ' + (msg.type || 'scene message')
+            + ' scene=' + (sceneName || '<empty>')
+            + ' known=' + JSON.stringify(known),
+        );
+        sendLog(
+            'warn',
+            'dropped ' + (msg.type || 'scene message') + ' (no pane route yet)',
+            { source: 'viewer.js', data: { type: msg.type, scene: sceneName, known } },
+        );
+        // Self-heal: the scene's config/state arrived before its pane route
+        // existed (e.g. an interleaved reconnect/`ready`).  Ask the server to
+        // resend it once — the response routes to the now-existing pane.
+        if ((msg.type === 'scene_config' || msg.type === 'scene_update')
+            && !_syncRequested.has(sceneName)) {
+            _syncRequested.add(sceneName);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'scene_sync_request', scene: sceneName }));
+            }
+        }
+        return;
+    }
     for (const v of route.sceneViews) await v.handleMessage(msg);
 }
 

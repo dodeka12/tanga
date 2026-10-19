@@ -20,6 +20,7 @@ from .camera import CameraAction, CameraConfig, ViewportConfig
 from ._ids import generate_id
 from ._lighting import SceneLighting
 from ._nodes import (
+    Transform,
     VizDepthImage,
     VizGroup,
     VizImage,
@@ -31,6 +32,7 @@ from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
 from ._props import _normalize_color
 from ._style_dict import StylesMap, _resolve_label_style, _resolve_tex_label_style
 from ._viz_styles import VizStyles, make_styles
+from .surface.material import SurfaceMaterial, SurfaceShader, SurfaceTexture, surface_material
 
 if TYPE_CHECKING:
     from ._interaction import InteractionConfig, MouseButton
@@ -154,6 +156,8 @@ class Scene:
         self._controls: dict[str, Any] = {}
         self._groups: dict[str, Any] = {}
         self._interaction_configs: dict[str, Any] = {}
+        self._surface_textures: dict[str, list[SurfaceTexture]] = {}
+        self._pending_surface_uniforms: dict[str, dict[str, Any]] = {}
 
     # -- Object lifecycle -------------------------------------
 
@@ -352,9 +356,10 @@ class Scene:
         image_id: str,
         payload: dict[str, Any],
         images: list[Any] | None = None,
+        transform: Transform | None = None,
     ) -> str:
         """Register a ``depth_image`` scene node and return its id."""
-        node = VizDepthImage(image_id, payload, images=images)
+        node = VizDepthImage(image_id, payload, images=images, transform=transform)
         self._nodes[image_id] = node
         if image_id not in self._order:
             self._order.append(image_id)
@@ -376,6 +381,7 @@ class Scene:
         image_id: str,
         payload: dict[str, Any],
         images: list[Any] | None = None,
+        transform: Transform | None = None,
     ) -> str:
         """Update an existing depth image node's payload, or create it."""
         node = self._nodes.get(image_id)
@@ -383,9 +389,11 @@ class Scene:
             node.payload = payload
             if images is not None:
                 node.images = list(images)
+            if transform is not None:
+                node.transform = transform
             node.mark("full")
             return image_id
-        return self.add_depth_image(image_id, payload, images=images)
+        return self.add_depth_image(image_id, payload, images=images, transform=transform)
 
     def depth_image_frames(self) -> list[tuple[str, bytes]]:
         """Return ``(id, encoded_frame)`` for every depth image node with pixels."""
@@ -408,6 +416,56 @@ class Scene:
                         )
                         frames.append((img.id, frame))
         return frames
+
+    def surface_texture_frames(self) -> list[tuple[str, bytes]]:
+        """Return ``(id, encoded_frame)`` for every surface texture with pixels."""
+        from ._image_wire import encode_image_frame
+
+        frames: list[tuple[str, bytes]] = []
+        for textures in self._surface_textures.values():
+            for texture in textures:
+                if texture.image.data is not None:
+                    frames.append(
+                        (
+                            texture.image.id,
+                            encode_image_frame(
+                                texture.image.id,
+                                texture.image.data,
+                                codec=texture.image.codec,
+                                jpeg_quality=texture.image.jpeg_quality or 85,
+                            ),
+                        )
+                    )
+        return frames
+
+    def _set_surface_textures(
+        self, oid: str, material: SurfaceMaterial | None
+    ) -> None:
+        """Register (or drop) the surface textures for a scene object id."""
+        if material is not None and material.textures:
+            self._surface_textures[oid] = list(material.textures)
+        else:
+            self._surface_textures.pop(oid, None)
+
+    def _push_surface_texture_frames(
+        self, textures: list[SurfaceTexture]
+    ) -> None:
+        """Send surface texture frames over the live transport, if connected."""
+        transport = getattr(getattr(self, "_host", None), "_transport", None)
+        if transport is None:
+            return
+        from ._image_wire import encode_image_frame
+
+        for texture in textures:
+            if texture.image.data is not None:
+                transport.send_bytes(
+                    encode_image_frame(
+                        texture.image.id,
+                        texture.image.data,
+                        codec=texture.image.codec,
+                        jpeg_quality=texture.image.jpeg_quality or 85,
+                    )
+                )
 
     def _push_depth_image_frames(self, node: VizDepthImage) -> None:
         """Send a node's binary frames over the live transport, if connected."""
@@ -495,6 +553,21 @@ class Scene:
             },
         )
 
+    def set_surface_uniform(
+        self, object_id: str, name: str, value: float | int | list[float]
+    ) -> None:
+        """Queue a surface-shader uniform change (applied on :meth:`flush`).
+
+        Mutates the node's resolved style in place so a later full
+        re-serialization (e.g. reconnect) keeps the updated value.
+        """
+        node = self._nodes.get(object_id)
+        if isinstance(node, VizSceneObject) and isinstance(node.style, dict):
+            surface = node.style.get("surface")
+            if isinstance(surface, dict) and isinstance(surface.get("shader"), dict):
+                surface["shader"].setdefault("uniforms", {})[name] = value
+        self._pending_surface_uniforms.setdefault(object_id, {})[name] = value
+
     @property
     def group_ids(self) -> list[str]:
         """IDs of all scene-graph groups."""
@@ -580,6 +653,12 @@ class Scene:
         tex_label_style: "TextureLabelStyle | None" = None,
         parent_id: str | None = None,
         attach_to: str | None = None,
+        surface: SurfaceMaterial
+        | SurfaceShader
+        | SurfaceTexture
+        | list[SurfaceTexture]
+        | tuple[SurfaceTexture, ...]
+        | None = None,
     ) -> str:
         """Add an entity to this scene.
 
@@ -592,7 +671,7 @@ class Scene:
         from ._scene_handle import VizSceneHandle
         from ._styles import TextureLabelStyle as _TLS
         from ._styles import _style_to_output
-        from .depth_image import DepthImage
+        from .depth_image import DepthImage, camera_transform
 
         if isinstance(obj, VizGroup):
             from .scene import _generate_id
@@ -622,7 +701,10 @@ class Scene:
             if opacity is not None:
                 resolved["opacity"] = float(opacity)
             content, frames = obj._build(resolved, eid)
-            self.add_depth_image(eid, content, images=frames)
+            transform = camera_transform(
+                resolved.get("camera"), resolved.get("apply_pose", True)
+            )
+            self.add_depth_image(eid, content, images=frames, transform=transform)
             self._attach_to_parent(eid, parent_id)
             return eid
 
@@ -676,6 +758,11 @@ class Scene:
         if opacity is not None:
             properties["opacity"] = float(opacity)
 
+        # Normalize the surface convenience input (shader / texture / material).
+        surface_mat: SurfaceMaterial | None = None
+        if surface is not None:
+            surface_mat = surface_material(surface)
+
         # Build texture label convenience style if tex_label is set
         _tex_label_merged: _TLS | None = None
         if tex_label is not None:
@@ -717,6 +804,17 @@ class Scene:
 
                     style = PS(texture_label=_tex_label_merged, wireframe=False)
 
+        # Merge the surface material into the style when not already set.
+        if surface_mat is not None:
+            if style is not None:
+                if getattr(style, "surface", None) is None:
+                    setattr(style, "surface", surface_mat)
+            else:
+                kind_for_surface = type(_resolve_scene_entity(obj)).__name__
+                surface_style = _style_for_surface(kind_for_surface, surface_mat)
+                if surface_style is not None:
+                    style = surface_style
+
         if style is not None:
             properties["style"] = style
 
@@ -748,6 +846,9 @@ class Scene:
                 attach_to=attach_to,
                 properties=properties,
             )
+            self._set_surface_textures(oid, surface_mat)
+            if surface_mat is not None and surface_mat.textures:
+                self._push_surface_texture_frames(surface_mat.textures)
             return oid
 
         eid = self.add(entity, entity_id=entity_id, **properties)
@@ -761,6 +862,9 @@ class Scene:
             attach_to=attach_to,
             properties=properties,
         )
+        self._set_surface_textures(eid, surface_mat)
+        if surface_mat is not None and surface_mat.textures:
+            self._push_surface_texture_frames(surface_mat.textures)
         return eid
 
     def _attach_to_parent(self, oid: str, parent_id: str | None) -> None:
@@ -1003,6 +1107,8 @@ class Scene:
                 if getattr(obj.data, "parent_id", None) in removed_ids:
                     if oid not in self._removed_ids:
                         self._removed_ids.append(oid)
+        for oid in removed_ids:
+            self._surface_textures.pop(oid, None)
 
     @staticmethod
     def _descendants(node: VizSceneObject) -> "Iterator[VizSceneObject]":
@@ -1019,6 +1125,7 @@ class Scene:
             if oid not in self._removed_ids:
                 self._removed_ids.append(oid)
         self._interaction_configs.clear()
+        self._surface_textures.clear()
 
     # -- Interaction config management -----------------------
 
@@ -1103,6 +1210,19 @@ class Scene:
                         patch["value"], node.id, self._interaction_configs
                     )
                 patches.append(patch)
+
+        for object_id in removed:
+            self._pending_surface_uniforms.pop(object_id, None)
+
+        for object_id, uniforms in self._pending_surface_uniforms.items():
+            patches.append(
+                {
+                    "id": object_id,
+                    "aspect": "surface_uniforms",
+                    "value": {"uniforms": dict(uniforms)},
+                }
+            )
+        self._pending_surface_uniforms.clear()
 
         return patches, removed
 
@@ -1227,6 +1347,32 @@ def _resolve_scene_entity(obj: Any) -> SceneEntity:
             f"Object of type {type(obj).__name__} is not a recognized "
             f"geometry entity, operator, or multivector."
         ) from None
+
+
+def _style_for_surface(kind: str, material: SurfaceMaterial) -> Any:
+    """Return a surface-carrying style instance for *kind*, or ``None``."""
+    from ._styles import (
+        BoxStyle,
+        ConeStyle,
+        CylinderStyle,
+        DiskStyle,
+        EllipsoidStyle,
+        PlaneStyle,
+        SphereStyle,
+    )
+
+    style_class = {
+        "Box": BoxStyle,
+        "Cone": ConeStyle,
+        "Cylinder": CylinderStyle,
+        "Disk": DiskStyle,
+        "Ellipsoid": EllipsoidStyle,
+        "Plane": PlaneStyle,
+        "Sphere": SphereStyle,
+    }.get(kind)
+    if style_class is None:
+        return None
+    return style_class(surface=material)
 
 
 def _generate_id() -> str:

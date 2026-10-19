@@ -32,6 +32,25 @@ viz.set_background_uniform(view, "u_angle", 1.57)        # set + push a live upd
 
 Uniform values are `float` or `int`.
 
+## Driving a background directly (self-push)
+
+Once a layout is registered (`viz.set_layout(...)` / `viz.show(...)`), the
+background `ImageView` is **bound** to its pane transport.  Keep a reference to
+it and mutate it directly — the mutators push their own granular updates, so you
+don't need `set_background_uniform` / `set_background_image` for layer changes:
+
+```python
+bg = view.camera_view.background_image
+bg.set_layer_style(1, ImageLayerStyle(opacity=0.5))   # → view_background_uniforms
+bg.set_layer(1, new_mask_rgba)                        # one frame + view_background_image
+bg.set_uniform("u_brightness", 0.2)                   # → view_background_uniforms
+bg.remove_layer(1)                                    # clears layer 1 in place
+```
+
+`set_layer`/`add_layer`/`set_image` re-send only the changed layer's pixel frame;
+`remove_layer(i)` (or `set_layer(i, None)`) clears a non-primary layer **in place**
+(stable index — the slot serializes as `null`).
+
 ## The shader contract
 
 The background renderer always provides:
@@ -48,15 +67,19 @@ The background renderer always provides:
 
 The standard colour uniforms (`u_value_min`/`u_value_max`, `u_brightness`,
 `u_contrast`, `u_midpoint`, `u_mode`) and any uniform you register are also
-available by name.  The default shader computes the letterbox/crop UV, samples
-`uImage`, then applies `tangaSampleColor()` — the shared colour pipeline (channel
-mode → value-range normalize → brightness/contrast → clamp) — before writing
-`gl_FragColor`.
+available by name.  A multi-layer background exposes one sampler per layer
+(`uImage0`…, up to `max_layers` — default 8) plus the per-layer compositing
+uniforms (`u_layer{i}_enabled`/`_opacity`/`_blend`/`_mode`/`_colormap`/
+`_value_min`/`_value_max`); `u_layer{i}_colormap` selects `gray`/`viridis`/`turbo`
+for scalar (1-channel) layers.  The default shader computes the letterbox/crop UV,
+composites the layers, then applies `tangaSampleColor()` — the shared colour
+pipeline (channel mode → value-range normalize → brightness/contrast → clamp) —
+before writing `gl_FragColor`.
 
 ## Example — brightness/contrast via ctrl+drag
 
 `py/examples/apps/calibrated_labeling_app.py` binds a
 `DragBinding(MouseButton.LEFT, handler, ModifierKey.CTRL)` to the calibrated
 surface; the handler maps horizontal drag to `u_contrast` and vertical drag to
-`u_brightness` via `set_background_uniform`, exactly like the `ImageCanvas`
-demos.
+`u_brightness` via the bound background `ImageView.set_uniform(...)`, exactly like
+the `ImageCanvas` demos.

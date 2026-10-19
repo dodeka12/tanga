@@ -13,6 +13,7 @@ from pytanga.geometry.operators import Dilator, GeneralRotor, Motor, Rotor, Tran
 from pytanga.viz._transforms import (
     dilator_to_matrix,
     general_rotor_to_matrix,
+    look_at_matrix,
     motor_to_matrix,
     operator_to_matrix,
     operator_to_trs,
@@ -73,6 +74,49 @@ class TestMatrixPrimitives:
         assert m[0, 0] == 2.0
         assert m[1, 1] == 3.0
         assert m[2, 2] == 4.0
+
+
+class TestLookAtMatrix:
+    def test_plus_z_aligns_forward(self):  # noqa: ANN201
+        m = look_at_matrix((1.0, 0.0, 0.0))
+        assert np.allclose(m @ np.array([0.0, 0.0, 1.0, 1.0]), [1.0, 0.0, 0.0, 1.0])
+
+    def test_diagonal_forward(self):  # noqa: ANN201
+        d = np.array([1.0, 1.0, 1.0]) / np.sqrt(3.0)
+        m = look_at_matrix(d)
+        got = m @ np.array([0.0, 0.0, 1.0, 1.0])
+        assert np.allclose(got[:3], d)
+
+    def test_default_up_is_identity_for_plus_z(self):  # noqa: ANN201
+        # forward = +z with default up = +y → identity.
+        assert np.allclose(look_at_matrix((0.0, 0.0, 1.0)), np.eye(4))
+
+    def test_zero_forward_is_identity(self):  # noqa: ANN201
+        assert np.allclose(look_at_matrix((0.0, 0.0, 0.0)), np.eye(4))
+
+    def test_forward_parallel_to_up_falls_back(self):  # noqa: ANN201
+        m = look_at_matrix((0.0, 1.0, 0.0), up=(0.0, 1.0, 0.0))
+        # +z still maps onto the forward direction.
+        got = m @ np.array([0.0, 0.0, 1.0, 1.0])
+        assert np.allclose(got[:3], [0.0, 1.0, 0.0])
+        r = m[:3, :3]
+        assert np.allclose(r.T @ r, np.eye(3), atol=1e-12)
+        assert np.linalg.det(r) > 0.0
+
+    @pytest.mark.parametrize(
+        "forward",
+        [(1.0, 0.0, 0.0), (0.0, 0.0, -1.0), (1.0, 1.0, 1.0), (-1.0, 2.0, 3.0)],
+    )
+    def test_orthonormal_right_handed(
+        self, forward: tuple[float, float, float]
+    ) -> None:
+        m = look_at_matrix(forward)
+        r = m[:3, :3]
+        assert np.allclose(r.T @ r, np.eye(3), atol=1e-12)
+        assert np.linalg.det(r) == pytest.approx(1.0, abs=1e-12)
+        d = np.asarray(forward, dtype=float)
+        d = d / np.linalg.norm(d)
+        assert np.allclose(r @ np.array([0.0, 0.0, 1.0]), d)
 
 
 class TestOperatorMatrix:

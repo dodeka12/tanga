@@ -10,6 +10,7 @@ import {
     tagEntity,
     addWireframeOverlay,
 } from './utils.js';
+import { createSurfaceMaterial } from './surface-material.js';
 
 export function createDisk(ent) {
     const color = parseColor(ent, '#ff8844');
@@ -21,7 +22,8 @@ export function createDisk(ent) {
     const normal = [0, 0, 1];
 
     const geometry = new THREE.CylinderGeometry(radius, radius, thickness, 48, 1);
-    const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: makeMaterial(color, opacity) });
+    const mesh = new THREE.Mesh(geometry, material);
     mesh.setRotationFromQuaternion(
         rotationFromDirection(normal[0], normal[1], normal[2])
     );

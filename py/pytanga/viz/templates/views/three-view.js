@@ -12,11 +12,13 @@ import { createEntityMesh, removeEntityMesh, updateEntityMesh } from '../rendere
 import { applyImageUniforms, updateImageLod } from '../renderers/image.js';
 import { applyDepthImageLighting, applyDepthImageUniforms } from '../renderers/depth-image.js';
 import { applySdfProxyLighting } from '../renderers/sdf.js';
+import { applySurfaceMaterialLighting, applySurfaceMaterialUniforms } from '../renderers/surface-material.js';
 import { DEFAULT_LIGHTING, parseHexColor } from '../renderers/shader-lighting.js';
 import { createImageBackground, setBackgroundAspect, setBackgroundCrop, setBackgroundLetterbox, updateImageBackground } from '../renderers/image-background.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
 import { logForwardingEnabled, sendEvent, sendLog } from '../events.js';
+import { installShaderErrorHook } from '../renderers/shader-error.js';
 import { attachGroupView, detachGroup, detachAll, releaseAttachedGroups } from '../controls-attached.js';
 import { applyCameraLock, applyPinhole, createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
 import { updateLineResolutions, applyStyleUpdate, entityRequiresRebuild } from '../renderers/utils.js';
@@ -161,6 +163,18 @@ export class ThreeJsView extends View {
         this.el.style.height = '100%';
 
         this._initScene();
+
+        // Apply the per-pane camera override + navigation/controls/lock right
+        // away instead of waiting for `scene_config`.  A calibrated `2d` pane
+        // whose `scene_config` is dropped (see `_routeToScene`) would otherwise
+        // keep the default orbit camera and show the scene's grid/axes.
+        // `_lastCameraKey` is set so the later `scene_config` re-application
+        // is a no-op (it must not reset an already-applied camera/pan/zoom).
+        if (this._cameraOverride) {
+            this._applyCamera(this._cameraOverride);
+            this._lastCameraKey = this._cameraKey(this._cameraOverride);
+        }
+        this._reconfigureControls();
     }
 
     // ── context setters ────────────────────────────────────────
@@ -272,6 +286,9 @@ export class ThreeJsView extends View {
         try {
             this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
             this.renderer.setPixelRatio(window.devicePixelRatio);
+            installShaderErrorHook(this.renderer, (err) => {
+                sendLog('error', 'Shader compile failed', { source: 'shader', data: { error: err } });
+            });
             this.renderer.setSize(this.width || window.innerWidth, this.height || window.innerHeight);
             this.renderer.shadowMap.enabled = false;
             this.renderer.domElement.style.position = 'absolute';
@@ -572,8 +589,9 @@ export class ThreeJsView extends View {
     // ── scene config / overlays ────────────────────────────────
 
     _applyShaderLighting(wireLighting) {
-        // Re-light the shader renderers (SDF proxies + depth surfaces) from the
-        // same scene-config lighting block that drives `_applyLighting`.
+        // Re-light the shader renderers (SDF proxies, depth surfaces, and
+        // surface shaders) from the same scene-config lighting block that
+        // drives `_applyLighting`.
         for (const entry of this.sceneObjects.values()) {
             if (!entry || !entry.mesh) continue;
             const kind = entry.data && entry.data.kind;
@@ -581,6 +599,12 @@ export class ThreeJsView extends View {
                 applySdfProxyLighting(entry.mesh, wireLighting);
             } else if (kind === 'depth_image') {
                 applyDepthImageLighting(entry.mesh, wireLighting);
+            } else {
+                entry.mesh.traverse((child) => {
+                    if (child.material) {
+                        applySurfaceMaterialLighting(child.material, wireLighting);
+                    }
+                });
             }
         }
     }
@@ -607,7 +631,21 @@ export class ThreeJsView extends View {
         // `scene_config` pushes (cursor, title, keyboard) re-send the same
         // (stale) camera and must not reset the user's pan/zoom.
         const cameraKey = this._cameraKey(cameraConfig);
-        if (cameraKey !== this._lastCameraKey) {
+        const cameraChanged = cameraKey !== this._lastCameraKey;
+        // Diagnostic (calibrated-pane orbit-fallback repro): a correct pane
+        // shows `override=yes nav=2d` (the constructor already applied the
+        // override, so `cameraChanged` is usually `false` here).  A buggy pane
+        // either never logs this line (its `scene_config` was dropped in
+        // `_routeToScene`) or shows `override=no nav=orbit`.
+        this._log(
+            'scene-config',
+            'name=' + (config.name || this.sceneName)
+            + ' nav=' + (this._navigation || 'orbit')
+            + ' override=' + (this._cameraOverride ? 'yes' : 'no')
+            + ' sceneCamera=' + (config.camera ? 'yes' : 'no')
+            + ' cameraChanged=' + cameraChanged,
+        );
+        if (cameraChanged) {
             this._lastCameraKey = cameraKey;
             this._applyCamera(cameraConfig);
         }
@@ -651,6 +689,8 @@ export class ThreeJsView extends View {
      * `_applySceneConfig` and `setCamera`.
      */
     _applyCamera(cameraConfig) {
+        // No renderer/controls/interaction in headless mode — nothing to apply.
+        if (!this.controls || !this._interaction) return;
         const spaceDim = (this.sceneConfig && this.sceneConfig.space_dim) || 3;
         const viewWidth = this.width > 0 ? this.width : null;
         const viewHeight = this.height > 0 ? this.height : null;
@@ -995,6 +1035,7 @@ export class ThreeJsView extends View {
     updateFromNode(node) {
         const camView = node.camera_view || {};
         this.clearOverlays();
+        this.setCamera(camView.camera || null);
         this.setLock(camView.lock || null);
         this.setNavigation(camView.navigation || null);
         this.setControls(camView.controls || null);
@@ -1373,6 +1414,10 @@ export class ThreeJsView extends View {
         const entry = this.sceneObjects.get(id);
         if (!entry) return;
 
+        if (aspect === 'surface_uniforms') {
+            if (entry.mesh) applySurfaceMaterialUniforms(entry.mesh, value.uniforms);
+            return;
+        }
         if (aspect === 'content') {
             await this._updateEntityContent(id, value);
             return;

@@ -11,6 +11,7 @@ import {
     addWireframeOverlay,
     createTextureLabel,
 } from './utils.js';
+import { createSurfaceMaterial } from './surface-material.js';
 
 /**
  * Build the quad geometry for a plane entity.
@@ -53,7 +54,8 @@ export async function createPlane(ent) {
 
     const spanGeometry = _planeGeometry(ent);
     const geometry = spanGeometry || new THREE.PlaneGeometry(extent * 2, extent * 2);
-    const material = makeMaterial(color, opacity, true);
+    const fallback = makeMaterial(color, opacity, true);
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: fallback });
     const mesh = new THREE.Mesh(geometry, material);
 
     // ── Texture label ──
@@ -91,9 +93,9 @@ export async function createPlane(ent) {
                     texture.repeat.set(1, 1);
                     break;
             }
-            material.map = texture;
-            material.color.set(0xffffff);
-            material.needsUpdate = true;
+            fallback.map = texture;
+            fallback.color.set(0xffffff);
+            fallback.needsUpdate = true;
         }
     }
 

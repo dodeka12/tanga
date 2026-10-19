@@ -30,6 +30,12 @@ export function takeImageFrame(id) {
     return frame;
 }
 
+// Return the frame with `id` without removing it (for textures shared across
+// several consumers, e.g. one surface texture applied to multiple entities).
+export function peekImageFrame(id) {
+    return _pending.get(id);
+}
+
 // Register a one-shot consumer to be invoked when the frame with `id` arrives.
 export function registerImageFrameConsumer(id, consume) {
     if (!_pendingConsumers.has(id)) _pendingConsumers.set(id, []);

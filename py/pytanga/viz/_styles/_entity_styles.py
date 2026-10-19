@@ -12,6 +12,7 @@ from ._base import VizStyle, WireframeDashPattern
 from ._overlay_styles import LabelStyle
 from ._tex_label_style import TextureLabelStyle
 from ..image import EImageCodec
+from ..surface.material import SurfaceMaterial
 
 
 @dataclass
@@ -302,6 +303,7 @@ class PlaneStyle(Quadric3DStyle):
 
     extent: float | None = None
     texture_label: TextureLabelStyle | None = None
+    surface: SurfaceMaterial | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result = super().to_dict()
@@ -310,6 +312,8 @@ class PlaneStyle(Quadric3DStyle):
             result["extent"] = self.extent
         if self.texture_label is not None:
             result["texture_label"] = self.texture_label.to_dict()
+        if self.surface is not None:
+            result["surface"] = self.surface.to_dict()
         return result
 
 
@@ -437,6 +441,7 @@ class SphereStyle(Quadric3DStyle):
 
     texture_label: TextureLabelStyle | None = None
     double_sided: bool | None = None
+    surface: SurfaceMaterial | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result = super().to_dict()
@@ -445,6 +450,8 @@ class SphereStyle(Quadric3DStyle):
             result["texture_label"] = self.texture_label.to_dict()
         if self.double_sided is not None:
             result["double_sided"] = self.double_sided
+        if self.surface is not None:
+            result["surface"] = self.surface.to_dict()
         return result
 
 
@@ -452,9 +459,13 @@ class SphereStyle(Quadric3DStyle):
 class CylinderStyle(Quadric3DStyle):
     """Visual style for :class:`~pytanga.geometry.Cylinder`."""
 
+    surface: SurfaceMaterial | None = None
+
     def to_dict(self) -> dict[str, Any]:
         result = super().to_dict()
         result["style_type"] = "CylinderStyle"
+        if self.surface is not None:
+            result["surface"] = self.surface.to_dict()
         return result
 
 
@@ -679,6 +690,7 @@ class DiskStyle(VizStyle):
     wireframe_dash: WireframeDashPattern | None = None
     wireframe_color: str | None = None
     wireframe_opacity: float | None = None
+    surface: SurfaceMaterial | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "DiskStyle"}
@@ -696,6 +708,8 @@ class DiskStyle(VizStyle):
             result["wireframe_color"] = self.wireframe_color
         if self.wireframe_opacity is not None:
             result["wireframe_opacity"] = self.wireframe_opacity
+        if self.surface is not None:
+            result["surface"] = self.surface.to_dict()
         return result
 
 
@@ -761,6 +775,7 @@ class BoxStyle(VizStyle):
     wireframe_dash: WireframeDashPattern | None = None
     wireframe_color: str | None = None
     wireframe_opacity: float | None = None
+    surface: SurfaceMaterial | None = None
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "BoxStyle"}
@@ -776,6 +791,8 @@ class BoxStyle(VizStyle):
             result["wireframe_color"] = self.wireframe_color
         if self.wireframe_opacity is not None:
             result["wireframe_opacity"] = self.wireframe_opacity
+        if self.surface is not None:
+            result["surface"] = self.surface.to_dict()
         return result
 
 
@@ -783,9 +800,13 @@ class BoxStyle(VizStyle):
 class EllipsoidStyle(Quadric3DStyle):
     """Visual style for :class:`~pytanga.geometry.Ellipsoid`."""
 
+    surface: SurfaceMaterial | None = None
+
     def to_dict(self) -> dict[str, Any]:
         result = super().to_dict()
         result["style_type"] = "EllipsoidStyle"
+        if self.surface is not None:
+            result["surface"] = self.surface.to_dict()
         return result
 
 
@@ -939,9 +960,13 @@ class RegularPolygonStyle(VizStyle):
 class ConeStyle(Quadric3DStyle):
     """Visual style for :class:`~pytanga.geometry.Cone`."""
 
+    surface: SurfaceMaterial | None = None
+
     def to_dict(self) -> dict[str, Any]:
         result = super().to_dict()
         result["style_type"] = "ConeStyle"
+        if self.surface is not None:
+            result["surface"] = self.surface.to_dict()
         return result
 
 
@@ -1047,6 +1072,9 @@ class DepthImageStyle(VizStyle):
     max_mesh_size: int | None = None
     image_scale: float | None = None
     segmentation_scale: float | None = None
+    camera: Any | None = None
+    depth_kind: str | None = None
+    apply_pose: bool | None = None
     codec: EImageCodec | None = None
     jpeg_quality: int | None = None
     world_scale: float | None = None
@@ -1060,6 +1088,12 @@ class DepthImageStyle(VizStyle):
     opacity: float | None = None
     shininess: float | None = None
     specular: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.depth_kind is not None:
+            from ..depth_image import normalize_depth_kind
+
+            self.depth_kind = normalize_depth_kind(self.depth_kind)
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "DepthImageStyle"}
@@ -1075,6 +1109,12 @@ class DepthImageStyle(VizStyle):
             result["image_scale"] = self.image_scale
         if self.segmentation_scale is not None:
             result["segmentation_scale"] = self.segmentation_scale
+        if self.camera is not None:
+            result["camera"] = self.camera
+        if self.depth_kind is not None:
+            result["depth_kind"] = self.depth_kind
+        if self.apply_pose is not None:
+            result["apply_pose"] = self.apply_pose
         if self.codec is not None:
             result["codec"] = int(self.codec)
         if self.jpeg_quality is not None:

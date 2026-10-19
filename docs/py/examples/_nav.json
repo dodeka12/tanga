@@ -295,6 +295,9 @@
             "Axes Overlay 2D": "py/examples/viz/camera/axes_overlay_2d.md"
           },
           {
+            "Calibrated Orbit Fallback Repro": "py/examples/viz/camera/calibrated_orbit_fallback_repro.md"
+          },
+          {
             "Camera Stream": "py/examples/viz/camera/camera_stream.md"
           },
           {
@@ -404,6 +407,9 @@
           },
           {
             "Load Image From Disk": "py/examples/viz/image/load_image_from_disk.md"
+          },
+          {
+            "Pinhole Depth": "py/examples/viz/image/pinhole_depth.md"
           },
           {
             "Raw Image": "py/examples/viz/image/raw_image.md"
@@ -580,6 +586,19 @@
           },
           {
             "Custom Defaults": "py/examples/viz/styling/custom_defaults.md"
+          }
+        ]
+      },
+      {
+        "Surface": [
+          {
+            "Overview": "py/examples/viz/surface/index.md"
+          },
+          {
+            "Shader Errors": "py/examples/viz/surface/shader_errors.md"
+          },
+          {
+            "Texture Mapping": "py/examples/viz/surface/texture_mapping.md"
           }
         ]
       },

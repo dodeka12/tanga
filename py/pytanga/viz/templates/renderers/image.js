@@ -282,10 +282,10 @@ export function buildColorUniforms(u) {
 // Per-layer compositing uniform defaults (enabled / opacity / blend / channel
 // mode / value range).  The serialized `uniforms` carry the seeded values; the
 // fallbacks here only apply to a hand-built entity missing them.
-export function buildLayerUniforms(u) {
+export function buildLayerUniforms(u, layerCount = 8) {
     const s = u || {};
     const out = {};
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < layerCount; i++) {
         // `enabled` must default to 0: a layer with no serialized uniforms has
         // no image (its `uImage{i}` is null), and enabling it would composite a
         // black texture over the real layers.  Existing layers always serialize
@@ -294,6 +294,7 @@ export function buildLayerUniforms(u) {
         out[`u_layer${i}_opacity`] = { value: s[`u_layer${i}_opacity`] ?? 1.0 };
         out[`u_layer${i}_blend`] = { value: s[`u_layer${i}_blend`] ?? 0 };
         out[`u_layer${i}_mode`] = { value: s[`u_layer${i}_mode`] ?? 1 };
+        out[`u_layer${i}_colormap`] = { value: s[`u_layer${i}_colormap`] ?? 0 };
         out[`u_layer${i}_value_min`] = { value: s[`u_layer${i}_value_min`] ?? 0.0 };
         out[`u_layer${i}_value_max`] = { value: s[`u_layer${i}_value_max`] ?? 1.0 };
     }
@@ -316,15 +317,15 @@ function buildUniforms(ent) {
     const u = ent.uniforms || {};
     const images = ent.images || [];
     const primary = images[0] || {};
+    const layerCount = ent.max_layers ?? 8;
     const uniforms = {
-        uImage0: { value: null },
-        uImage1: { value: null },
-        uImage2: { value: null },
-        uImage3: { value: null },
         uImageSize: { value: new THREE.Vector2(primary.width || 1, primary.height || 1) },
         ...buildColorUniforms(u),
-        ...buildLayerUniforms(u),
+        ...buildLayerUniforms(u, layerCount),
     };
+    for (let i = 0; i < layerCount; i++) {
+        uniforms[`uImage${i}`] = { value: null };
+    }
     addCustomUniforms(uniforms, u);
     return uniforms;
 }
@@ -333,11 +334,12 @@ export async function createImage(ent, opts) {
     const frame = ent.frame || {};
     const width = frame.width || 1;
     const height = frame.height || 1;
+    const layerCount = ent.max_layers ?? 8;
 
     const geometry = new THREE.PlaneGeometry(width, height);
     const uniforms = buildUniforms(ent);
 
-    const fragment = ent.shader?.fragment || buildImageFragment();
+    const fragment = ent.shader?.fragment || buildImageFragment(layerCount);
     const vertex = ent.shader?.vertex || buildImageVertex();
 
     const material = new THREE.ShaderMaterial({
@@ -359,7 +361,7 @@ export async function createImage(ent, opts) {
 
     const maxDim = opts?.maxDim;
     const images = ent.images || [];
-    for (let i = 0; i < images.length && i < 4; i++) {
+    for (let i = 0; i < images.length && i < layerCount; i++) {
         const img = images[i];
         const key = `uImage${i}`;
         if (img.source === 'url') {
@@ -437,6 +439,7 @@ export function updateImage(mesh, ent, prev) {
     const material = mesh.material;
     if (!material || !material.uniforms) return false;
     const uniforms = ent.uniforms || {};
+    const layerCount = ent.max_layers ?? prev?.max_layers ?? 8;
     if (material.uniforms.u_value_min) material.uniforms.u_value_min.value = uniforms.u_value_min ?? 0.0;
     if (material.uniforms.u_value_max) material.uniforms.u_value_max.value = uniforms.u_value_max ?? 1.0;
     if (material.uniforms.u_brightness) material.uniforms.u_brightness.value = uniforms.u_brightness ?? 0.0;
@@ -446,8 +449,8 @@ export function updateImage(mesh, ent, prev) {
     // Apply per-layer compositing uniforms (enabled / opacity / blend / channel
     // mode / value range).  The serialized `uniforms` always carry them; guard
     // on presence so an older entity without them leaves the current values.
-    for (let i = 0; i < 4; i++) {
-        for (const key of ['enabled', 'opacity', 'blend', 'mode', 'value_min', 'value_max']) {
+    for (let i = 0; i < layerCount; i++) {
+        for (const key of ['enabled', 'opacity', 'blend', 'mode', 'colormap', 'value_min', 'value_max']) {
             const name = `u_layer${i}_${key}`;
             if (material.uniforms[name] && name in uniforms) {
                 material.uniforms[name].value = uniforms[name];

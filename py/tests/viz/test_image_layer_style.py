@@ -10,6 +10,7 @@ import pytest
 from pytanga.viz import (
     DEFAULT_IMAGE_LAYER_STYLE,
     ImageChannelMode,
+    ImageColormap,
     ImageLayerStyle,
     LayerBlendMode,
 )
@@ -41,6 +42,21 @@ class TestImageChannelMode:
             ImageChannelMode.from_str("bogus")
 
 
+class TestImageColormap:
+    def test_codes(self) -> None:
+        assert int(ImageColormap.GRAY) == 0
+        assert int(ImageColormap.VIRIDIS) == 1
+        assert int(ImageColormap.TURBO) == 2
+
+    def test_from_str(self) -> None:
+        assert ImageColormap.from_str("gray") is ImageColormap.GRAY
+        assert ImageColormap.from_str("grayscale") is ImageColormap.GRAY
+        assert ImageColormap.from_str("viridis") is ImageColormap.VIRIDIS
+        assert ImageColormap.from_str("turbo") is ImageColormap.TURBO
+        with pytest.raises(ValueError):
+            ImageColormap.from_str("bogus")
+
+
 class TestImageLayerStyle:
     def test_defaults_are_none(self) -> None:
         style = ImageLayerStyle()
@@ -48,6 +64,7 @@ class TestImageLayerStyle:
         assert style.opacity is None
         assert style.blend is None
         assert style.channel is None
+        assert style.colormap is None
         assert style.value_min is None
         assert style.value_max is None
 
@@ -63,9 +80,10 @@ class TestImageLayerStyle:
         assert style.blend is None
 
     def test_string_coercion(self) -> None:
-        style = ImageLayerStyle(blend="add", channel="gray")
+        style = ImageLayerStyle(blend="add", channel="gray", colormap="viridis")
         assert style.blend is LayerBlendMode.ADD
         assert style.channel is ImageChannelMode.GRAY
+        assert style.colormap is ImageColormap.VIRIDIS
 
     def test_opacity_validation(self) -> None:
         with pytest.raises(ValueError, match="opacity"):

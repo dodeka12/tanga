@@ -30,6 +30,7 @@ def test_serialize_banner_global_defaults():  # noqa: ANN201
     assert msg["align_y"] == 0.5
     assert msg["auto_hide"] is True
     assert msg["dismissable"] is True
+    assert msg["scrollable"] is False
     assert msg["controls"] == []
 
 
@@ -37,6 +38,11 @@ def test_serialize_banner_scoped():  # noqa: ANN201
     banner = Banner(id="b1", text="x")
     assert serialize_banner(banner, scene="detail")["scene"] == "detail"
     assert serialize_banner(banner, scene="")["scene"] == ""
+
+
+def test_serialize_banner_scrollable():  # noqa: ANN201
+    assert serialize_banner(Banner(id="b", text="x"))["scrollable"] is False
+    assert serialize_banner(Banner(id="b", text="x", scrollable=True))["scrollable"] is True
 
 
 def test_serialize_banner_controls_kind_specific():  # noqa: ANN201

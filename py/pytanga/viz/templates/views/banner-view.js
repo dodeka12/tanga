@@ -21,6 +21,7 @@ export class BannerView extends View {
         align_y = 0.5,
         auto_hide = true,
         dismissable = true,
+        scrollable = false,
         controls = [],
         backdropMode = 'fixed',
         onClose = null,
@@ -31,12 +32,14 @@ export class BannerView extends View {
         this.text = text;
         this.autoHide = auto_hide;
         this.dismissable = dismissable;
+        this.scrollable = scrollable;
         this.controls = controls || [];
         this.onClose = onClose;
         this._backdrop = null;
         this._dismissed = false;
 
         this.el.classList.add('tanga-banner');
+        if (scrollable) this.el.classList.add('tanga-banner--scrollable');
         Object.assign(this.el.style, {
             left: (align_x * 100) + '%',
             top: (align_y * 100) + '%',

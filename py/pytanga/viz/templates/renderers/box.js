@@ -9,6 +9,7 @@ import {
     tagEntity,
     addWireframeOverlay,
 } from './utils.js';
+import { createSurfaceMaterial } from './surface-material.js';
 
 export function createBox(ent) {
     const color = parseColor(ent, '#88ccff');
@@ -18,7 +19,8 @@ export function createBox(ent) {
     // Canonical: an axis-aligned box centered at the origin; placement (center
     // + rotation quaternion) rides on the node transform.
     const geometry = new THREE.BoxGeometry(size[0], size[1], size[2]);
-    const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
+    const material = createSurfaceMaterial(ent, { fallbackMaterial: makeMaterial(color, opacity) });
+    const mesh = new THREE.Mesh(geometry, material);
 
     const wireframe = styleParam(ent, 'wireframe', false);
     if (wireframe) {

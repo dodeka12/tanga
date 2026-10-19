@@ -32,6 +32,7 @@ _EPS = 1e-12
 __all__ = [
     "translation_matrix",
     "rotation_matrix",
+    "look_at_matrix",
     "scale_matrix",
     "to_trs",
     "translator_to_matrix",
@@ -91,6 +92,60 @@ def rotation_matrix(
     )
     m = np.eye(4, dtype=np.float64)
     m[:3, :3] = r
+    return m
+
+
+def look_at_matrix(
+    forward: Direction | tuple[float, float, float] | np.ndarray,
+    up: Direction | tuple[float, float, float] | np.ndarray = (0.0, 1.0, 0.0),
+) -> np.ndarray:
+    """Return a 4×4 rotation matrix whose +z axis points along *forward*.
+
+    Builds a right-handed orthonormal basis with
+    ``right = normalize(cross(up, forward))`` and ``up' = cross(forward, right)``
+    so the +y axis stays as close to *up* as possible; the matrix columns are
+    ``(right, up', forward)`` (the three.js local→world convention, matching
+    :func:`quat_to_matrix`).  When *forward* is (anti-)parallel to *up*, the
+    reference axis is replaced with the coordinate axis least aligned with
+    *forward* to keep the cross product well-conditioned.  A zero-length
+    *forward* yields the identity rotation.
+    """
+    if isinstance(forward, Direction):
+        f = np.array([forward.x, forward.y, forward.z], dtype=np.float64)
+    else:
+        f = np.array(forward, dtype=np.float64)
+    if isinstance(up, Direction):
+        u = np.array([up.x, up.y, up.z], dtype=np.float64)
+    else:
+        u = np.array(up, dtype=np.float64)
+
+    nf = float(np.linalg.norm(f))
+    if nf < _EPS:
+        return np.eye(4, dtype=np.float64)
+    f = f / nf
+
+    right = np.cross(u, f)
+    nr = float(np.linalg.norm(right))
+    if nr < _EPS:
+        ref = min(
+            (
+                np.array([1.0, 0.0, 0.0]),
+                np.array([0.0, 1.0, 0.0]),
+                np.array([0.0, 0.0, 1.0]),
+            ),
+            key=lambda r: abs(float(np.dot(r, f))),
+        )
+        right = np.cross(ref, f)
+        nr = float(np.linalg.norm(right))
+    if nr < _EPS:
+        return np.eye(4, dtype=np.float64)
+    right = right / nr
+    up2 = np.cross(f, right)
+
+    m = np.eye(4, dtype=np.float64)
+    m[:3, 0] = right
+    m[:3, 1] = up2
+    m[:3, 2] = f
     return m
 
 

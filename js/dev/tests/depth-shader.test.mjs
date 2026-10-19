@@ -47,6 +47,28 @@ test('vertex shader computes a world-space surface normal', () => {
     assert.ok(vertex.includes('vWorldPosition = (modelMatrix * vec4(p, 1.0)).xyz'));
 });
 
+test('vertex shader supports pinhole camera-frame positions', () => {
+    const vertex = buildDepthVertex();
+    assert.ok(vertex.includes('uniform float u_depth_kind'));
+    assert.ok(vertex.includes('uniform float u_fx'));
+    assert.ok(vertex.includes('uniform float u_fy'));
+    assert.ok(vertex.includes('uniform float u_cx'));
+    assert.ok(vertex.includes('uniform float u_cy'));
+    assert.ok(vertex.includes('uniform vec2 u_frame_size'));
+    assert.ok(vertex.includes('float axialDepthZ(vec2 uvSample, float dSample)'));
+    assert.ok(vertex.includes('vec3 pinholeVertex(vec2 uvSample, float z)'));
+    // Axial, radial, and inverse depth branches.
+    assert.ok(vertex.includes('// Axial depth: d = distance along the optical axis.'));
+    assert.ok(vertex.includes('// Radial depth: d = Euclidean distance along the projection ray.'));
+    assert.ok(vertex.includes('// Inverse depth: d = 1/Z.'));
+    assert.ok(vertex.includes('return (abs(metric) > 1e-9) ? (1.0 / metric) : u_depth_max;'));
+    // Pinhole depth_min/depth_max are axial metres: clamp the converted Z.
+    assert.ok(vertex.includes('clamp(axialDepthZ(snap, d), u_depth_min, u_depth_max)'));
+    // The calibration pose is applied as the object transform, not in the shader.
+    assert.ok(!vertex.includes('u_camera_to_world'));
+    assert.ok(vertex.includes('p = pc;'));
+});
+
 test('fragment shader shades plain mode with scene lighting', () => {
     const fragment = buildDepthFragment();
     assert.ok(fragment.includes('uniform int uLightCount'));

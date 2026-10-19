@@ -34,6 +34,9 @@ class Banner:
             the user selects an option; otherwise the backend must remove it.
         dismissable: When ``False``, the banner is modal — a dimmed backdrop
             blocks interaction and there is no ✕ / click-away.
+        scrollable: When ``True``, the markdown body becomes a dedicated scroll
+            region filling most of the banner (title stays pinned on top), and
+            the banner is sized larger.  Useful for long error/log output.
         controls: The control objects rendered as the banner's options.
         on_close: Optional handler invoked when the user dismisses a
             ``dismissable`` banner (runs on the server loop).
@@ -46,6 +49,7 @@ class Banner:
     align_y: float = 0.5
     auto_hide: bool = True
     dismissable: bool = True
+    scrollable: bool = False
     controls: list[Control] = field(default_factory=list)
     on_close: ControlHandler | None = None
 
@@ -72,6 +76,7 @@ def serialize_banner(banner: Banner, scene: str | None = None) -> dict[str, Any]
         "align_y": banner.align_y,
         "auto_hide": banner.auto_hide,
         "dismissable": banner.dismissable,
+        "scrollable": banner.scrollable,
         "controls": serialize_control_defs(banner.controls),
     }
 

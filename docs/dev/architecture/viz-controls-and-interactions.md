@@ -273,6 +273,11 @@ envelope, targeting a backend-only `ClientLog` control (`_controls.py`, id
   `ClientLogRecord` and fires `("client_log", "log")`; the default sink logs via
   `logging.getLogger("tanga.viz.client")`, replaceable with
   `viz.on_client_log(handler)`.
+- **Shader compile errors** — the live viewer installs
+  `renderer.debug.onShaderError` (`renderers/shader-error.js`) and reports a
+  formatted driver log as a `source: "shader"` record;
+  `Visualizer.on_shader_error(handler)` filters those records over
+  `on_client_log` (e.g. to show a banner).
 - `ClientLog` is **backend-only**: never serialized, never placed in a layout.
 - Opt-in **trace forwarding**: `setLogForwarding(true)` / `?log=1` additionally
   forwards the frontend `_log(...)` init/WS lines at `info` level (default off —

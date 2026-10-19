@@ -16,4 +16,5 @@
 - [Scenes](scenes/index.md)
 - [SDF](sdf/index.md)
 - [Styling](styling/index.md)
+- [Surface](surface/index.md)
 - [UI](ui/index.md)
