@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.21.1 (2.22.0-rc1)] — 2026-10-20
+- DepthImage grazing-angle filter (`max_grazing_angle` → live `u_max_stretch` uniform) · `pinhole_depth.py` box-in-plane + sine slider example
+- Bug fixes: background image layers no longer lose their textures after rapid `set_layer` updates
+→ [Details](2026/10/20_3a4b0aad9.md)
+
 ## [Since 2.21.1 (2.21.2-rc1)] — 2026-10-20
 - Per-pane runtime visibility (SceneView.set_visible + visible_in) · depth surface scoped to the 3D pane in pinhole_depth.py
 - Breaking: SceneView(hide/show) removed · docs/examples install path refactor
