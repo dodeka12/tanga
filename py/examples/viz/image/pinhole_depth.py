@@ -1,172 +1,221 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""pinhole_depth.py — switch the interpretation of one depth map, live.
+"""pinhole_depth.py — a calibrated depth surface next to its 2D image.
 
-Places a calibrated pinhole camera at the world origin (OpenCV convention:
-x right, y down, z forward) with its optical axis along the normalized world
-direction ``(1, 1, 1)/√3``, using the default pytanga world axes and grid for
-orientation.  A single, constant depth map (value ``2.0``)
-is rendered through :class:`~pytanga.viz.DepthImage` with the **same**
-``camera=calib``.  The surface is therefore always placed automatically
-**relative to the camera** — the intrinsics give the ray through each pixel,
-the depth gives the distance along it, and the calibration pose places it in
-the world — so it needs no manual placement regardless of the calibration's
-rotation/translation.
+Shows one calibrated scene in two panes so the pinhole :class:`~pytanga.viz.DepthImage`
+fix can be checked visually:
 
-A control pane on the left switches ``depth_kind`` so the **same raw depth
-values** produce three different 3D surfaces, all sitting along the camera's
-optical axis:
+- **left** — the calibrated camera view (``navigation="2d"``) with the synthetic
+  test image as a full-viewport background; the depth surface is hidden here via
+  ``SceneView(hide=...)``.
+- **right** — the same scene from a 3D overview camera, showing the depth
+  surface textured with that image (plus the camera frustum for reference).
 
-- ``axial``   — depth along the optical axis → a flat wall at ``Z = 2 m``,
-  centered at ``2·(1,1,1)/√3 ≈ (1.15, 1.15, 1.15)``.
-- ``radial``  — depth along the projection ray → a dome of radius ``2 m``
-  (every pixel is 2 m from the camera, so the surface is a sphere).
-- ``inverse`` — inverse depth ``1/Z`` → a flat wall at ``Z = 1/2 = 0.5 m``.
-
-The camera frustum and the camera center are drawn for reference.
-``depth_min``/``depth_max`` are always axial metres.
+The test image is a 2D sine pattern whose spatial frequency increases toward the
+bottom-right corner, so both left/right and top/bottom orientation are
+unambiguous.  The depth map is that same sine pattern's amplitude, mapped into
+the axial depth range, so the reconstructed surface follows the image pattern.
+Because both panes share the ``"world"`` scene, the hidden left pane never builds
+the surface (and therefore never consumes its binary frames), while the right
+pane still renders it.
 
 Run with:  uv run python py/examples/viz/image/pinhole_depth.py
 
-Keywords: depth image, pinhole, camera calibration, depth kind, frustum, surface, axes
+Keywords: depth image, pinhole, camera calibration, split view, image background, hide, frustum
 """
 
 from __future__ import annotations
 
-from typing import Any
+import math
 
 import numpy as np
 
-from pytanga.geometry import Frustum, Matrix, OpenCVFrame, Point
-from pytanga.geometry.transforms import look_at_matrix
+from pytanga.geometry import Frustum, Matrix, OpenCVFrame
 from pytanga.viz import (
     CameraCalibration,
-    ControlEvent,
+    CameraConfig3d,
+    CameraView,
     DepthImage,
     DepthImageData,
     DepthImageStyle,
-    DropdownView,
-    GroupView,
-    LabelView,
+    ImageData,
     SceneView,
     SplitView,
+    ViewportConfig,
     Visualizer,
 )
 
-#: Reference-frame resolution the intrinsics refer to (pixels).
-_FRAME_W, _FRAME_H = 160, 120
+#: Color image / reference-frame resolution (the intrinsics refer to this).
+_IMAGE_W, _IMAGE_H = 512, 384
+#: Depth-map resolution (downscaled to the mesh independently of the image).
+_DEPTH_W, _DEPTH_H = 128, 96
 
-#: The constant raw depth value (its meaning depends on ``depth_kind``).
-_DEPTH = 2.0
+#: Axial depth range: the top row is near, the bottom row is far.
+_NEAR, _FAR = 1.0, 3.0
 
 
 def _calibration() -> CameraCalibration:
-    """A pinhole camera at the world origin looking along (1, 1, 1)/√3.
-
-    ``fx = fy = 100`` px on a 160×120 frame gives a ~62° vertical field of view,
-    wide enough that the radial ("range") surface curves visibly.
-    """
-    forward = np.asarray([1.0, 1.0, 1.0], dtype=float)
-    forward = forward / np.linalg.norm(forward)
-    # Camera→world rotation (standard frame) looking along ``forward``; convert
-    # to the OpenCV world→camera basis (x right, y down, z forward) for K/R/t.
-    r_c2w = look_at_matrix(forward)
-    opencv = OpenCVFrame().to_matrix()[:3, :3]
-    R = Matrix((r_c2w[:3, :3].T @ opencv).tolist())
+    """An OpenCV pinhole camera at the world origin looking along ``-z``."""
     return CameraCalibration(
-        K=Matrix([[100.0, 0.0, 80.0], [0.0, 100.0, 60.0], [0.0, 0.0, 1.0]]),
-        R=R,
+        K=Matrix(
+            [
+                [400.0, 0.0, _IMAGE_W / 2.0],
+                [0.0, 400.0, _IMAGE_H / 2.0],
+                [0.0, 0.0, 1.0],
+            ]
+        ),
+        R=Matrix.identity(3),
         t=(0.0, 0.0, 0.0),
-        image_size=(_FRAME_W, _FRAME_H),
+        image_size=(_IMAGE_W, _IMAGE_H),
         frame=OpenCVFrame(),
         units=1.0,
     )
 
 
+def _sine_pattern(height: int, width: int) -> np.ndarray:
+    """A 2D sine pattern in ``[0, 1]`` whose frequency grows toward bottom-right.
+
+    The carrier frequency increases with both ``u`` and ``v``, so left/right and
+    top/bottom are unambiguous; ``0.5 + 0.5·sin(...)`` maps the signed amplitude
+    ``[-1, 1]`` into ``[0, 1]``.
+    """
+    ys, xs = np.mgrid[0:height, 0:width]
+    u = xs / max(width - 1, 1)
+    v = ys / max(height - 1, 1)
+    fx = 3.0 + 9.0 * u
+    fy = 2.0 + 7.0 * v
+    return 0.5 + 0.5 * np.sin(2.0 * np.pi * (fx * u + fy * v))
+
+
+def _image(height: int, width: int) -> np.ndarray:
+    """The sine pattern tinted red (top-left) → blue (bottom-right)."""
+    s = _sine_pattern(height, width)
+    ys, xs = np.mgrid[0:height, 0:width]
+    u = xs / max(width - 1, 1)
+    v = ys / max(height - 1, 1)
+    r = s * (1.0 - u) * (1.0 - v)
+    g = s * 0.25
+    b = s * u * v
+    return np.clip(np.stack([r, g, b], axis=-1) * 255.0, 0.0, 255.0).astype(np.uint8)
+
+
 def _depth(height: int, width: int) -> np.ndarray:
-    """A constant depth map: the value ``2.0`` in the selected ``depth_kind`` units."""
-    return np.full((height, width), _DEPTH, dtype=np.float32)
+    """The sine pattern's amplitude mapped into the axial depth range."""
+    return (_NEAR + (_FAR - _NEAR) * _sine_pattern(height, width)).astype(np.float32)
+
+
+def _frustum_corners(frustum: Frustum) -> np.ndarray:
+    """Return the 8 corner points of a ``Frustum`` (N×3, metres)."""
+    o = np.array([frustum.origin.x, frustum.origin.y, frustum.origin.z], dtype=float)
+    axis = np.array([frustum.axis.x, frustum.axis.y, frustum.axis.z], dtype=float)
+    horiz = np.array(
+        [frustum.horizontal.x, frustum.horizontal.y, frustum.horizontal.z],
+        dtype=float,
+    )
+    vert = np.cross(horiz, axis)  # horizontal × axis
+
+    def plane(d: float, hw: float, hh: float) -> list[np.ndarray]:
+        center = o + axis * d
+        return [
+            center + horiz * (sx * hw) + vert * (sy * hh)
+            for sx in (-1.0, 1.0)
+            for sy in (-1.0, 1.0)
+        ]
+
+    if frustum.near <= 0.0:
+        near_pts = [o, o, o, o]
+    else:
+        near_pts = plane(
+            frustum.near,
+            frustum.far_half_width * frustum.near / frustum.far,
+            frustum.far_half_height * frustum.near / frustum.far,
+        )
+    return np.asarray(
+        near_pts + plane(frustum.far, frustum.far_half_width, frustum.far_half_height),
+        dtype=float,
+    )
+
+
+def _surface_corners(calib: CameraCalibration) -> np.ndarray:
+    """World-space corners of the depth surface (4 reference-frame corners)."""
+    fx, fy = calib.K.data[0, 0], calib.K.data[1, 1]
+    cx, cy = calib.K.data[0, 2], calib.K.data[1, 2]
+    c2w = calib.camera_to_world().data
+    corners = []
+    for v, z in ((0.0, _NEAR), (_IMAGE_H - 1.0, _FAR)):
+        for u in (0.0, _IMAGE_W - 1.0):
+            cam = np.array([(u - cx) / fx * z, (v - cy) / fy * z, z, 1.0])
+            corners.append((c2w @ cam)[:3])
+    return np.asarray(corners, dtype=float)
+
+
+def _overview_camera(points: np.ndarray, *, fov: float = 50.0) -> CameraConfig3d:
+    """Return a 3D camera that frames *points* (N×3) from a three-quarter view."""
+    lo = points.min(axis=0)
+    hi = points.max(axis=0)
+    center = (lo + hi) / 2.0
+    radius = 0.5 * float(np.linalg.norm(hi - lo))
+    distance = (radius / math.sin(math.radians(fov) / 2.0)) * 1.1
+    direction = np.array([0.6, 0.5, 0.7])
+    direction /= np.linalg.norm(direction)
+    position = center + direction * distance
+    return CameraConfig3d(
+        fov=fov,
+        position=(float(position[0]), float(position[1]), float(position[2])),
+        target=(float(center[0]), float(center[1]), float(center[2])),
+        up=(0.0, 1.0, 0.0),
+        near=max(0.01, distance * 0.001),
+        far=distance * 10.0,
+    )
 
 
 def main() -> None:
     calib = _calibration()
     cam = calib.to_pinhole_camera()
-    depth = _depth(_FRAME_H, _FRAME_W)
+    background = ImageData("camera", data=_image(_IMAGE_H, _IMAGE_W))
+    depth = _depth(_DEPTH_H, _DEPTH_W)
 
     viz = Visualizer(
-        title="Tanga — pinhole depth kind",
+        reuse_existing=False,
+        title="Tanga — pinhole depth image (image vs 3D surface)",
     )
     world = viz.scene("world")
 
-    # Reference objects: camera frustum + camera center.
-    world.new(Frustum.from_camera(cam, near=0.2, far=3.0), color="#ffcc44")
-    world.new(Point(*calib.camera_center()), color="#ff4444")
+    frustum = Frustum.from_camera(cam, near=0.5, far=4.0)
+    frustum_ref = world.new(frustum, color="#ffcc44")
 
-    surface_ref: Any = None
-
-    def _add_surface(kind: str) -> None:
-        """Remove the previous surface, then add one with the given ``depth_kind``.
-
-        Each ``new()`` call generates a fresh entity id, so ``remove()`` on the
-        previous reference and the new add never collide.
-        """
-        nonlocal surface_ref
-        if surface_ref is not None:
-            surface_ref.remove()
-        surface_ref = world.new(
-            DepthImage(DepthImageData(depth=depth)),
-            style=DepthImageStyle(
-                camera=calib,
-                depth_kind=kind,
-                render_mode="depth",
-                colormap="turbo",
-                depth_min=0.0,
-                depth_max=3.0,
-            ),
-        )
-
-    _add_surface("axial")
-
-    async def _on_kind(value: Any, _event: ControlEvent) -> None:
-        _add_surface(str(value))
-        viz.flush()
-
-    kind = DropdownView(
-        "depth_kind",
-        label="Depth kind",
-        options=["axial", "radial", "inverse"],
-        value="axial",
-        on_change=_on_kind,
+    depth_ref = world.new(
+        DepthImage(DepthImageData(image=_image(_IMAGE_H, _IMAGE_W), depth=depth)),
+        style=DepthImageStyle(
+            camera=calib,
+            depth_kind="axial",
+            apply_pose=True,
+            render_mode="image",
+            depth_min=_NEAR,
+            depth_max=_FAR,
+        ),
     )
 
-    layout = SplitView(
-        orientation="horizontal",
-        children=[
-            GroupView(
-                "Pinhole depth",
-                [
-                    kind,
-                    LabelView(
-                        "hint",
-                        value=(
-                            "Camera looks along (1,1,1)/√3.\n"
-                            "Same depth map (constant 2.0), three interpretations:\n"
-                            "  axial   → flat wall at 2 m\n"
-                            "  radial  → dome of radius 2 m\n"
-                            "  inverse → flat wall at 0.5 m"
-                        ),
-                    ),
-                ],
-            ),
-            SceneView("world"),
-        ],
+    overview_cam = _overview_camera(
+        np.vstack([_frustum_corners(frustum), _surface_corners(calib)])
     )
 
-    viz.show(layout=layout)
+    left = SceneView(
+        "world",
+        camera_view=CameraView(
+            cam,
+            navigation="2d",
+            viewport=ViewportConfig(zoom=1.0, pan=(0.0, 0.0)),
+            background_image=background,
+        ),
+        hide={depth_ref.id, frustum_ref.id},
+    )
+    right = SceneView("world", camera_view=CameraView(overview_cam))
+
+    viz.show(layout=SplitView("horizontal", [left, right]))
     viz.wait()
 
 
 if __name__ == "__main__":
     main()
-

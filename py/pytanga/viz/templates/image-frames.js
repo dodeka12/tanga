@@ -36,6 +36,14 @@ export function peekImageFrame(id) {
     return _pending.get(id);
 }
 
+// Remove a frame (and any pending one-shot consumers) from the store.  Used
+// when an entity that shared its frames via `peekImageFrame` is removed, so the
+// store does not grow across add/remove cycles.
+export function removeImageFrame(id) {
+    _pending.delete(id);
+    _pendingConsumers.delete(id);
+}
+
 // Register a one-shot consumer to be invoked when the frame with `id` arrives.
 export function registerImageFrameConsumer(id, consume) {
     if (!_pendingConsumers.has(id)) _pendingConsumers.set(id, []);

@@ -1,7 +1,7 @@
 // Tanga — unit tests for the binary image-frame decoder (node --test).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decodeImageFrame, hasImageFrame, peekImageFrame, registerImageFrameConsumer, storeImageFrame, takeImageFrame } from '../../../py/pytanga/viz/templates/image-frames.js';
+import { decodeImageFrame, hasImageFrame, peekImageFrame, registerImageFrameConsumer, removeImageFrame, storeImageFrame, takeImageFrame } from '../../../py/pytanga/viz/templates/image-frames.js';
 
 // Build a little-endian frame by hand (magic "TGI\0" + header + id + payload).
 function buildFrame({ version = 2, codec = 0, width = 2, height = 3, channels = 1, dtype = 0, id = 'img1', payload = new Uint8Array([1, 2, 3, 4, 5, 6]) }) {
@@ -94,6 +94,21 @@ test('peekImageFrame returns the frame without removing it', () => {
     assert.equal(peekImageFrame('peek1'), frame);
     assert.equal(hasImageFrame('peek1'), true);
     takeImageFrame('peek1');
+});
+
+test('removeImageFrame removes a stored frame and its pending consumers', () => {
+    const frame = { id: 'rm1', width: 1, height: 1, channels: 3, dtype: 0, codec: 'jpeg', bytes: new Uint8Array([5]) };
+    storeImageFrame(frame);
+    const received = [];
+    registerImageFrameConsumer('rm1', (f) => received.push(f));
+    removeImageFrame('rm1');
+    assert.equal(hasImageFrame('rm1'), false);
+    // A frame that arrives after removal is stored again, but the removed
+    // one-shot consumer is not invoked.
+    storeImageFrame({ ...frame, bytes: new Uint8Array([6]) });
+    assert.equal(received.length, 0);
+    assert.equal(hasImageFrame('rm1'), true);
+    removeImageFrame('rm1');
 });
 
 test('registerImageFrameConsumer is invoked once when the frame arrives', () => {

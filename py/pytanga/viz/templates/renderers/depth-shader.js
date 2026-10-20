@@ -36,7 +36,9 @@ float axialDepthZ(vec2 uvSample, float dSample) {
     }
     if (u_depth_kind > 1.5) {
         // Radial depth: d = Euclidean distance along the projection ray.
-        vec2 pixel = uvSample * u_frame_size;
+        // uv.y runs bottom→top (v=1 is the top row), but the OpenCV row index
+        // runs top→bottom, so invert v before mapping to the camera frame.
+        vec2 pixel = vec2(uvSample.x, 1.0 - uvSample.y) * u_frame_size;
         float xn = (pixel.x - u_cx) / u_fx;
         float yn = (pixel.y - u_cy) / u_fy;
         return metric / sqrt(xn * xn + yn * yn + 1.0);
@@ -46,8 +48,12 @@ float axialDepthZ(vec2 uvSample, float dSample) {
 }
 
 // Camera-frame vertex (x right, y down, z forward) from axial depth Z.
+// The depth/image textures upload with flipY=true, so uv.y = 1 samples the top
+// image row.  The OpenCV row index counts down from the top, hence the
+// 1.0 - uvSample.y inversion — without it the surface is mirrored vertically
+// against the texture it was measured from.
 vec3 pinholeVertex(vec2 uvSample, float z) {
-    vec2 pixel = uvSample * u_frame_size;
+    vec2 pixel = vec2(uvSample.x, 1.0 - uvSample.y) * u_frame_size;
     return vec3((pixel.x - u_cx) / u_fx * z, (pixel.y - u_cy) / u_fy * z, z);
 }
 

@@ -17,9 +17,8 @@ import {
 } from './shader-lighting.js';
 import { makeEncodedTexture } from './image.js';
 import {
-    hasImageFrame,
+    peekImageFrame,
     registerImageFrameConsumer,
-    takeImageFrame,
 } from '../image-frames.js';
 
 const MAX_SELECTED_SEGMENTS = 16;
@@ -120,23 +119,24 @@ function bindFrameTexture(mesh, key, meta, nearest) {
     }
     const make = nearest ? makeScalarTexture : makeEncodedTexture;
     const uniforms = mesh.material.uniforms;
-    const has = hasImageFrame(meta.id);
-    console.log('[depth-image] bindFrameTexture', key, meta.id, 'hasFrame=', has, 'nearest=', nearest);
+    // Peek (not take) so the same depth/image/segmentation frames can be shared
+    // across several SceneViews that render the same depth image.  Taking the
+    // frame here would leave every later view with the 1×1 white fallback.
+    const frame = peekImageFrame(meta.id);
+    console.log('[depth-image] bindFrameTexture', key, meta.id, 'hasFrame=', !!frame, 'nearest=', nearest);
+    const bind = (tex) => {
+        uniforms[key].value = tex;
+        console.log('[depth-image] bound texture', key, meta.id, tex.image?.width, tex.image?.height);
+    };
     try {
-        if (has) {
-            make(meta, takeImageFrame(meta.id))
-                .then((tex) => {
-                    uniforms[key].value = tex;
-                    console.log('[depth-image] bound texture', key, meta.id, tex.image?.width, tex.image?.height);
-                })
+        if (frame) {
+            make(meta, frame)
+                .then(bind)
                 .catch((e) => console.error('[depth-image] texture failed', key, meta.id, e));
         } else {
-            registerImageFrameConsumer(meta.id, (frame) => {
-                make(meta, frame)
-                    .then((tex) => {
-                        uniforms[key].value = tex;
-                        console.log('[depth-image] bound texture (late)', key, meta.id, tex.image?.width, tex.image?.height);
-                    })
+            registerImageFrameConsumer(meta.id, (late) => {
+                make(meta, late)
+                    .then(bind)
                     .catch((e) => console.error('[depth-image] texture failed (late)', key, meta.id, e));
             });
         }
