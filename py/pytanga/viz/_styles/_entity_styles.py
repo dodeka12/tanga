@@ -1064,6 +1064,8 @@ class DepthImageStyle(VizStyle):
         opacity: Surface opacity.
         shininess: Blinn-Phong specular exponent for ``"plain"`` mode.
         specular: Blinn-Phong specular color for ``"plain"`` mode.
+        max_grazing_angle: Discard surface more edge-on than this angle (deg);
+            ``None`` = off.
     """
 
     render_mode: str | None = None
@@ -1088,12 +1090,18 @@ class DepthImageStyle(VizStyle):
     opacity: float | None = None
     shininess: float | None = None
     specular: str | None = None
+    max_grazing_angle: float | None = None
 
     def __post_init__(self) -> None:
         if self.depth_kind is not None:
             from ..depth_image import normalize_depth_kind
 
             self.depth_kind = normalize_depth_kind(self.depth_kind)
+        if self.max_grazing_angle is not None:
+            from ..depth_image import grazing_angle_to_stretch
+
+            grazing_angle_to_stretch(self.max_grazing_angle)  # validate early
+            self.max_grazing_angle = float(self.max_grazing_angle)
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"style_type": "DepthImageStyle"}
@@ -1141,4 +1149,6 @@ class DepthImageStyle(VizStyle):
             result["shininess"] = self.shininess
         if self.specular is not None:
             result["specular"] = self.specular
+        if self.max_grazing_angle is not None:
+            result["max_grazing_angle"] = self.max_grazing_angle
         return result

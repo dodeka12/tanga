@@ -86,6 +86,7 @@ function buildDepthUniforms(ent) {
         u_frame_size: { value: new THREE.Vector2(frameW, frameH) },
         u_missing_depth: { value: u.u_missing_depth ?? -3.402823466e38 },
         u_discard_missing: { value: u.u_discard_missing ?? 1 },
+        u_max_stretch: { value: u.u_max_stretch ?? 0.0 },
         u_seg_enabled: { value: u.u_seg_enabled ?? 0 },
         u_num_selected: { value: u.u_num_selected ?? 0 },
         // uint8 masks are normalized to 0..1 on upload, so the shader rescales

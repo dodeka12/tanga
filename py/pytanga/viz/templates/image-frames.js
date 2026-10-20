@@ -44,6 +44,22 @@ export function removeImageFrame(id) {
     _pendingConsumers.delete(id);
 }
 
+// Resolve the authoritative pixel layout for a data texture.  The decoded
+// frame's own header (width/height/channels/dtype) wins when a frame is
+// present, falling back to `img` metadata only when it is not.  `img` can be
+// stale (a one-shot consumer registered from an older message), whereas the
+// frame is self-describing — trusting it prevents e.g. decoding a 2048×1535
+// frame into a 1×1 placeholder-sized texture.
+export function resolveFrameFormat(img, frame) {
+    const meta = img || {};
+    return {
+        width: (frame && frame.width) || meta.width,
+        height: (frame && frame.height) || meta.height,
+        channels: (frame && frame.channels) || meta.channels || 1,
+        dtype: (frame && frame.dtype) ?? meta.dtype ?? 0,
+    };
+}
+
 // Register a one-shot consumer to be invoked when the frame with `id` arrives.
 export function registerImageFrameConsumer(id, consume) {
     if (!_pendingConsumers.has(id)) _pendingConsumers.set(id, []);

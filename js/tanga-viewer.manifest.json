@@ -192,11 +192,11 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image.js",
-      "sha256": "e017895387142bfebddd4773bb9ea3dc33d93275f033ac72ee22536ed224fe87"
+      "sha256": "a87f35d6f361f4352f4dde50819aea463840b127a63ecc4d7a92fa6fd1721ca0"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image-background.js",
-      "sha256": "83e90c2ba3af40c1c114a16cbcdf7e570d57e207990e2f00c7bc21bf8c0f4bd0"
+      "sha256": "63f41c369f2eb4faaf511c0aeb0090964a8790435de1e96bbf61bb7f0bbf775d"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image-tiles.js",
@@ -220,11 +220,11 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/depth-shader.js",
-      "sha256": "52ba0ce334d7a1f9cf1272701c3c695337871e1c42251c1fd0881e8b723e58b2"
+      "sha256": "3e1e19c4b38174bd58b7f981ef36ecc3a33f87cab79377ed1020167b14a36c8d"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/depth-image.js",
-      "sha256": "fc5bafdda884d46ae37ad66a0b7465680d49ecabfe99aa0f5e666692228efc2c"
+      "sha256": "190244c9d2d2b01875b0cce6785ebae961c771cba40913d0ea750c780cfe08c3"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/factory.js",
@@ -272,7 +272,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/image-frames.js",
-      "sha256": "f96e4b54067d91d7d47d36a6d9a0b688fbacb25d6ea0e9c84c5cc953e25a5070"
+      "sha256": "cd35793f7be9c93d3693306d952d096e2e9383128678f77c67ddec8ff12897bd"
     },
     {
       "path": "py/pytanga/viz/templates/sdf/objects/transform.js",
@@ -303,6 +303,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "e6a6638bbffadd3fd45afc7b7e2c83aa9fceab4d043af3255a2778f7129efecd",
-  "bundle_sha256": "17f0fde0a228f4ad8e6bf5cf6efb429b6763352f7633389b95e0eb68b71469b7"
+  "fingerprint_sha256": "b9a5286a746c6fc9266798b7f9f3f282a83d95e178c6ae368abe1bace6ba9ccf",
+  "bundle_sha256": "ec1c543cd14fd1f24101e5cbe8eadd5d8b963867f62dd7b8b8c970232063c870"
 }

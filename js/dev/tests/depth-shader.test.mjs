@@ -89,3 +89,13 @@ test('fragment shader shades plain mode with scene lighting', () => {
     assert.ok(fragment.includes('pow(max(dot(N, H), 0.0), u_shininess)'));
     assert.ok(fragment.includes('gl_FragColor = vec4(ambient + diffuse + specular, u_opacity)'));
 });
+
+test('vertex and fragment shaders carry the depth-jump stretch filter', () => {
+    const vertex = buildDepthVertex();
+    assert.ok(vertex.includes('varying float vStretch'));
+    assert.ok(vertex.includes('snap - du'));
+    assert.ok(vertex.includes('snap - dv'));
+    const fragment = buildDepthFragment();
+    assert.ok(fragment.includes('uniform float u_max_stretch'));
+    assert.ok(fragment.includes('vStretch > u_max_stretch'));
+});

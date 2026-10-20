@@ -3098,14 +3098,16 @@ function emptyTypedArray(dtype, length) {
     return new Uint8Array(length);
 }
 
-function makeDataTexture(img, bytes) {
-    const width = img.width;
-    const height = img.height;
-    const channels = img.channels || 1;
-    const dtype = img.dtype ?? 0;
+function makeDataTexture(img, bytes, frame) {
+    // The decoded frame is authoritative for size/format (its header carries
+    // the real width/height/channels/dtype), whereas `img` metadata can be
+    // stale (e.g. a consumer registered from an older message whose placeholder
+    // dimensions differ from the frame that eventually arrived).  Fall back to
+    // `img` only when no frame is available.
+    const { width, height, channels, dtype } = resolveFrameFormat(img, frame);
     const spec = DTYPE_TYPES[dtype] ?? DTYPE_TYPES[0];
 
-    const frameBytes = bytes ?? (hasImageFrame(img.id) ? takeImageFrame(img.id).bytes : null);
+    const frameBytes = bytes ?? (frame ? frame.bytes : null) ?? (hasImageFrame(img.id) ? takeImageFrame(img.id).bytes : null);
     const raw = frameBytes
         ? typedArrayFor(dtype, frameBytes)
         : emptyTypedArray(dtype, width * height * channels);
@@ -3164,7 +3166,7 @@ async function makeEncodedTexture(img, frame) {
         bytes = new Uint8Array(await new Response(stream).arrayBuffer());
     }
 
-    return makeDataTexture(img, bytes);
+    return makeDataTexture(img, bytes, frame);
 }
 
 // Compose a tiled float32/uint16 image at `level` into one float DataTexture by
@@ -3655,6 +3657,46 @@ function _bindLayerTexture(material, img, i) {
     });
 }
 
+// Identity of a layer for change detection.  A layer's `version` (a uuid
+// bumped by `ImageData.update()` and by every fresh `ImageData`) is stable per
+// content; fall back to `id` for hand-built metadata that omits it.
+function _layerTag(img) {
+    if (!img) return null;
+    return `${img.source || 'data'}:${img.version ?? img.id}`;
+}
+
+// Bind every layer described by `imageMeta`, re-binding only the layers whose
+// `version` changed (plus all tiled layers).  Without this, each
+// `view_background_image` re-binds *unchanged* layers whose pixel frames were
+// already consumed, registering one-shot consumers bound to stale placeholder
+// metadata — which then decode a later, differently-sized frame with the wrong
+// dimensions (the layer-texture race).
+function _bindLayers(material, imageMeta) {
+    const img = imageMeta || {};
+    const layers = _layersOf(img);
+    const layerCount = Number(img.max_layers) || 8;
+    const bound = material.userData._layerVersions || (material.userData._layerVersions = new Map());
+    for (let i = 0; i < layers.length && i < layerCount; i++) {
+        const layer = layers[i];
+        const key = `uImage${i}`;
+        if (!layer) {
+            // A cleared (stable-index) slot: null the sampler once.
+            if (bound.get(key) !== null) {
+                material.uniforms[key].value = null;
+                bound.set(key, null);
+            }
+            continue;
+        }
+        const tag = _layerTag(layer);
+        // Tiled layers always re-bind (they rebuild `_tiledLayers`, have no
+        // pixel frame, and cannot race a stale consumer); data/url layers only
+        // re-bind when their content actually changed.
+        if (layer.source !== 'tiled' && bound.get(key) === tag) continue;
+        bound.set(key, tag);
+        _bindLayerTexture(material, layer, i);
+    }
+}
+
 /**
  * Build a screen-space image background quad.
  *
@@ -3678,11 +3720,7 @@ function createImageBackground(imageMeta) {
         vertex: img.shader?.vertex ?? null,
     };
 
-    const layers = _layersOf(img);
-    const layerCount = Number(img.max_layers) || 8;
-    for (let i = 0; i < layers.length && i < layerCount; i++) {
-        _bindLayerTexture(material, layers[i], i);
-    }
+    _bindLayers(material, img);
 
     return mesh;
 }
@@ -3704,13 +3742,10 @@ function updateImageBackground(mesh, imageMeta) {
     mat.uniforms.uImageAspect.value = width / height;
     // Re-apply color-processing + custom uniforms from the new metadata.
     applyImageUniforms(mesh, img.uniforms);
-    // Rebuild the tiled-layer LOD state from the new metadata.
+    // Rebuild the tiled-layer LOD state from the new metadata, then re-bind
+    // only the layers whose content actually changed (see `_bindLayers`).
     mat.userData._tiledLayers = [];
-    const layers = _layersOf(img);
-    const layerCount = Number(img.max_layers) || 8;
-    for (let i = 0; i < layers.length && i < layerCount; i++) {
-        _bindLayerTexture(mat, layers[i], i);
-    }
+    _bindLayers(mat, img);
 }
 
 /**
@@ -4285,6 +4320,7 @@ varying float vDepth;
 varying float vValid;
 varying vec3 vNormal;
 varying vec3 vWorldPosition;
+varying float vStretch;        // max apparent depth slope (tan grazing angle) over neighbours
 
 uniform sampler2D uDepth;
 uniform vec2 uDepthSize;
@@ -4343,17 +4379,24 @@ void main() {
     vec2 dv = vec2(0.0, 1.0 / max(uDepthSize.y, 1.0));
     float dU = texture2D(uDepth, snap + du).r;
     float dV = texture2D(uDepth, snap + dv).r;
+    float dL = texture2D(uDepth, snap - du).r;
+    float dD = texture2D(uDepth, snap - dv).r;
     bool missingU = (dU == u_missing_depth);
     bool missingV = (dV == u_missing_depth);
+    bool missingL = (dL == u_missing_depth);
+    bool missingD = (dD == u_missing_depth);
 
     vec3 p;
     vec3 n;
+    vStretch = 0.0;
     if (u_depth_kind > 0.5) {
         // Pinhole: depth_min/depth_max are axial depth (Z) in world units, so
         // convert the raw sample to Z first, then clamp.
         float zC  = missing  ? u_depth_min : clamp(axialDepthZ(snap, d), u_depth_min, u_depth_max);
         float zCU = missingU ? u_depth_min : clamp(axialDepthZ(snap + du, dU), u_depth_min, u_depth_max);
         float zCV = missingV ? u_depth_min : clamp(axialDepthZ(snap + dv, dV), u_depth_min, u_depth_max);
+        float zCL = missingL ? u_depth_min : clamp(axialDepthZ(snap - du, dL), u_depth_min, u_depth_max);
+        float zCD = missingD ? u_depth_min : clamp(axialDepthZ(snap - dv, dD), u_depth_min, u_depth_max);
         vDepth = zC;
 
         vec3 pc = pinholeVertex(snap, zC);
@@ -4362,12 +4405,28 @@ void main() {
         vec3 nCam = normalize(cross(pcU - pc, pcV - pc));
         p = pc;
         n = nCam;
+
+        // Depth-jump / stretch filter: apparent slope (tan of the grazing angle)
+        // against the viewing ray, per neighbour pair.  One reference-frame pixel
+        // at axial depth z subtends z/f laterally; adjacent mesh samples are
+        // u_frame_size/uDepthSize reference pixels apart, so
+        // slope = |Δz| · f · uDepthSize / (z · u_frame_size).  Missing endpoints
+        // contribute 0 (handled by vValid).
+        float invZ = 1.0 / max(zC, 1e-6);
+        float sx = u_fx * uDepthSize.x / max(u_frame_size.x, 1.0);
+        float sy = u_fy * uDepthSize.y / max(u_frame_size.y, 1.0);
+        if (!missing && !missingU) vStretch = max(vStretch, abs(zCU - zC) * sx * invZ);
+        if (!missing && !missingL) vStretch = max(vStretch, abs(zCL - zC) * sx * invZ);
+        if (!missing && !missingV) vStretch = max(vStretch, abs(zCV - zC) * sy * invZ);
+        if (!missing && !missingD) vStretch = max(vStretch, abs(zCD - zC) * sy * invZ);
     } else {
         // Orthographic: clamp the raw depth value (legacy heightfield), then
         // apply depth_scale/depth_offset.
         float zC  = missing  ? u_depth_min : clamp(d, u_depth_min, u_depth_max);
         float zCU = missingU ? u_depth_min : clamp(dU, u_depth_min, u_depth_max);
         float zCV = missingV ? u_depth_min : clamp(dV, u_depth_min, u_depth_max);
+        float zCL = missingL ? u_depth_min : clamp(dL, u_depth_min, u_depth_max);
+        float zCD = missingD ? u_depth_min : clamp(dD, u_depth_min, u_depth_max);
         vDepth = zC;
 
         p = position;
@@ -4376,6 +4435,16 @@ void main() {
         vec3 tX = vec3(uWorldStep.x, 0.0, (zCU - u_depth_offset) * u_depth_scale - hC);
         vec3 tY = vec3(0.0, uWorldStep.y, (zCV - u_depth_offset) * u_depth_scale - hC);
         n = normalize(cross(tX, tY));
+
+        // Orthographic slope (tan of the grazing angle): world-unit height step
+        // vs the object-space sample spacing.  Missing endpoints contribute 0.
+        float invSx = 1.0 / max(uWorldStep.x, 1e-6);
+        float invSy = 1.0 / max(uWorldStep.y, 1e-6);
+        float absScale = abs(u_depth_scale);
+        if (!missing && !missingU) vStretch = max(vStretch, abs(zCU - zC) * absScale * invSx);
+        if (!missing && !missingL) vStretch = max(vStretch, abs(zCL - zC) * absScale * invSx);
+        if (!missing && !missingV) vStretch = max(vStretch, abs(zCV - zC) * absScale * invSy);
+        if (!missing && !missingD) vStretch = max(vStretch, abs(zCD - zC) * absScale * invSy);
     }
 
     vNormal = normalize(mat3(modelMatrix) * n);
@@ -4430,6 +4499,7 @@ varying float vDepth;
 varying float vValid;
 varying vec3 vNormal;
 varying vec3 vWorldPosition;
+varying float vStretch;         // max apparent depth slope (tan grazing angle) over neighbours
 
 uniform sampler2D uDepth;
 uniform sampler2D uSegMask;
@@ -4445,6 +4515,7 @@ uniform int u_colormap;          // 0 = viridis, 1 = turbo, 2 = gray
 uniform vec3 u_color;
 uniform float u_opacity;
 uniform int u_discard_missing;
+uniform float u_max_stretch;     // discard fragments steeper than this slope (0 = off)
 uniform int u_seg_enabled;
 uniform int u_num_selected;
 uniform float u_seg_scale;        // 255.0 for uint8, 1.0 for float/uint16
@@ -4470,6 +4541,8 @@ bool tangaSegmentSelected(vec2 uv) {
 void main() {
     // Missing depth -> discard (no color, no depth write).
     if (u_discard_missing == 1 && vValid < 0.5) discard;
+    // Depth-jump / stretch filter -> discard stretched (edge-on) triangles.
+    if (u_max_stretch > 0.0 && vStretch > u_max_stretch) discard;
     // Segmentation filter -> discard non-selected segments (no depth write).
     if (!tangaSegmentSelected(vUv)) discard;
 
@@ -4573,6 +4646,7 @@ function buildDepthUniforms(ent) {
         u_frame_size: { value: new THREE.Vector2(frameW, frameH) },
         u_missing_depth: { value: u.u_missing_depth ?? -3.402823466e38 },
         u_discard_missing: { value: u.u_discard_missing ?? 1 },
+        u_max_stretch: { value: u.u_max_stretch ?? 0.0 },
         u_seg_enabled: { value: u.u_seg_enabled ?? 0 },
         u_num_selected: { value: u.u_num_selected ?? 0 },
         // uint8 masks are normalized to 0..1 on upload, so the shader rescales
@@ -6702,6 +6776,22 @@ function peekImageFrame(id) {
 function removeImageFrame(id) {
     _pending.delete(id);
     _pendingConsumers.delete(id);
+}
+
+// Resolve the authoritative pixel layout for a data texture.  The decoded
+// frame's own header (width/height/channels/dtype) wins when a frame is
+// present, falling back to `img` metadata only when it is not.  `img` can be
+// stale (a one-shot consumer registered from an older message), whereas the
+// frame is self-describing — trusting it prevents e.g. decoding a 2048×1535
+// frame into a 1×1 placeholder-sized texture.
+function resolveFrameFormat(img, frame) {
+    const meta = img || {};
+    return {
+        width: (frame && frame.width) || meta.width,
+        height: (frame && frame.height) || meta.height,
+        channels: (frame && frame.channels) || meta.channels || 1,
+        dtype: (frame && frame.dtype) ?? meta.dtype ?? 0,
+    };
 }
 
 // Register a one-shot consumer to be invoked when the frame with `id` arrives.

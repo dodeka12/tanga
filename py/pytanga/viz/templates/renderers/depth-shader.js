@@ -11,6 +11,7 @@ varying float vDepth;
 varying float vValid;
 varying vec3 vNormal;
 varying vec3 vWorldPosition;
+varying float vStretch;        // max apparent depth slope (tan grazing angle) over neighbours
 
 uniform sampler2D uDepth;
 uniform vec2 uDepthSize;
@@ -69,17 +70,24 @@ void main() {
     vec2 dv = vec2(0.0, 1.0 / max(uDepthSize.y, 1.0));
     float dU = texture2D(uDepth, snap + du).r;
     float dV = texture2D(uDepth, snap + dv).r;
+    float dL = texture2D(uDepth, snap - du).r;
+    float dD = texture2D(uDepth, snap - dv).r;
     bool missingU = (dU == u_missing_depth);
     bool missingV = (dV == u_missing_depth);
+    bool missingL = (dL == u_missing_depth);
+    bool missingD = (dD == u_missing_depth);
 
     vec3 p;
     vec3 n;
+    vStretch = 0.0;
     if (u_depth_kind > 0.5) {
         // Pinhole: depth_min/depth_max are axial depth (Z) in world units, so
         // convert the raw sample to Z first, then clamp.
         float zC  = missing  ? u_depth_min : clamp(axialDepthZ(snap, d), u_depth_min, u_depth_max);
         float zCU = missingU ? u_depth_min : clamp(axialDepthZ(snap + du, dU), u_depth_min, u_depth_max);
         float zCV = missingV ? u_depth_min : clamp(axialDepthZ(snap + dv, dV), u_depth_min, u_depth_max);
+        float zCL = missingL ? u_depth_min : clamp(axialDepthZ(snap - du, dL), u_depth_min, u_depth_max);
+        float zCD = missingD ? u_depth_min : clamp(axialDepthZ(snap - dv, dD), u_depth_min, u_depth_max);
         vDepth = zC;
 
         vec3 pc = pinholeVertex(snap, zC);
@@ -88,12 +96,28 @@ void main() {
         vec3 nCam = normalize(cross(pcU - pc, pcV - pc));
         p = pc;
         n = nCam;
+
+        // Depth-jump / stretch filter: apparent slope (tan of the grazing angle)
+        // against the viewing ray, per neighbour pair.  One reference-frame pixel
+        // at axial depth z subtends z/f laterally; adjacent mesh samples are
+        // u_frame_size/uDepthSize reference pixels apart, so
+        // slope = |Δz| · f · uDepthSize / (z · u_frame_size).  Missing endpoints
+        // contribute 0 (handled by vValid).
+        float invZ = 1.0 / max(zC, 1e-6);
+        float sx = u_fx * uDepthSize.x / max(u_frame_size.x, 1.0);
+        float sy = u_fy * uDepthSize.y / max(u_frame_size.y, 1.0);
+        if (!missing && !missingU) vStretch = max(vStretch, abs(zCU - zC) * sx * invZ);
+        if (!missing && !missingL) vStretch = max(vStretch, abs(zCL - zC) * sx * invZ);
+        if (!missing && !missingV) vStretch = max(vStretch, abs(zCV - zC) * sy * invZ);
+        if (!missing && !missingD) vStretch = max(vStretch, abs(zCD - zC) * sy * invZ);
     } else {
         // Orthographic: clamp the raw depth value (legacy heightfield), then
         // apply depth_scale/depth_offset.
         float zC  = missing  ? u_depth_min : clamp(d, u_depth_min, u_depth_max);
         float zCU = missingU ? u_depth_min : clamp(dU, u_depth_min, u_depth_max);
         float zCV = missingV ? u_depth_min : clamp(dV, u_depth_min, u_depth_max);
+        float zCL = missingL ? u_depth_min : clamp(dL, u_depth_min, u_depth_max);
+        float zCD = missingD ? u_depth_min : clamp(dD, u_depth_min, u_depth_max);
         vDepth = zC;
 
         p = position;
@@ -102,6 +126,16 @@ void main() {
         vec3 tX = vec3(uWorldStep.x, 0.0, (zCU - u_depth_offset) * u_depth_scale - hC);
         vec3 tY = vec3(0.0, uWorldStep.y, (zCV - u_depth_offset) * u_depth_scale - hC);
         n = normalize(cross(tX, tY));
+
+        // Orthographic slope (tan of the grazing angle): world-unit height step
+        // vs the object-space sample spacing.  Missing endpoints contribute 0.
+        float invSx = 1.0 / max(uWorldStep.x, 1e-6);
+        float invSy = 1.0 / max(uWorldStep.y, 1e-6);
+        float absScale = abs(u_depth_scale);
+        if (!missing && !missingU) vStretch = max(vStretch, abs(zCU - zC) * absScale * invSx);
+        if (!missing && !missingL) vStretch = max(vStretch, abs(zCL - zC) * absScale * invSx);
+        if (!missing && !missingV) vStretch = max(vStretch, abs(zCV - zC) * absScale * invSy);
+        if (!missing && !missingD) vStretch = max(vStretch, abs(zCD - zC) * absScale * invSy);
     }
 
     vNormal = normalize(mat3(modelMatrix) * n);
@@ -156,6 +190,7 @@ varying float vDepth;
 varying float vValid;
 varying vec3 vNormal;
 varying vec3 vWorldPosition;
+varying float vStretch;         // max apparent depth slope (tan grazing angle) over neighbours
 
 uniform sampler2D uDepth;
 uniform sampler2D uSegMask;
@@ -171,6 +206,7 @@ uniform int u_colormap;          // 0 = viridis, 1 = turbo, 2 = gray
 uniform vec3 u_color;
 uniform float u_opacity;
 uniform int u_discard_missing;
+uniform float u_max_stretch;     // discard fragments steeper than this slope (0 = off)
 uniform int u_seg_enabled;
 uniform int u_num_selected;
 uniform float u_seg_scale;        // 255.0 for uint8, 1.0 for float/uint16
@@ -196,6 +232,8 @@ bool tangaSegmentSelected(vec2 uv) {
 void main() {
     // Missing depth -> discard (no color, no depth write).
     if (u_discard_missing == 1 && vValid < 0.5) discard;
+    // Depth-jump / stretch filter -> discard stretched (edge-on) triangles.
+    if (u_max_stretch > 0.0 && vStretch > u_max_stretch) discard;
     // Segmentation filter -> discard non-selected segments (no depth write).
     if (!tangaSegmentSelected(vUv)) discard;
 

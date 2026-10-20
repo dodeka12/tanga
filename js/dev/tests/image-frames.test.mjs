@@ -1,7 +1,7 @@
 // Tanga — unit tests for the binary image-frame decoder (node --test).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decodeImageFrame, hasImageFrame, peekImageFrame, registerImageFrameConsumer, removeImageFrame, storeImageFrame, takeImageFrame } from '../../../py/pytanga/viz/templates/image-frames.js';
+import { decodeImageFrame, hasImageFrame, peekImageFrame, registerImageFrameConsumer, removeImageFrame, resolveFrameFormat, storeImageFrame, takeImageFrame } from '../../../py/pytanga/viz/templates/image-frames.js';
 
 // Build a little-endian frame by hand (magic "TGI\0" + header + id + payload).
 function buildFrame({ version = 2, codec = 0, width = 2, height = 3, channels = 1, dtype = 0, id = 'img1', payload = new Uint8Array([1, 2, 3, 4, 5, 6]) }) {
@@ -121,4 +121,34 @@ test('registerImageFrameConsumer is invoked once when the frame arrives', () => 
     storeImageFrame({ ...frame, bytes: new Uint8Array([8]) });
     assert.equal(received.length, 1);
     takeImageFrame('late1');
+});
+
+test('resolveFrameFormat prefers the decoded frame over (stale) metadata', () => {
+    // A consumer registered from an older message carries 1×1 placeholder
+    // metadata, but the frame that actually arrives is 2048×1535 — its header
+    // must win so the texture is sized/typed correctly.
+    const meta = { id: 'lay2', width: 1, height: 1, channels: 4, dtype: 0 };
+    const frame = { id: 'lay2', width: 2048, height: 1535, channels: 4, dtype: 0, codec: 'zlib', bytes: new Uint8Array(0) };
+    assert.deepEqual(resolveFrameFormat(meta, frame), { width: 2048, height: 1535, channels: 4, dtype: 0 });
+});
+
+test('resolveFrameFormat falls back to metadata when no frame is present', () => {
+    const meta = { id: 'lay4', width: 1024, height: 767, channels: 1, dtype: 1 };
+    assert.deepEqual(resolveFrameFormat(meta, null), { width: 1024, height: 767, channels: 1, dtype: 1 });
+});
+
+test('storeImageFrame replaces a same-id frame so a stale consumer sees the newest frame', () => {
+    const newFrame = { id: 'race1', width: 2048, height: 1535, channels: 4, dtype: 0, codec: 'zlib', bytes: new Uint8Array([2]) };
+    const received = [];
+    registerImageFrameConsumer('race1', (f) => received.push(f));
+    storeImageFrame(newFrame);
+    assert.deepEqual(received, [newFrame]);
+    assert.equal(peekImageFrame('race1'), newFrame);
+    // A later store with the same id replaces the frame (latest wins), and the
+    // already-fired consumer is not re-invoked (one-shot).
+    const newest = { id: 'race1', width: 2048, height: 1535, channels: 4, dtype: 0, codec: 'zlib', bytes: new Uint8Array([3]) };
+    storeImageFrame(newest);
+    assert.equal(peekImageFrame('race1'), newest);
+    assert.equal(received.length, 1);
+    removeImageFrame('race1');
 });
