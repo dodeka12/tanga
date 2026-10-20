@@ -314,6 +314,49 @@ class TestOpenLayoutBrowser:
         assert captured["url"].startswith("/?view=demo&token=")
 
 
+class _FakeTransport:
+    def __init__(self) -> None:
+        self.sent: list[dict] = []
+
+    def send(self, message: dict) -> None:
+        self.sent.append(message)
+
+
+class TestViewVisibility:
+    def test_scene_view_set_visible_pushes_view_visibility(self, monkeypatch):  # noqa: ANN001, ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        fake = _FakeTransport()
+        monkeypatch.setattr(viz._layout, "_transport", fake)
+
+        left = SceneView("world", id="sv_left")
+        viz.set_layout(
+            SplitView("horizontal", [left, SceneView("world", id="sv_right")])
+        )
+
+        left.set_visible("e", False)
+
+        assert fake.sent == [
+            {"type": "view_visibility", "view_id": "sv_left", "hide": ["e"]}
+        ]
+
+    def test_two_panes_hide_targets_only_left(self, monkeypatch):  # noqa: ANN001, ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        fake = _FakeTransport()
+        monkeypatch.setattr(viz._layout, "_transport", fake)
+
+        left = SceneView("world", id="sv_left")
+        right = SceneView("world", id="sv_right")
+        viz.set_layout(SplitView("horizontal", [left, right]))
+
+        left.set_visible("e", False)
+
+        assert fake.sent == [
+            {"type": "view_visibility", "view_id": "sv_left", "hide": ["e"]}
+        ]
+        assert left._hide == {"e"}
+        assert right._hide == set()
+
+
 class _FakeServer:
     def __init__(self):  # noqa: ANN204
         self.captured = []

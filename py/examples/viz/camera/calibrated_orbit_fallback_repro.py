@@ -206,8 +206,8 @@ def main() -> None:
             viewport=ViewportConfig(zoom=1.0, pan=(0.0, 0.0)),
             background_image=background,
         ),
-        hide={frustum_ref.id},
     )
+    left.set_visible(frustum_ref.id, False)
     right = SceneView("world", camera_view=CameraView(overview_cam), read_only=True)
 
     async def _on_reload(_value: Any, _event: ControlEvent) -> None:

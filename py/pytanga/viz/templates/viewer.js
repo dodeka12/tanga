@@ -654,6 +654,11 @@ async function handleMessage(msg) {
         if (target) target.setSurface(msg.surface);
         return;
     }
+    if (msg.type === 'view_visibility') {
+        const target = _viewById.get(msg.view_id);
+        if (target) target.setVisibility(msg.hide);
+        return;
+    }
 
     if (msg.type === 'theme_define') {
         const applyThemeBackgrounds = () => {

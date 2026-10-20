@@ -121,7 +121,6 @@ def main() -> None:
     left = SceneView(
         "world",
         camera_view=cam_view,
-        hide={frustum_ref.id},
         overlay=[
             GroupView(
                 "View",
@@ -130,6 +129,7 @@ def main() -> None:
             )
         ],
     )
+    left.set_visible(frustum_ref.id, False)
     right = SceneView("world")  # default (auto-fit) camera, shows the frustum
 
     viz.show(layout=SplitView("horizontal", [left, right]))

@@ -11,7 +11,6 @@ from ._base import View
 from ._helpers import (
     _DEFAULT_SCENE_MIN,
     _coerce_scene_name,
-    _normalize_id_set,
     _scene_view_counter,
 )
 from .._size import SizeSpec
@@ -50,8 +49,8 @@ class SceneView(View):
     ``overlay`` lists views that float over the canvas (e.g. a ``GroupView``),
     anchored by each child's ``position``.
 
-    ``hide`` / ``show`` are optional sets of scene-entity ids that filter which
-    entities this pane renders (``hide`` removes, ``show`` is a whitelist).
+    Entities are shown/hidden per-pane at runtime via :meth:`set_visible`, which
+    sends a granular ``view_visibility`` message (no layout re-push).
 
     ``surface`` is an optional :class:`~pytanga.viz.InteractionSurface` bound to
     this pane — a per-pane interaction plane (no scene entity) that emits
@@ -73,8 +72,6 @@ class SceneView(View):
         controls: dict[MouseButton, CameraAction | None] | None = None,
         viewport: ViewportConfig | None = None,
         overlay: list[View] | None = None,
-        hide: set[str] | None = None,
-        show: set[str] | None = None,
         surface: InteractionSurface | None = None,
         read_only: bool = False,
         size: SizeSpec = None,
@@ -119,10 +116,21 @@ class SceneView(View):
         else:
             self.camera_view = None
         self.overlay = list(overlay or [])
-        self.hide = _normalize_id_set(hide)
-        self.show = _normalize_id_set(show)
+        self._hide: set[str] = set()
+        self._push_visibility = None  # callback slot injected at layout register
         self.surface = surface
         self.read_only = bool(read_only)
+
+    def set_visible(self, entity_id: str, visible: bool) -> None:
+        """Show or hide ``entity_id`` only in this pane (granular, no re-push)."""
+        if not isinstance(entity_id, str) or not entity_id:
+            raise ValueError(f"entity_id must be a non-empty string, got {entity_id!r}")
+        if visible:
+            self._hide.discard(entity_id)
+        else:
+            self._hide.add(entity_id)
+        if self._push_visibility is not None:
+            self._push_visibility(self)
 
     def _serialize(self) -> dict[str, Any]:
         result = super()._serialize()
@@ -130,10 +138,8 @@ class SceneView(View):
         result["scene"] = self.scene
         if self.camera_view is not None:
             result["camera_view"] = self.camera_view.to_dict()
-        if self.hide:
-            result["hide"] = sorted(self.hide)
-        if self.show:
-            result["show"] = sorted(self.show)
+        if self._hide:
+            result["hide"] = sorted(self._hide)
         if self.surface is not None:
             result["surface"] = self.surface.serialize()
         if self.read_only:

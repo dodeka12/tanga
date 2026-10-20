@@ -98,3 +98,33 @@ class TestVisibilityApi:
         node.consume_dirty()
         ref.set_visible(True)
         assert node.visible is True
+
+
+class TestVisibleIn:
+    def test_node_serializes_visible_in(self):  # noqa: ANN201
+        node = VizSceneObject(
+            "n", Point(0, 0, 0), kind="Point", visible_in={"sv0", "sv1"}
+        )
+        assert node.serialize()["visible_in"] == ["sv0", "sv1"]
+
+    def test_node_omits_empty_visible_in(self):  # noqa: ANN201
+        node = VizSceneObject("n", Point(0, 0, 0), kind="Point")
+        assert "visible_in" not in node.serialize()
+
+    def test_invalid_visible_in_raises(self):  # noqa: ANN201
+        with pytest.raises(ValueError):
+            VizSceneObject("n", Point(0, 0, 0), kind="Point", visible_in={1})
+
+    def test_handle_new_visible_in_stored(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        h = viz.scene("t")
+        h.new(Sphere(Point(0, 0, 0), radius=1), entity_id="s", visible_in={"sv0"})
+        node = h.scene.get_node("s")
+        assert node.visible_in == {"sv0"}
+        assert node.serialize()["visible_in"] == ["sv0"]
+
+    def test_handle_new_omits_visible_in_by_default(self):  # noqa: ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        h = viz.scene("t")
+        h.new(Sphere(Point(0, 0, 0), radius=1), entity_id="s2")
+        assert "visible_in" not in h.scene.get_node("s2").serialize()

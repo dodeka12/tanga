@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.21.1 (2.21.2-rc1)] — 2026-10-20
+- Per-pane runtime visibility (SceneView.set_visible + visible_in) · depth surface scoped to the 3D pane in pinhole_depth.py
+- Breaking: SceneView(hide/show) removed · docs/examples install path refactor
+→ [Details](2026/10/20_4d22d807b.md)
+
 ## [Since 2.21.1] — 2026-10-20
 - Depth images render in every pane (shared frames) · pinhole depth surfaces no longer mirror vertically
 - pinhole_depth.py two-pane image/3D example with a sine-pattern-driven depth map

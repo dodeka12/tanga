@@ -52,8 +52,7 @@ precompiled/*
 _input/
 _output/
 site/
-.dep-docs/
-.dep-examples/
+_dep-info/
 .cache/
 
 # JS / Node toolchain (js/dev/)

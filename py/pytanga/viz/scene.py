@@ -123,6 +123,7 @@ class SceneObject:
     data: Any = None  # GeoEntity, Label, dict, ...
     properties: dict[str, Any] = field(default_factory=dict)
     dirty: bool = True
+    visible_in: set[str] | None = None
 
 
 # ── Scene State Manager ────────────────────────────────────
@@ -206,6 +207,7 @@ class Scene:
             kind=kind,
             props=props,
             styles_map=self.styles.kind,
+            visible_in=obj.visible_in,
         )
         # An SdfGroup mutated directly through `ref.entity.set_member_transform()`
         # must mark its node's content dirty; wire a change hook for that.
@@ -357,9 +359,12 @@ class Scene:
         payload: dict[str, Any],
         images: list[Any] | None = None,
         transform: Transform | None = None,
+        visible_in: set[str] | None = None,
     ) -> str:
         """Register a ``depth_image`` scene node and return its id."""
-        node = VizDepthImage(image_id, payload, images=images, transform=transform)
+        node = VizDepthImage(
+            image_id, payload, images=images, transform=transform, visible_in=visible_in
+        )
         self._nodes[image_id] = node
         if image_id not in self._order:
             self._order.append(image_id)
@@ -610,6 +615,7 @@ class Scene:
         entity: "SceneEntity | None",
         *,
         entity_id: str | None = None,
+        visible_in: set[str] | None = None,
         **properties: Any,
     ) -> str:
         """Add a scene-layer entity (backward-compat wrapper for ``add_object``)."""
@@ -622,6 +628,7 @@ class Scene:
             data=entity,
             properties=dict(properties),
             dirty=True,
+            visible_in=visible_in,
         )
         return self.add_object(obj, object_id=eid)
 
@@ -659,6 +666,7 @@ class Scene:
         | list[SurfaceTexture]
         | tuple[SurfaceTexture, ...]
         | None = None,
+        visible_in: set[str] | None = None,
     ) -> str:
         """Add an entity to this scene.
 
@@ -704,7 +712,9 @@ class Scene:
             transform = camera_transform(
                 resolved.get("camera"), resolved.get("apply_pose", True)
             )
-            self.add_depth_image(eid, content, images=frames, transform=transform)
+            self.add_depth_image(
+                eid, content, images=frames, transform=transform, visible_in=visible_in
+            )
             self._attach_to_parent(eid, parent_id)
             return eid
 
@@ -725,7 +735,9 @@ class Scene:
                 properties["style"] = style
             elif body_style is not None:
                 properties["style"] = body_style
-            eid = self.add(obj.entity, entity_id=entity_id, **properties)
+            eid = self.add(
+                obj.entity, entity_id=entity_id, visible_in=visible_in, **properties
+            )
             obj._init(VizSceneHandle(self._host, self.name), eid)
             self._host._act_objects[eid] = obj
             self._attach_to_parent(eid, parent_id)
@@ -834,6 +846,7 @@ class Scene:
                     data=entity,
                     properties=properties,
                     dirty=True,
+                    visible_in=visible_in,
                 ),
                 object_id=entity_id,
             )
@@ -851,7 +864,7 @@ class Scene:
                 self._push_surface_texture_frames(surface_mat.textures)
             return oid
 
-        eid = self.add(entity, entity_id=entity_id, **properties)
+        eid = self.add(entity, entity_id=entity_id, visible_in=visible_in, **properties)
         self._attach_to_parent(eid, parent_id)
 
         self._add_label_for_entity(

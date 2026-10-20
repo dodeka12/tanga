@@ -404,7 +404,7 @@ uv run python py/examples/<path>.py
 
 - **heavy work** — [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md)
 
-- **hide** — [a calibrated depth surface next to its 2D image](viz/image/pinhole_depth.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
+- **hide** — [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
 
 - **hierarchy** — [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md)
 
@@ -957,6 +957,8 @@ uv run python py/examples/<path>.py
 - **View3dConfig** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md)
 
 - **visible** — [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
+
+- **visible_in** — [a calibrated depth surface next to its 2D image](viz/image/pinhole_depth.md)
 
 - **visualization** — [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md)
 

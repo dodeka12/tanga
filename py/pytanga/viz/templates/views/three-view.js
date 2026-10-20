@@ -1071,6 +1071,14 @@ export class ThreeJsView extends View {
         this._show = show && show.length ? new Set(show) : null;
     }
 
+    /** Runtime per-pane hide set (`view_visibility`): update + reconcile. */
+    setVisibility(hide) {
+        this.setVisibilityFilter(hide || null, null);
+        for (const entry of this.sceneObjects.values()) {
+            if (entry && entry.layer === 'scene') this._applyVisibility(entry);
+        }
+    }
+
     /** Set this pane's interaction surface (per-pane ``surface``). */
     setSurface(surface) {
         this._surface = surface || null;
@@ -1101,6 +1109,17 @@ export class ThreeJsView extends View {
     _isFilteredOut(id) {
         if (this._hide.has(id)) return true;
         return this._show !== null && !this._show.has(id);
+    }
+
+    _inStaticScope(msg) {
+        const scope = msg && msg.visible_in;
+        return !scope || scope.length === 0 || scope.includes(this.viewId);
+    }
+
+    _applyVisibility(entry) {
+        if (!entry || !entry.obj) return;
+        const global = entry.data ? entry.data.visible !== false : true;
+        entry.obj.visible = global && !this._isFilteredOut(entry.data && entry.data.id);
     }
 
     _renderTitle(titleText) {
@@ -1347,8 +1366,10 @@ export class ThreeJsView extends View {
             this.sceneObjects.delete(msg.id);
         }
         if (msg.layer === 'scene') {
-            // Per-pane visibility filter (SceneView.hide / SceneView.show).
-            if (this._isFilteredOut(msg.id)) {
+            // Static per-view scope (`visible_in`): skip construction entirely
+            // when this pane is not in scope.  Runtime hide/show toggles the
+            // already-built object's visibility instead.
+            if (!this._inStaticScope(msg)) {
                 return;
             }
             // SDF proxies require WebGL2 (GLSL3 + gl_FragDepth); on WebGL1 they
@@ -1359,6 +1380,7 @@ export class ThreeJsView extends View {
             }
             const entry = await buildSceneObject(msg, this.scene, this.sceneObjects, { maxDim: this._imageScreenLongSide(msg.frame) });
             if (entry && entry.obj) {
+                this._applyVisibility(entry);
                 this._attachPendingGroups(msg.id, entry.obj);
             }
             if (entry && msg.interaction) {
@@ -1480,7 +1502,8 @@ export class ThreeJsView extends View {
             return;
         }
         if (aspect === 'visible') {
-            if (entry.obj) entry.obj.visible = value.visible !== false;
+            if (entry.data) entry.data.visible = value.visible !== false;
+            this._applyVisibility(entry);
             return;
         }
         if (aspect === 'style') {
@@ -1544,6 +1567,7 @@ export class ThreeJsView extends View {
             entry.mesh = newMesh;
         }
         entry.data = { ...prev, ...content };
+        this._applyVisibility(entry);
         if (prev.interaction) {
             this._interaction.registerInteractive(id, entry.obj, prev.interaction);
         }

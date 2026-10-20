@@ -98,8 +98,8 @@ packaged inside the wheel. AI coding tools can expose them by calling:
 
 ```python
 import pytanga
-pytanga.install_docs()     # copies docs to .dep-docs/pytanga/
-pytanga.install_examples() # copies examples to .dep-examples/pytanga/
+pytanga.install_docs()     # copies docs to _dep-info/pytanga/docs/
+pytanga.install_examples() # copies examples to _dep-info/pytanga/examples/
 pytanga.install_info()     # installs docs and examples in one call
 ```
 

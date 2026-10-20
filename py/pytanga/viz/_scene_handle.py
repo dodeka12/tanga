@@ -103,6 +103,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         parent_id: str | None = None,
         attach_to: str | None = None,
         surface: Any = None,
+        visible_in: set[str] | None = None,
     ) -> str:
         """Add an entity, operator, MV, or label to this scene.
 
@@ -123,6 +124,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             parent_id=parent_id,
             attach_to=attach_to,
             surface=surface,
+            visible_in=visible_in,
         )
 
     def new(
@@ -143,6 +145,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
         parent_id: str | None = None,
         attach_to: str | None = None,
         surface: Any = None,
+        visible_in: set[str] | None = None,
     ) -> Any:
         """Like :meth:`add`, but returns a :class:`VizObjectRef` for the node."""
         from ._object_ref import VizObjectRef
@@ -160,6 +163,7 @@ class VizSceneHandle(_JupyterDisplayMixin):
             parent_id=parent_id,
             attach_to=attach_to,
             surface=surface,
+            visible_in=visible_in,
         )
         return VizObjectRef(self, self._scene().get_node(eid))
 
