@@ -151,6 +151,46 @@ function _bindLayerTexture(material, img, i) {
     });
 }
 
+// Identity of a layer for change detection.  A layer's `version` (a uuid
+// bumped by `ImageData.update()` and by every fresh `ImageData`) is stable per
+// content; fall back to `id` for hand-built metadata that omits it.
+function _layerTag(img) {
+    if (!img) return null;
+    return `${img.source || 'data'}:${img.version ?? img.id}`;
+}
+
+// Bind every layer described by `imageMeta`, re-binding only the layers whose
+// `version` changed (plus all tiled layers).  Without this, each
+// `view_background_image` re-binds *unchanged* layers whose pixel frames were
+// already consumed, registering one-shot consumers bound to stale placeholder
+// metadata — which then decode a later, differently-sized frame with the wrong
+// dimensions (the layer-texture race).
+function _bindLayers(material, imageMeta) {
+    const img = imageMeta || {};
+    const layers = _layersOf(img);
+    const layerCount = Number(img.max_layers) || 8;
+    const bound = material.userData._layerVersions || (material.userData._layerVersions = new Map());
+    for (let i = 0; i < layers.length && i < layerCount; i++) {
+        const layer = layers[i];
+        const key = `uImage${i}`;
+        if (!layer) {
+            // A cleared (stable-index) slot: null the sampler once.
+            if (bound.get(key) !== null) {
+                material.uniforms[key].value = null;
+                bound.set(key, null);
+            }
+            continue;
+        }
+        const tag = _layerTag(layer);
+        // Tiled layers always re-bind (they rebuild `_tiledLayers`, have no
+        // pixel frame, and cannot race a stale consumer); data/url layers only
+        // re-bind when their content actually changed.
+        if (layer.source !== 'tiled' && bound.get(key) === tag) continue;
+        bound.set(key, tag);
+        _bindLayerTexture(material, layer, i);
+    }
+}
+
 /**
  * Build a screen-space image background quad.
  *
@@ -174,11 +214,7 @@ export function createImageBackground(imageMeta) {
         vertex: img.shader?.vertex ?? null,
     };
 
-    const layers = _layersOf(img);
-    const layerCount = Number(img.max_layers) || 8;
-    for (let i = 0; i < layers.length && i < layerCount; i++) {
-        _bindLayerTexture(material, layers[i], i);
-    }
+    _bindLayers(material, img);
 
     return mesh;
 }
@@ -200,13 +236,10 @@ export function updateImageBackground(mesh, imageMeta) {
     mat.uniforms.uImageAspect.value = width / height;
     // Re-apply color-processing + custom uniforms from the new metadata.
     applyImageUniforms(mesh, img.uniforms);
-    // Rebuild the tiled-layer LOD state from the new metadata.
+    // Rebuild the tiled-layer LOD state from the new metadata, then re-bind
+    // only the layers whose content actually changed (see `_bindLayers`).
     mat.userData._tiledLayers = [];
-    const layers = _layersOf(img);
-    const layerCount = Number(img.max_layers) || 8;
-    for (let i = 0; i < layers.length && i < layerCount; i++) {
-        _bindLayerTexture(mat, layers[i], i);
-    }
+    _bindLayers(mat, img);
 }
 
 /**

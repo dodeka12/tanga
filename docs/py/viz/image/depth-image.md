@@ -72,6 +72,7 @@ depth values (NaN/±inf) are replaced with a `missing_depth` sentinel (default
 | `color` / `opacity` | `str`/`float` | `#ffffff`/`1.0` | Plain-mode color / surface opacity |
 | `shininess` | `float` | `32.0` | Blinn-Phong specular exponent (plain mode) |
 | `specular` | `str` | `#ffffff` | Blinn-Phong specular color (plain mode) |
+| `max_grazing_angle` | `float` | `None` | Discard surface more edge-on than this angle (degrees); `None`/`0` = off (serialized as `u_max_stretch` = `tan(angle)`) |
 
 ## Downscaling & compression
 
@@ -140,6 +141,20 @@ ref.set_selected_segments([])       # disable filtering (show all)
 
 Filtering is a fragment `discard` on non-selected ids, so hidden segments write
 neither color nor depth.
+
+## Depth-jump filter
+
+At depth borders (e.g. a car against a wall) the mesh contains long, stretched
+triangles that connect a near vertex to a far vertex.  `DepthImageStyle(
+max_grazing_angle=…)` (degrees) discards fragments whose surface is more
+edge-on than that angle, removing the artefacts while keeping legitimately
+slanted surfaces.  The threshold is the live uniform `u_max_stretch`
+(`= tan(angle)`), so it changes without a rebuild or pixel re-send:
+
+```python
+ref = viz.new(..., style=DepthImageStyle(max_grazing_angle=85))
+ref.set_uniform("u_max_stretch", 0.0)   # 0 = off (show everything)
+```
 
 ## Live uniforms and custom shaders
 

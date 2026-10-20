@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import pytest
 
@@ -199,6 +201,18 @@ class TestDepthImageBuild:
         assert uniforms["u_selected_segments"][:2] == [1, 2]
         assert len(uniforms["u_selected_segments"]) == MAX_SELECTED_SEGMENTS
 
+    def test_max_grazing_angle_serialization(self) -> None:
+        depth_img = DepthImage(DepthImageData(depth=np.zeros((8, 8), np.float32)))
+        content, _ = depth_img._build(_resolved(max_grazing_angle=80), "d0")
+        assert content["uniforms"]["u_max_stretch"] == pytest.approx(
+            math.tan(math.radians(80))
+        )
+
+    def test_max_grazing_angle_default_off(self) -> None:
+        depth_img = DepthImage(DepthImageData(depth=np.zeros((8, 8), np.float32)))
+        content, _ = depth_img._build(_resolved(), "d0")
+        assert content["uniforms"]["u_max_stretch"] == 0.0
+
 
 class TestDepthImageStyle:
     def test_to_dict(self) -> None:
@@ -224,3 +238,11 @@ class TestDepthImageStyle:
         assert merged["depth_max"] == 1.0
         assert merged["discard_missing"] is True
         assert merged["double_sided"] is True
+
+    def test_max_grazing_angle_to_dict(self) -> None:
+        assert DepthImageStyle(max_grazing_angle=80).to_dict()["max_grazing_angle"] == 80.0
+        assert "max_grazing_angle" not in DepthImageStyle().to_dict()
+
+    def test_max_grazing_angle_rejects_ge_90(self) -> None:
+        with pytest.raises(ValueError, match="max_grazing_angle"):
+            DepthImageStyle(max_grazing_angle=90)

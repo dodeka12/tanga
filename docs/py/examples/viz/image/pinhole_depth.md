@@ -1,22 +1,27 @@
-# a calibrated depth surface next to its 2D image
+# a calibrated depth surface with a grazing-angle filter
 
-**Keywords:** depth image · pinhole · camera calibration · split view · image background · visible_in · frustum
+**Keywords:** depth image · pinhole · camera calibration · depth jump filter · grazing angle · slider · uniform · split view
 
-Shows one calibrated scene in two panes so the pinhole `~pytanga.viz.DepthImage`
-fix can be checked visually:
+Shows one calibrated scene in three panes:
 
 - **left** — the calibrated camera view (`navigation="2d"`) with the synthetic
   test image as a full-viewport background.
+- **middle** — a control pane with a **Max grazing angle** slider that changes
+  the `~pytanga.viz.DepthImage` depth-jump filter live via
+  `ref.set_uniform("u_max_stretch", …)` (no rebuild, no pixel re-send).
 - **right** — the same scene from a 3D overview camera, showing the depth
   surface textured with that image (plus the camera frustum for reference).
 
-The test image is a 2D sine pattern whose spatial frequency increases toward the
-bottom-right corner, so both left/right and top/bottom orientation are
-unambiguous.  The depth map is that same sine pattern's amplitude, mapped into
-the axial depth range, so the reconstructed surface follows the image pattern.
-The depth surface is added with `visible_in={right.id}` so it is only
-constructed in the 3D pane; the left calibrated camera pane never builds it
-(and therefore never consumes its binary frames).
+The depth map is a central box at `Z = 1.5` in front of a plane that undulates
+with the sine pattern's depth (`[2, 3]`); the sharp box/plane border produces
+the stretched triangles the grazing-angle filter removes, while the sine
+undulation (a legitimate slant) stays.  The test image is a 2D sine pattern
+whose spatial frequency
+increases toward the bottom-right corner, so both left/right and top/bottom
+orientation are unambiguous.  The depth surface is added with
+`visible_in={right.id}` so it is only constructed in the 3D pane; the left
+calibrated camera pane never builds it (and therefore never consumes its binary
+frames).
 
 ## Run
 
@@ -34,32 +39,38 @@ uv run python py/examples/viz/image/pinhole_depth.py
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 Christian Perwass
 
-"""pinhole_depth.py — a calibrated depth surface next to its 2D image.
+"""pinhole_depth.py — a calibrated depth surface with a grazing-angle filter.
 
-Shows one calibrated scene in two panes so the pinhole :class:`~pytanga.viz.DepthImage`
-fix can be checked visually:
+Shows one calibrated scene in three panes:
 
 - **left** — the calibrated camera view (``navigation="2d"``) with the synthetic
   test image as a full-viewport background.
+- **middle** — a control pane with a **Max grazing angle** slider that changes
+  the :class:`~pytanga.viz.DepthImage` depth-jump filter live via
+  ``ref.set_uniform("u_max_stretch", …)`` (no rebuild, no pixel re-send).
 - **right** — the same scene from a 3D overview camera, showing the depth
   surface textured with that image (plus the camera frustum for reference).
 
-The test image is a 2D sine pattern whose spatial frequency increases toward the
-bottom-right corner, so both left/right and top/bottom orientation are
-unambiguous.  The depth map is that same sine pattern's amplitude, mapped into
-the axial depth range, so the reconstructed surface follows the image pattern.
-The depth surface is added with ``visible_in={right.id}`` so it is only
-constructed in the 3D pane; the left calibrated camera pane never builds it
-(and therefore never consumes its binary frames).
+The depth map is a central box at ``Z = 1.5`` in front of a plane that undulates
+with the sine pattern's depth (``[2, 3]``); the sharp box/plane border produces
+the stretched triangles the grazing-angle filter removes, while the sine
+undulation (a legitimate slant) stays.  The test image is a 2D sine pattern
+whose spatial frequency
+increases toward the bottom-right corner, so both left/right and top/bottom
+orientation are unambiguous.  The depth surface is added with
+``visible_in={right.id}`` so it is only constructed in the 3D pane; the left
+calibrated camera pane never builds it (and therefore never consumes its binary
+frames).
 
 Run with:  uv run python py/examples/viz/image/pinhole_depth.py
 
-Keywords: depth image, pinhole, camera calibration, split view, image background, visible_in, frustum
+Keywords: depth image, pinhole, camera calibration, depth jump filter, grazing angle, slider, uniform, split view
 """
 
 from __future__ import annotations
 
 import math
+from typing import Any
 
 import numpy as np
 
@@ -68,11 +79,14 @@ from pytanga.viz import (
     CameraCalibration,
     CameraConfig3d,
     CameraView,
+    ControlEvent,
     DepthImage,
     DepthImageData,
     DepthImageStyle,
+    GroupView,
     ImageData,
     SceneView,
+    SliderView,
     SplitView,
     ViewportConfig,
     Visualizer,
@@ -85,6 +99,10 @@ _DEPTH_W, _DEPTH_H = 128, 96
 
 #: Axial depth range: the top row is near, the bottom row is far.
 _NEAR, _FAR = 1.0, 3.0
+#: Axial depth of the box front, in front of the background plane (``_FAR``).
+_BOX_Z = 1.5
+#: Minimum axial depth of the undulating background plane (max is ``_FAR``).
+_BG_DEPTH_MIN = 2.0
 
 
 def _calibration() -> CameraCalibration:
@@ -133,8 +151,18 @@ def _image(height: int, width: int) -> np.ndarray:
 
 
 def _depth(height: int, width: int) -> np.ndarray:
-    """The sine pattern's amplitude mapped into the axial depth range."""
-    return (_NEAR + (_FAR - _NEAR) * _sine_pattern(height, width)).astype(np.float32)
+    """A central box in front of a gently undulating (sine-wave) plane.
+
+    The background plane carries the sine pattern's depth in ``[_BG_DEPTH_MIN,
+    _FAR]``; the flat box front at ``_BOX_Z`` creates the sharp border whose
+    stretched triangles the grazing-angle filter removes, while the sine
+    undulation (a legitimate slant) is kept.
+    """
+    depth = _BG_DEPTH_MIN + (_FAR - _BG_DEPTH_MIN) * _sine_pattern(height, width)
+    lo_h, hi_h = height // 4, 3 * height // 4
+    lo_w, hi_w = width // 4, 3 * width // 4
+    depth[lo_h:hi_h, lo_w:hi_w] = _BOX_Z
+    return depth.astype(np.float32)
 
 
 def _frustum_corners(frustum: Frustum) -> np.ndarray:
@@ -233,8 +261,9 @@ def main() -> None:
     right = SceneView("world", id="3d", camera_view=CameraView(overview_cam))
 
     # Add the depth surface only to the 3D pane via `visible_in`, so the left
-    # calibrated camera pane never constructs (or consumes) it.
-    world.new(
+    # calibrated camera pane never constructs (or consumes) it.  Start with the
+    # grazing-angle filter on, so the box/plane border is already cleaned up.
+    depth_ref = world.new(
         DepthImage(DepthImageData(image=_image(_IMAGE_H, _IMAGE_W), depth=depth)),
         style=DepthImageStyle(
             camera=calib,
@@ -243,13 +272,29 @@ def main() -> None:
             render_mode="image",
             depth_min=_NEAR,
             depth_max=_FAR,
+            max_grazing_angle=85,
         ),
         visible_in={right.id},
     )
 
     left.set_visible(frustum_ref.id, False)
 
-    viz.show(layout=SplitView("horizontal", [left, right]))
+    async def _on_grazing_angle(value: Any, _event: ControlEvent) -> None:
+        # Live uniform update: 0 = off (tan(0) == 0), 89° ≈ edge-on (tan → large).
+        depth_ref.set_uniform("u_max_stretch", math.tan(math.radians(value)))
+
+    grazing_slider = SliderView(
+        "max_grazing_angle",
+        label="Max grazing angle",
+        min=0.0,
+        max=89.0,
+        step=1.0,
+        value=85.0,
+        on_change=_on_grazing_angle,
+    )
+    controls = GroupView("Depth-jump filter", [grazing_slider])
+
+    viz.show(layout=SplitView("horizontal", [controls, left, right]))
     viz.wait()
 
 

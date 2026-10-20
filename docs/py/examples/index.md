@@ -128,7 +128,7 @@ uv run python py/examples/<path>.py
 
 - **camera** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [3D projective camera via View3dConfig](viz/camera/3d_plane.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [Stream a programmatic camera feed at 30 Hz over MJPEG](viz/camera/camera_stream.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md)
 
-- **camera calibration** — [a calibrated depth surface next to its 2D image](viz/image/pinhole_depth.md)
+- **camera calibration** — [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md)
 
 - **CameraView** — [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
 
@@ -254,7 +254,9 @@ uv run python py/examples/<path>.py
 
 - **depth** — [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md)
 
-- **depth image** — [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [a calibrated depth surface next to its 2D image](viz/image/pinhole_depth.md), [One lighting config for mesh, SDF, and depth-surface objects](viz/lighting/scene_lighting.md)
+- **depth image** — [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md), [One lighting config for mesh, SDF, and depth-surface objects](viz/lighting/scene_lighting.md)
+
+- **depth jump filter** — [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md)
 
 - **detached** — [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md)
 
@@ -352,7 +354,7 @@ uv run python py/examples/<path>.py
 
 - **frame streaming** — [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md)
 
-- **frustum** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [a calibrated depth surface next to its 2D image](viz/image/pinhole_depth.md)
+- **frustum** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
 
 - **G(3,0)** — [Euclidean 3D geometric algebra  G(3, 0)](ga/basis/base_e3_demo.md)
 
@@ -387,6 +389,8 @@ uv run python py/examples/<path>.py
 - **gradient** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md), [Switch between standard and custom surface texture mapping](viz/surface/texture_mapping.md)
 
 - **gravity** — [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md)
+
+- **grazing angle** — [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md)
 
 - **Grid** — [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
 
@@ -424,7 +428,7 @@ uv run python py/examples/<path>.py
 
 - **image** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
-- **image background** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [a calibrated depth surface next to its 2D image](viz/image/pinhole_depth.md)
+- **image background** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
 
 - **image labeling** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md)
 
@@ -640,7 +644,7 @@ uv run python py/examples/<path>.py
 
 - **PIL** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
-- **pinhole** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [a calibrated depth surface next to its 2D image](viz/image/pinhole_depth.md)
+- **pinhole** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md)
 
 - **pixels** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
@@ -808,7 +812,7 @@ uv run python py/examples/<path>.py
 
 - **sizing** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
-- **slider** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
+- **slider** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
 
 - **SliderView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
@@ -838,7 +842,7 @@ uv run python py/examples/<path>.py
 
 - **spheres** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **split view** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [a calibrated depth surface next to its 2D image](viz/image/pinhole_depth.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
+- **split view** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
 - **stack view** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
@@ -936,7 +940,7 @@ uv run python py/examples/<path>.py
 
 - **undo** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
-- **uniform** — [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
+- **uniform** — [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md)
 
 - **unify** — [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md)
 
@@ -957,8 +961,6 @@ uv run python py/examples/<path>.py
 - **View3dConfig** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md)
 
 - **visible** — [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
-
-- **visible_in** — [a calibrated depth surface next to its 2D image](viz/image/pinhole_depth.md)
 
 - **visualization** — [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md)
 

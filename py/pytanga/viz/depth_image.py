@@ -16,6 +16,7 @@ the mesh/texture resolution actually needed is transmitted.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Any
@@ -302,6 +303,25 @@ def normalize_depth_kind(value: str) -> str:
         ) from exc
 
 
+def grazing_angle_to_stretch(angle_deg: float | None) -> float:
+    """Convert a max grazing angle (degrees) to the ``u_max_stretch`` uniform.
+
+    The stretch filter discards surface fragments that are more edge-on to the
+    viewing ray than ``angle_deg``.  ``None`` or ``<= 0`` disables the filter
+    (returns ``0.0``, the "off" sentinel); otherwise the value is the tangent of
+    the angle, i.e. the apparent depth slope (``tan(grazing angle)``) the vertex
+    shader compares against ``vStretch``.
+    """
+    if angle_deg is None:
+        return 0.0
+    angle_deg = float(angle_deg)
+    if angle_deg <= 0.0:
+        return 0.0
+    if angle_deg >= 90.0:
+        raise ValueError("max_grazing_angle must be < 90 degrees")
+    return math.tan(math.radians(angle_deg))
+
+
 def compute_pinhole_positions(
     depth: np.ndarray,
     fx: float,
@@ -442,6 +462,7 @@ class DepthImage:
             "u_depth_max": float(style["depth_max"]),
             "u_missing_depth": float(self.data.missing_depth),
             "u_discard_missing": 1 if style["discard_missing"] else 0,
+            "u_max_stretch": grazing_angle_to_stretch(style.get("max_grazing_angle")),
             "u_seg_enabled": 0,
             "u_num_selected": 0,
             "u_selected_segments": [0] * MAX_SELECTED_SEGMENTS,

@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { tagEntity } from './utils.js';
 import { buildImageFragment, buildImageVertex } from './image-shader.js';
 import { levelForScreen } from './image-tiles.js';
-import { hasImageFrame, registerImageFrameConsumer, takeImageFrame } from '../image-frames.js';
+import { hasImageFrame, registerImageFrameConsumer, resolveFrameFormat, takeImageFrame } from '../image-frames.js';
 
 // dtype code → THREE texture type + element width (see py/pytanga/viz/image.py).
 const DTYPE_TYPES = {
@@ -59,14 +59,16 @@ function emptyTypedArray(dtype, length) {
     return new Uint8Array(length);
 }
 
-export function makeDataTexture(img, bytes) {
-    const width = img.width;
-    const height = img.height;
-    const channels = img.channels || 1;
-    const dtype = img.dtype ?? 0;
+export function makeDataTexture(img, bytes, frame) {
+    // The decoded frame is authoritative for size/format (its header carries
+    // the real width/height/channels/dtype), whereas `img` metadata can be
+    // stale (e.g. a consumer registered from an older message whose placeholder
+    // dimensions differ from the frame that eventually arrived).  Fall back to
+    // `img` only when no frame is available.
+    const { width, height, channels, dtype } = resolveFrameFormat(img, frame);
     const spec = DTYPE_TYPES[dtype] ?? DTYPE_TYPES[0];
 
-    const frameBytes = bytes ?? (hasImageFrame(img.id) ? takeImageFrame(img.id).bytes : null);
+    const frameBytes = bytes ?? (frame ? frame.bytes : null) ?? (hasImageFrame(img.id) ? takeImageFrame(img.id).bytes : null);
     const raw = frameBytes
         ? typedArrayFor(dtype, frameBytes)
         : emptyTypedArray(dtype, width * height * channels);
@@ -125,7 +127,7 @@ export async function makeEncodedTexture(img, frame) {
         bytes = new Uint8Array(await new Response(stream).arrayBuffer());
     }
 
-    return makeDataTexture(img, bytes);
+    return makeDataTexture(img, bytes, frame);
 }
 
 // Compose a tiled float32/uint16 image at `level` into one float DataTexture by

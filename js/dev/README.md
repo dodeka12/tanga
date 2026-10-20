@@ -57,6 +57,16 @@ The smoke asserts that a "Swap panes" re-push **reuses** the two scene-pane
 canvases (reorders, doesn't recreate) and that a background-image swap leaves
 them untouched.
 
+There is also a background **layer-texture race** smoke:
+
+1. `uv run python js/dev/tests/serve-layer-race-smoke.py`
+2. `node js/dev/tests/layer-race-smoke.mjs <printed-url>`
+
+It reproduces the reported `set_layer` loop (five 1×1 placeholder layers replaced
+in a row by full-size distinct colours), then asserts each enabled layer renders
+its colour at the pane centre.  `SMOKE_ITERS=N` (default `20`) overrides the
+number of full replace cycles — the issue's acceptance suggests `50`.
+
 ## CI
 
 JS tests, esbuild, and Playwright **never run in GitHub Actions**. They are
