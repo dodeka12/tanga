@@ -1,14 +1,15 @@
 # Switch between standard and custom surface texture mapping
 
-**Keywords:** surface · texture mapping · shader · checkerboard · gradient · lighting
+**Keywords:** surface · texture mapping · shader · checkerboard · gradient · lighting · opacity
 
 Shows a sphere, a plane, a box, and a cylinder side by side, all textured with
 the same surface material.  A dropdown switches, at runtime, between the
 **standard** texture map (the first texture, lit by the global scene lighting)
 and a **custom** GLSL shader that twirls a second texture — visibly different
 from a straight texture sample.  A slider (enabled only for the custom shader)
-controls the twirl amount.  Both paths share the scene-lighting uniforms
-documented in `pytanga.viz.surface`.
+controls the twirl amount, and an opacity slider changes the objects' opacity in
+place (a granular style update, no re-add).  Both paths share the scene-lighting
+uniforms documented in `pytanga.viz.surface`.
 
 ## Run
 
@@ -33,12 +34,13 @@ the same surface material.  A dropdown switches, at runtime, between the
 **standard** texture map (the first texture, lit by the global scene lighting)
 and a **custom** GLSL shader that twirls a second texture — visibly different
 from a straight texture sample.  A slider (enabled only for the custom shader)
-controls the twirl amount.  Both paths share the scene-lighting uniforms
-documented in :mod:`pytanga.viz.surface`.
+controls the twirl amount, and an opacity slider changes the objects' opacity in
+place (a granular style update, no re-add).  Both paths share the scene-lighting
+uniforms documented in :mod:`pytanga.viz.surface`.
 
 Run with:  uv run python py/examples/viz/surface/texture_mapping.py
 
-Keywords: surface, texture mapping, shader, checkerboard, gradient, lighting
+Keywords: surface, texture mapping, shader, checkerboard, gradient, lighting, opacity
 """
 
 from __future__ import annotations
@@ -110,6 +112,7 @@ def main() -> None:
     standard = SurfaceMaterial(textures=[SurfaceTexture(image=gradient)])
     mode = "standard"
     twirl = 4.0
+    opacity = 1.0
 
     def _custom_material() -> SurfaceMaterial:
         return SurfaceMaterial(
@@ -146,7 +149,11 @@ def main() -> None:
         material = _current_material()
         for name, entity in entities:
             refs[name] = viz.new(
-                entity, entity_id=f"surface_{name}", surface=material, label=name
+                entity,
+                entity_id=f"surface_{name}",
+                surface=material,
+                opacity=opacity,
+                label=name,
             )
 
     _apply()
@@ -167,6 +174,14 @@ def main() -> None:
                 refs[name].set_surface_uniform("u_twirl", twirl)
             await viz.flush_async()
 
+    async def _on_opacity(value: Any, _event: ControlEvent) -> None:
+        nonlocal opacity
+        opacity = float(value)
+        # Change opacity in place: a granular `style` patch, no re-add.
+        for name, _entity in entities:
+            refs[name].opacity = opacity
+        await viz.flush_async()
+
     mode_control = DropdownView(
         "surface_mode",
         label="Surface",
@@ -185,9 +200,22 @@ def main() -> None:
     )
     twirl_control.control.enabled = False  # disabled until "custom" is selected
 
+    opacity_control = SliderView(
+        "opacity",
+        label="Opacity",
+        min=0.0,
+        max=1.0,
+        step=0.05,
+        value=opacity,
+        on_change=_on_opacity,
+    )
+
     layout = SplitView(
         orientation="horizontal",
-        children=[GroupView("Surface", [mode_control, twirl_control]), SceneView("")],
+        children=[
+            GroupView("Surface", [mode_control, opacity_control, twirl_control]),
+            SceneView(""),
+        ],
     )
 
     viz.show(layout=layout)

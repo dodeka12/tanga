@@ -215,7 +215,7 @@ async function makeTiledCanvasTexture(img, level) {
 
 // Build a tiled image at `level`, dispatching uint8 to the canvas path and
 // float32/uint16 to the float DataTexture path.
-function buildTiledTextureAtLevel(img, level) {
+export function buildTiledTextureAtLevel(img, level) {
     return (img.dtype === 1 || img.dtype === 2)
         ? makeTiledDataTexture(img, level)
         : makeTiledCanvasTexture(img, level);

@@ -148,7 +148,7 @@ class TestSerializeEntities:
         assert "point" not in d
         assert "normal" not in d
         assert d["transform"]["position"] == [0.0, 0.0, 3.0]
-        assert d["opacity"] == 0.3
+        assert d["opacity"] == 1.0
         assert d["extent"] == 10.0
 
     def test_plane_pair(self):  # noqa: ANN201
@@ -494,6 +494,23 @@ class TestStyleOverrides:
         styles_map = {k: copy(v) for k, v in _CANONICAL.items()}
         d = _serialize(Sphere(Point(0, 0, 0), 1.0), styles_map=styles_map)
         assert d["style"]["opacity"] == 1.0
+
+    def test_surface_solid_default_opacity_is_one(self):  # noqa: ANN201
+        """Solid-surface entities default to fully opaque."""
+        from pytanga.viz._styles import _DEFAULT_STYLE_FOR_KIND as _CANONICAL
+
+        kinds = {
+            "Plane",
+            "Sphere",
+            "Ellipsoid",
+            "Disk",
+            "PartialDisk",
+            "Box",
+            "Cylinder",
+            "Cone",
+        }
+        for kind in kinds:
+            assert _CANONICAL[kind].opacity == 1.0, kind
 
     def test_cylinder(self):  # noqa: ANN201
         d = _serialize(Cylinder(Point(1, 2, 3), Direction(0, 1, 0), 2.0, 0.2))

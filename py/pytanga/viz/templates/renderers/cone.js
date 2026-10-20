@@ -23,7 +23,7 @@ function resolveHeight(ent) {
 
 export function createCone(ent) {
     const color = parseColor(ent, '#ffaa00');
-    const opacity = styleParam(ent, 'opacity', 0.9);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const halfAngle = Math.max(ent.halfAngle || 0.3, 0.01);
     const height = resolveHeight(ent);
     const radius = height * Math.tan(halfAngle);

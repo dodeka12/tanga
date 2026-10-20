@@ -303,17 +303,32 @@ export function applyStyleUpdate(mesh, ent) {
     const fillOpacity = styleParam(ent, 'fill_opacity', undefined);
     if (opacity !== undefined || fillOpacity !== undefined) {
         mesh.traverse((child) => {
-            if (child.material && child.material.opacity !== undefined) {
+            const material = child.material;
+            if (!material) return;
+            // Surface ShaderMaterials drive alpha via `u_opacity` (and may keep
+            // an alpha texture that stays transparent at full opacity).
+            if (material.uniforms && material.uniforms.uOpacity) {
+                const target = opacity;
+                if (target !== undefined) {
+                    const alphaTex = !!(material.userData && material.userData._alphaTexture);
+                    material.uniforms.uOpacity.value = target;
+                    material.transparent = target < 1.0 || alphaTex;
+                    material.depthWrite = target >= 0.99 && !alphaTex;
+                    material.needsUpdate = true;
+                }
+                return;
+            }
+            if (material.opacity !== undefined) {
                 // A fill quad (Rectangle2D) has its own opacity key: the
                 // top-level `opacity` drives the outline only.
                 const isFill = !!(child.userData && child.userData.isFillQuad);
                 if (isFill && fillOpacity === undefined) return;
                 const target = isFill ? fillOpacity : opacity;
                 if (target !== undefined) {
-                    child.material.opacity = target;
-                    child.material.transparent = target < 1.0;
-                    child.material.depthWrite = target >= 0.99;
-                    child.material.needsUpdate = true;
+                    material.opacity = target;
+                    material.transparent = target < 1.0;
+                    material.depthWrite = target >= 0.99;
+                    material.needsUpdate = true;
                 }
             }
         });

@@ -5,17 +5,19 @@
 
 Builds a synthetic depth map from a product of phase-shifted sines of different
 frequencies (``sin(2π·f1·u + φ1) · sin(2π·f2·v + φ2)``), a higher-resolution
-color image, and **selectable segmentation masks** — the whole surface (default),
-the positive-valued region, or the negative-valued region — then renders them as
-a textured, filterable :class:`~pytanga.viz.DepthImage` surface in the 3D
-viewer.
+color image overlaid with high-frequency pixel noise (so the ``image_scale``
+downscale is visible), and **selectable segmentation masks** — the whole surface
+(default), the positive-valued region, or the negative-valued region — then
+renders them as a textured, filterable :class:`~pytanga.viz.DepthImage` surface
+in the 3D viewer.
 
 A horizontal :class:`~pytanga.viz.SplitView` shows a control panel on the left
 (a :class:`~pytanga.viz.GroupView` of ``DepthImageStyle`` and segmentation
 controls) and the 3D surface on the right.  Press **Update view** to re-build the
-surface with the selected segmentation, render mode, colormap, mesh/world/depth
-scale, opacity, and Blinn-Phong ``shininess`` (the ``"plain"`` render mode is
-lit by the scene lighting, with a white specular highlight).
+surface with the selected segmentation, render mode, colormap,
+mesh/image/world/depth scale, opacity, and Blinn-Phong ``shininess`` (the
+``"plain"`` render mode is lit by the scene lighting, with a white specular
+highlight).
 
 Run with:  uv run python py/examples/viz/image/depth_surface.py
 
@@ -27,7 +29,6 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-
 from pytanga.viz import (
     ButtonView,
     ControlEvent,
@@ -68,12 +69,20 @@ def _surface(width: int, height: int) -> np.ndarray:
 
 
 def _color_image(width: int, height: int) -> np.ndarray:
-    """A synthetic RGB gradient (red→green along the diagonal)."""
+    """A synthetic RGB gradient overlaid with high-frequency pixel noise.
+
+    The per-pixel noise is visible at full resolution and gets smoothed away as
+    ``image_scale`` is reduced (bilinear averaging), making the downscale effect
+    easy to see.
+    """
+    rng = np.random.default_rng(0)
     ys, xs = np.mgrid[0:height, 0:width]
-    r = (xs / max(width - 1, 1) * 255).astype(np.uint8)
-    g = (ys / max(height - 1, 1) * 255).astype(np.uint8)
-    b = np.full_like(r, 64)
-    return np.stack([r, g, b], axis=-1)
+    r = (xs / max(width - 1, 1) * 255).astype(np.float64)
+    g = (ys / max(height - 1, 1) * 255).astype(np.float64)
+    b = np.full_like(r, 64.0)
+    noise = rng.uniform(-100.0, 100.0, size=(height, width, 3))
+    rgb = np.stack([r, g, b], axis=-1) + noise
+    return np.clip(rgb, 0.0, 255.0).astype(np.uint8)
 
 
 def _positive_segmentation(width: int, height: int) -> np.ndarray:
@@ -152,6 +161,9 @@ def main() -> None:
     mesh_scale = SliderView(
         "mesh_scale", label="Mesh scale", min=0.05, max=1.0, step=0.05, value=0.5
     )
+    image_scale = SliderView(
+        "image_scale", label="Image scale", min=0.05, max=1.0, step=0.05, value=1.0
+    )
     depth_scale = SliderView(
         "depth_scale", label="Depth scale", min=0.0, max=5.0, step=0.1, value=2.0
     )
@@ -179,6 +191,7 @@ def main() -> None:
                 render_mode=render_mode.value,
                 colormap=colormap.value,
                 mesh_scale=mesh_scale.value,
+                image_scale=image_scale.value,
                 depth_scale=depth_scale.value,
                 world_scale=world_scale.value,
                 opacity=opacity.value,
@@ -198,6 +211,7 @@ def main() -> None:
                     render_mode,
                     colormap,
                     mesh_scale,
+                    image_scale,
                     depth_scale,
                     world_scale,
                     opacity,

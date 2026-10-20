@@ -14,7 +14,7 @@ import { createSurfaceMaterial } from './surface-material.js';
 
 export function createDisk(ent) {
     const color = parseColor(ent, '#ff8844');
-    const opacity = styleParam(ent, 'opacity', 0.9);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const radius = Math.max(ent.radius || 1.0, 0.001);
     const thickness = Math.max(styleParam(ent, 'thickness', 0.02), 0.001);
     // Canonical plane is XY (normal +Z): the disk slab's cylinder axis (+Y) is

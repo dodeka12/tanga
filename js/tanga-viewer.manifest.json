@@ -8,7 +8,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/utils.js",
-      "sha256": "128beb1fba9562657a0606a6e9a5ec14cb6e18f72b8d03815dac7aa6c0636899"
+      "sha256": "cb39922482259efc94e4009f1e22e2f55f2edf9ae915a63d405573ea6057867f"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/point.js",
@@ -40,7 +40,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/plane.js",
-      "sha256": "298ee9798b7d8cd0bb0b2b1c50c6aa5179d5366748490c2689ac6bd017c2855e"
+      "sha256": "527d5b12c47c95ea21bcd3b1c36e612e08fe9e2fb81f1c0025e7f67874caf2dc"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/arc.js",
@@ -52,19 +52,19 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/cone.js",
-      "sha256": "bd6b6124db626e72951030d087b2fb145164132e2c9233bd587d05ee6906098d"
+      "sha256": "7ea0a7cf629abe3d6942fe573ab02e7120baf0e8b3eb42ef8cf69942c4585d09"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/cylinder.js",
-      "sha256": "3cb1525eb59ab5001dfdd2a2cd8296dfc8d8d6841a693ca86a67c467a803e9ad"
+      "sha256": "f847080383a84f2743af432a02f17461dd03cdf23a758e0e2d767ba37c2e1c97"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/box.js",
-      "sha256": "025ee39a73f41a05480865d760416e776d39e43b3c9fa703fc6b2f94f02abfef"
+      "sha256": "17b4454693956abcd89fefd2e79f843b3b2a8445c21fa396691fb6c64ef506c3"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/disk.js",
-      "sha256": "bbf4d42439ef30165ac6f520cbb38931bd0f360e4759a2c748ccf780a48794a2"
+      "sha256": "fefd79ba7dc5eb6efd359af8c7e1a605ee4186a3f91c608f2a6470e5f4c69dd8"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/ellipse.js",
@@ -72,11 +72,11 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/ellipsoid.js",
-      "sha256": "e05f6a03a98742cb530e0abe5fb3d81bcfb571e8e3d34de7a30e477042f2329e"
+      "sha256": "e26fd11b93c7efdf65a492cb7a71f6d5ca4c0a30d734363ad7ab498876314904"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/partial_disk.js",
-      "sha256": "ef890ccb731ab29fad38cd6aaebe8eee615a68b538b9642399f3878f745f3735"
+      "sha256": "274b61483e1e9d25fe2b778f5011955a86b8009dba6a1a76d60659689d41b8fb"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/regular_polygon.js",
@@ -116,7 +116,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/sphere.js",
-      "sha256": "d81da990f6cb7a150c39c230df02b7663a3abaf6120f1d164cf055a67adb34ae"
+      "sha256": "fc723575a37a4cc131b6e8c14d651bb4737f8180bcb7543b2af158452a9c31cc"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/space.js",
@@ -192,11 +192,11 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image.js",
-      "sha256": "a48a781ab300f7badedf1bb73e5f109be57fdecb9efda48d8910f79692525e24"
+      "sha256": "e017895387142bfebddd4773bb9ea3dc33d93275f033ac72ee22536ed224fe87"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image-background.js",
-      "sha256": "d4f59011564e5bd0233eff776067b7ebb22d18a561ea7a3a02bbcbc8197ac7c6"
+      "sha256": "83e90c2ba3af40c1c114a16cbcdf7e570d57e207990e2f00c7bc21bf8c0f4bd0"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/image-tiles.js",
@@ -212,11 +212,11 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/surface-shader.js",
-      "sha256": "00e3431a3ca992bb68cadcb45b2754d9aefbc74a142aba760fb9923f1451bb02"
+      "sha256": "c5c257a06ced0b7eb6282d85fd4f86a304111bf513b00ba49a03fcf28399a0ef"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/surface-material.js",
-      "sha256": "e79235734e8a0522e3f2275cb9a5b6be8c39a60c2fe452a0580cab7d280dc9e9"
+      "sha256": "d4ab9c0248873e130dc2d3e0a83bd6afe2e8c531eb577cdbcf53240c96201b7e"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/depth-shader.js",
@@ -303,6 +303,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "3a4d11284638a1adbd4a73c7c64aacde2a97f1ace1dce96a9026a67507d4bc91",
-  "bundle_sha256": "7df45eafdb9cfab9ae64cbeb81f69a5d19043cb941fcf52741dbc29209837457"
+  "fingerprint_sha256": "25b49945c0556be854273299a447210c7e93f2a46159084c721ef8eb15e61852",
+  "bundle_sha256": "09a7d78cdae013b30de314e22c23fbbad57a32c4a165135023e0c5a4e051b7df"
 }

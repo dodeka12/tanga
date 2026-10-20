@@ -26,7 +26,7 @@ function resolveCylinderRadius(ent) {
 
 export function createCylinder(ent) {
     const color = parseColor(ent, '#44aaff');
-    const opacity = styleParam(ent, 'opacity', 0.9);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const radius = resolveCylinderRadius(ent);
     const length = resolveCylinderLength(ent);
 

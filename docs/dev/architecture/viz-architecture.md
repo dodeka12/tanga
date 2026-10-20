@@ -456,8 +456,10 @@ The contract lives in `py/pytanga/viz/surface/` (Python) and
 - **Semantics** — no `surface` → the standard `MeshPhongMaterial`; textures only
   → the **first** texture is sampled by the standard texture shader; a shader
   replaces the standard shader; a shader + textures binds each texture to its
-  declared `uniform` sampler.  Surface materials are **opaque** (they ignore the
-  entity's translucent "shell" opacity).
+  declared `uniform` sampler.  Solid-surface entities default to opacity `1.0`;
+  the surface material honors the entity's opacity — the standard texture shader
+  multiplies `u_opacity` by the texture alpha channel, and a custom shader
+  receives the entity opacity as `u_opacity`.
 - **Image delivery** — texture pixels are `ImageData` binary frames
   (`encode_image_frame`; codec auto-selects JPEG for `uint8` 1/3-channel).
   `Scene.surface_texture_frames()` feeds `Visualizer._image_frames_for`, and

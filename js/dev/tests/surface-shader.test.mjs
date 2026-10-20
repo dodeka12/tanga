@@ -36,3 +36,17 @@ test('standard texture map samples the first texture sampler', () => {
     assert.ok(fs.includes('uniform sampler2D uTexture;'));
     assert.ok(fs.includes('texture2D(uTexture, vUv).rgb'));
 });
+
+test('standard texture map multiplies opacity by the texture alpha', () => {
+    const fs = buildSurfaceFragment({
+        textureSamplers: ['uTexture'],
+        sampleTexture: 'uTexture',
+    });
+    assert.ok(fs.includes('u_opacity * texture2D(uTexture, vUv).a'));
+});
+
+test('custom shader applies the entity opacity as the fragment alpha', () => {
+    const fs = buildSurfaceFragment({ userFragment: 'vec3 c = u_color;' });
+    assert.ok(fs.includes('fragColor = vec4(surfaceColor(baseColor, n, p), u_opacity);'));
+    assert.ok(!fs.includes('texture2D('));
+});

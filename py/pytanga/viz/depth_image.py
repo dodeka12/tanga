@@ -152,30 +152,39 @@ def _nearest_downscale(arr: np.ndarray, width: int, height: int) -> np.ndarray:
     return arr[np.ix_(ys, xs)]
 
 
-def _cast_rounded(arr: np.ndarray, dtype: np.dtype) -> np.ndarray:
-    """Cast a float buffer to *dtype*, rounding and clamping integer targets."""
-    if np.issubdtype(dtype, np.integer):
-        info = np.iinfo(dtype)
-        return np.clip(np.rint(arr), info.min, info.max).astype(dtype)
-    return arr.astype(dtype)
+def _bilinear_downscale(arr: np.ndarray, width: int, height: int) -> np.ndarray:
+    """Bilinear downscale via Pillow for the color image.
 
-
-def _area_downscale(arr: np.ndarray, width: int, height: int) -> np.ndarray:
-    """Box-average downscale (area resample) for the color image."""
-    h, w = arr.shape[0], arr.shape[1]
+    Resizes with Pillow's bilinear filter.  Multi-channel rasters are resized
+    channel-by-channel (each channel keeps its dtype), which covers every
+    supported raster dtype (``uint8``/``uint16``/``float32``) and channel count
+    (1/3/4).  Raises :class:`ImportError` when Pillow is unavailable.
+    """
+    h, w = arr.shape[:2]
     if (w, h) == (width, height):
         return arr
-    xs0 = ((np.arange(width)) * w / width).astype(np.int64)
-    xs1 = np.clip(((np.arange(width) + 1) * w / width).astype(np.int64), xs0 + 1, w)
-    ys0 = ((np.arange(height)) * h / height).astype(np.int64)
-    ys1 = np.clip(((np.arange(height) + 1) * h / height).astype(np.int64), ys0 + 1, h)
-    shape = (height, width) if arr.ndim == 2 else (height, width, arr.shape[2])
-    out = np.empty(shape, dtype=np.float64)
-    for j in range(height):
-        for i in range(width):
-            block = arr[ys0[j] : ys1[j], xs0[i] : xs1[i]]
-            out[j, i] = block.mean(axis=(0, 1), dtype=np.float64)
-    return _cast_rounded(out, arr.dtype)
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise ImportError(
+            "Bilinear image downscale requires Pillow; install it "
+            "(e.g. `pip install pillow`)"
+        ) from exc
+
+    resample = Image.Resampling.BILINEAR
+    if arr.ndim == 2:
+        image = Image.fromarray(arr)
+        return np.asarray(image.resize((width, height), resample), dtype=arr.dtype)
+    return np.stack(
+        [
+            np.asarray(
+                Image.fromarray(arr[:, :, c]).resize((width, height), resample),
+                dtype=arr.dtype,
+            )
+            for c in range(arr.shape[2])
+        ],
+        axis=-1,
+    )
 
 
 def _scaled_side(side: int, scale: float | None) -> int:
@@ -523,7 +532,7 @@ class DepthImage:
         image_meta: dict[str, Any] | None = None
         if self.data.image is not None:
             h, w = self.data.image.shape[0], self.data.image.shape[1]
-            image = _area_downscale(
+            image = _bilinear_downscale(
                 self.data.image,
                 _scaled_side(w, style.get("image_scale")),
                 _scaled_side(h, style.get("image_scale")),

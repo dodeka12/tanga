@@ -13,7 +13,7 @@ import { createSurfaceMaterial } from './surface-material.js';
 
 export function createBox(ent) {
     const color = parseColor(ent, '#88ccff');
-    const opacity = styleParam(ent, 'opacity', 0.9);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const size = ent.size || [1, 1, 1];
 
     // Canonical: an axis-aligned box centered at the origin; placement (center

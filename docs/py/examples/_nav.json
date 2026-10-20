@@ -400,6 +400,9 @@
             "Huge Image": "py/examples/viz/image/huge_image.md"
           },
           {
+            "Huge Image Background": "py/examples/viz/image/huge_image_background.md"
+          },
+          {
             "Image Canvas": "py/examples/viz/image/image_canvas.md"
           },
           {

@@ -470,6 +470,7 @@ export class ThreeJsView extends View {
         if (this.controls) this.controls.update();
         clampOrthoView(this.camera, this.controls);
         this._updateImageLod();
+        this._updateBackgroundLod();
         this._updateScreenSpaceMarkers();
         updateTweens(this.sceneObjects);
         const width = this.width || window.innerWidth;
@@ -527,6 +528,43 @@ export class ThreeJsView extends View {
             if (maxDim == null) continue;
             updateImageLod(entry.mesh, maxDim);
         }
+    }
+
+    // Re-resolve a tiled background image's pyramid level to match the current
+    // crop window (zoom/pan).  The background quad samples one composed texture;
+    // as the crop shrinks (zoom in), a higher-resolution level is fetched so the
+    // visible region is not upscaled.
+    _updateBackgroundLod() {
+        if (!this._backgroundMesh || !this.renderer) return;
+        const maxDim = this._backgroundScreenLongSide();
+        if (maxDim == null) return;
+        updateImageLod(this._backgroundMesh, maxDim);
+    }
+
+    // Device-pixel resolution of the visible background crop's long side,
+    // derived from the crop window + letterbox + device-pixel ratio.
+    _backgroundScreenLongSide() {
+        const mat = this._backgroundMesh && this._backgroundMesh.material;
+        if (!mat || !mat.uniforms) return null;
+        const crop = mat.uniforms.uCrop ? mat.uniforms.uCrop.value : null;
+        if (!crop) return null;
+        const width = this.width || window.innerWidth;
+        const height = this.height || window.innerHeight;
+        if (!(width > 0 && height > 0)) return null;
+        const dpr = this.renderer.getPixelRatio();
+        const du = Math.max(1e-9, crop.z - crop.x);
+        const dv = Math.max(1e-9, crop.w - crop.y);
+        let hx = mat.uniforms.uHx ? Number(mat.uniforms.uHx.value) || 0 : 0;
+        let hy = mat.uniforms.uHy ? Number(mat.uniforms.uHy.value) || 0 : 0;
+        if (!(hx > 0) || !(hy > 0)) {
+            const aspect = (mat.uniforms.uImageAspect ? Number(mat.uniforms.uImageAspect.value) : 0) || 1;
+            const paneAspect = width / height;
+            const fitHx = Math.min(1, aspect / paneAspect);
+            const fitHy = Math.min(1, paneAspect / aspect);
+            if (!(hx > 0)) hx = fitHx;
+            if (!(hy > 0)) hy = fitHy;
+        }
+        return Math.max(hx * width * dpr / du, hy * height * dpr / dv);
     }
 
     // Keep screen-space point markers at a constant on-screen size.  Iterate the
