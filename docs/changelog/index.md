@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.21.1] — 2026-10-20
+- Depth images render in every pane (shared frames) · pinhole depth surfaces no longer mirror vertically
+- pinhole_depth.py two-pane image/3D example with a sine-pattern-driven depth map
+→ [Details](2026/10/20_618cbeea4.md)
+
 ## [Since 2.21.0] — 2026-10-20
 - Tiled background images register on self-push, re-resolve on zoom, and survive reconnect · solid-surface opacity 1.0 & texture-alpha
 - huge_image_background.py example · depth_surface noise/scale examples

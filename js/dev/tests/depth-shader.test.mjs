@@ -69,6 +69,14 @@ test('vertex shader supports pinhole camera-frame positions', () => {
     assert.ok(vertex.includes('p = pc;'));
 });
 
+test('pinhole vertex math inverts the texture v coordinate to the OpenCV row', () => {
+    const vertex = buildDepthVertex();
+    // flipY textures sample the top row at v=1, but the camera frame's y axis
+    // points down (row 0 at the top); both pinhole sites must invert v.
+    assert.ok(vertex.includes('vec2 pixel = vec2(uvSample.x, 1.0 - uvSample.y) * u_frame_size;'));
+    assert.ok(!vertex.includes('vec2 pixel = uvSample * u_frame_size;'));
+});
+
 test('fragment shader shades plain mode with scene lighting', () => {
     const fragment = buildDepthFragment();
     assert.ok(fragment.includes('uniform int uLightCount'));

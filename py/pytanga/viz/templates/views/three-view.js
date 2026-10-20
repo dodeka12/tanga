@@ -16,6 +16,7 @@ import { applySurfaceMaterialLighting, applySurfaceMaterialUniforms } from '../r
 import { DEFAULT_LIGHTING, parseHexColor } from '../renderers/shader-lighting.js';
 import { createImageBackground, setBackgroundAspect, setBackgroundCrop, setBackgroundLetterbox, updateImageBackground } from '../renderers/image-background.js';
 import { buildSceneObject, buildOverlay, removeObject, applyTransformToObject } from '../scene-builder.js';
+import { removeImageFrame } from '../image-frames.js';
 import { startTween, updateTweens, cancelTween } from '../animator.js';
 import { logForwardingEnabled, sendEvent, sendLog } from '../events.js';
 import { installShaderErrorHook } from '../renderers/shader-error.js';
@@ -26,6 +27,16 @@ import { InteractionController } from '../interaction.js';
 import { AxesOverlay } from '../axes-overlay.js';
 import { GridUnderlay } from '../grid-underlay.js';
 import { clampOrthoView, screenWorldScale } from '../camera-fit.js';
+
+// Depth images share their binary frames across panes via `peekImageFrame`, so
+// they are not claimed on first use.  Remove them here (on true entity removal
+// or a full scene reset) so the frame store does not grow.
+function removeDepthImageFrames(data) {
+    if (!data || data.kind !== 'depth_image') return;
+    for (const meta of [data.depth, data.image, data.segmentation]) {
+        if (meta && meta.id) removeImageFrame(meta.id);
+    }
+}
 
 // ── WebGL1 SDF fallback warning banner ──────────────────────
 // SDF proxies need GLSL3 + `gl_FragDepth` (WebGL2). On WebGL1 those objects
@@ -608,6 +619,9 @@ export class ThreeJsView extends View {
             this.labelRenderer.domElement.innerHTML = '';
         }
         this._interaction.clearAllInteractive();
+        for (const entry of this.sceneObjects.values()) {
+            removeDepthImageFrames(entry && entry.data);
+        }
         this.sceneObjects.clear();
         this._backgroundMesh = null;
         this._backgroundImage = null;
@@ -1412,6 +1426,7 @@ export class ThreeJsView extends View {
     _removeSceneObject(id) {
         this._interaction.unregisterInteractive(id);
         const entry = this.sceneObjects.get(id);
+        if (entry) removeDepthImageFrames(entry.data);
         if (entry && entry.layer === 'scene' && entry.obj && entry.obj.userData._attachedGroups) {
             for (const groupId of entry.obj.userData._attachedGroups) {
                 detachGroup(groupId);
