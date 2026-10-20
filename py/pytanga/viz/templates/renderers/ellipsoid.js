@@ -13,7 +13,7 @@ import { createSurfaceMaterial } from './surface-material.js';
 
 export function createEllipsoid(ent) {
     const color = parseColor(ent, '#ffaa00');
-    const opacity = styleParam(ent, 'opacity', 0.9);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const radii = ent.radii || [1, 1, 1];
 
     // Canonical: a unit sphere scaled by per-axis radii at the origin;

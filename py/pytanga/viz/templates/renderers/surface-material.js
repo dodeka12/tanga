@@ -12,6 +12,7 @@
 import * as THREE from 'three';
 import { buildSurfaceFragment, buildSurfaceVertex } from './surface-shader.js';
 import { makeEncodedTexture } from './image.js';
+import { styleParam } from './utils.js';
 import { peekImageFrame, registerImageFrameConsumer } from '../image-frames.js';
 import {
     DEFAULT_LIGHTING,
@@ -139,15 +140,17 @@ export function createSurfaceMaterial(ent, { fallbackMaterial } = {}) {
     const surface = ent.style && ent.style.surface;
     if (!surface) return fallbackMaterial;
 
-    // Surface materials are opaque: the entity's canonical "shell" opacity
-    // (e.g. a translucent Plane) does not apply to a textured/shader surface.
-    const opacity = 1.0;
+    // The surface material honors the entity's resolved opacity: the standard
+    // texture map multiplies it by the texture alpha channel, and a custom
+    // shader receives it as `u_opacity`.
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const [r, g, b] = parseHexColor(ent.color, [1, 1, 1]);
 
     const hasShader = !!(surface.shader && surface.shader.fragment);
     const textures = surface.textures || [];
 
     if (hasShader) {
+        const hasAlphaTexture = textures.some((t) => t && t.channels === 4);
         const uniforms = {
             u_color: { value: new THREE.Vector3(r, g, b) },
             u_opacity: { value: opacity },
@@ -166,16 +169,18 @@ export function createSurfaceMaterial(ent, { fallbackMaterial } = {}) {
             }),
             uniforms,
             glslVersion: THREE.GLSL3,
-            transparent: opacity < 1.0,
-            depthWrite: opacity >= 0.99,
+            transparent: opacity < 1.0 || hasAlphaTexture,
+            depthWrite: opacity >= 0.99 && !hasAlphaTexture,
             depthTest: true,
             side: THREE.DoubleSide,
         });
+        material.userData._alphaTexture = hasAlphaTexture;
         bindSurfaceTextures(material, textures);
         return material;
     }
 
     if (textures.length) {
+        const hasAlphaTexture = !!(textures[0] && textures[0].channels === 4);
         const uniforms = {
             u_color: { value: new THREE.Vector3(r, g, b) },
             u_opacity: { value: opacity },
@@ -193,11 +198,12 @@ export function createSurfaceMaterial(ent, { fallbackMaterial } = {}) {
             }),
             uniforms,
             glslVersion: THREE.GLSL3,
-            transparent: opacity < 1.0,
-            depthWrite: opacity >= 0.99,
+            transparent: opacity < 1.0 || hasAlphaTexture,
+            depthWrite: opacity >= 0.99 && !hasAlphaTexture,
             depthTest: true,
             side: THREE.DoubleSide,
         });
+        material.userData._alphaTexture = hasAlphaTexture;
         // Only the first texture drives the standard texture map.
         _bindTexture(uniforms.uTexture, textures[0]);
         return material;

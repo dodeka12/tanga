@@ -15,8 +15,10 @@ style (`SphereStyle`, `PlaneStyle`, …).
 - A shader → replaces the standard shader.
 - A shader + textures → the shader replaces the standard shader, and each
   texture is bound to its declared sampler `uniform`.
-- Surface materials are opaque by default; they do not inherit the entity's
-  translucent "shell" opacity.
+- Solid-surface entities default to opacity `1.0`, and the surface material
+  honors the entity's opacity: the standard texture map multiplies it by the
+  texture's alpha channel (`opacity × texel.a`), and a custom shader receives it
+  as the `u_opacity` uniform and decides how to use it.
 
 ## Standard texture map
 
@@ -36,7 +38,8 @@ viz.add(
 `SurfaceShader` takes a GLSL fragment that defines
 `vec3 surfaceColor(vec3 baseColor, vec3 n, vec3 p)` and returns the surface
 color.  The host provides the varyings `vUv`, `vNormal`, `vWorldPosition`,
-`vLocalPos`, the uniforms `u_color` / `u_opacity`, the global scene-lighting
+`vLocalPos`, the uniforms `u_color` / `u_opacity` (the entity's opacity), the
+global scene-lighting
 uniforms (`uLightCount`, `uLightDir[]`, `uLightColor[]`, `uAmbientColor`), and a
 `tangaLight(albedo, n, p)` helper.  Texture samplers are declared by the host
 from each `SurfaceTexture.uniform`; the fragment samples them but must **not**

@@ -80,6 +80,8 @@ uv run python py/examples/<path>.py
 
 - **Axis** — [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
 
+- **background** — [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
+
 - **background image** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md)
 
 - **banner** — [Capture a shader compile error and show it in a banner](viz/surface/shader_errors.md), [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md)
@@ -127,6 +129,8 @@ uv run python py/examples/<path>.py
 - **camera** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [3D projective camera via View3dConfig](viz/camera/3d_plane.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [Stream a programmatic camera feed at 30 Hz over MJPEG](viz/camera/camera_stream.md), [2D fit-camera keeps the axes/grid undistorted](viz/camera/fit_2d.md), [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md)
 
 - **camera calibration** — [switch the interpretation of one depth map, live](viz/image/pinhole_depth.md)
+
+- **CameraView** — [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
 
 - **capped cone** — [isolate the SDF arrowhead (capped cone) placement](viz/sdf/arrowhead.md)
 
@@ -420,7 +424,7 @@ uv run python py/examples/<path>.py
 
 - **icon_only** — [Controls styled from the extracted theme CSS files](viz/ui/controls/control_theming.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md)
 
-- **image** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
+- **image** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
 - **image background** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
 
@@ -431,6 +435,8 @@ uv run python py/examples/<path>.py
 - **ImageData** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
 - **ImageData.update** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md)
+
+- **ImageView** — [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
 
 - **indeterminate** — [Determinate and indeterminate progress bars with a status line](viz/ui/controls/progress_bar.md)
 
@@ -480,7 +486,7 @@ uv run python py/examples/<path>.py
 
 - **LabelStyle** — [Labels with custom styling, dynamic update, and removal](viz/labels/basic.md)
 
-- **large image** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md)
+- **large image** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
 
 - **LaTeX** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
 
@@ -560,7 +566,7 @@ uv run python py/examples/<path>.py
 
 - **named blades** — [Euclidean 3D geometric algebra  G(3, 0)](ga/basis/base_e3_demo.md), [Three ways to work with named basis blades](ga/basis/basis_usage.md)
 
-- **navigation** — [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md)
+- **navigation** — [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
 
 - **nested** — [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md)
 
@@ -588,7 +594,7 @@ uv run python py/examples/<path>.py
 
 - **on_release** — [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md)
 
-- **opacity** — [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md)
+- **opacity** — [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [Switch between standard and custom surface texture mapping](viz/surface/texture_mapping.md)
 
 - **OpenCV** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md)
 
@@ -612,6 +618,8 @@ uv run python py/examples/<path>.py
 
 - **P3** — [Projective 3D geometric algebra  G(4, 0)](ga/basis/base_p3_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
+- **pan** — [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
+
 - **pane swap** — [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md)
 
 - **panes** — [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md)
@@ -634,7 +642,7 @@ uv run python py/examples/<path>.py
 
 - **PIL** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
-- **pinhole** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [switch the interpretation of one depth map, live](viz/image/pinhole_depth.md)
+- **pinhole** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [switch the interpretation of one depth map, live](viz/image/pinhole_depth.md)
 
 - **pixels** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md)
 
@@ -692,7 +700,7 @@ uv run python py/examples/<path>.py
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
-- **pyramid** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
+- **pyramid** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
 - **Q2** — [intersect two 2D conics (a point tuple)](ga/quadric/conic_intersection_demo.md)
 
@@ -888,7 +896,7 @@ uv run python py/examples/<path>.py
 
 - **tiled** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
-- **tiles** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md)
+- **tiles** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
 
 - **tilted plane** — [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
 
@@ -977,6 +985,8 @@ uv run python py/examples/<path>.py
 - **with_basis** — [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md)
 
 - **zlib** — [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md)
+
+- **zoom** — [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
 
 ## Topics
 

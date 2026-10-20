@@ -121,6 +121,32 @@ class TestDepthImageBuild:
         image_frame = frames[1]
         assert image_frame.data is not None and image_frame.data.shape == (20, 30, 3)
 
+    def test_image_downscale_preserves_uint16(self) -> None:
+        depth_img = DepthImage(
+            DepthImageData(
+                depth=np.zeros((10, 12), np.float32),
+                image=np.zeros((40, 60), np.uint16),
+            )
+        )
+        _, frames = depth_img._build(_resolved(image_scale=0.5), "d0")
+        data = frames[1].data
+        assert data is not None
+        assert data.dtype == np.uint16
+        assert data.shape == (20, 30)
+
+    def test_image_downscale_preserves_float32_multichannel(self) -> None:
+        depth_img = DepthImage(
+            DepthImageData(
+                depth=np.zeros((10, 12), np.float32),
+                image=np.zeros((40, 60, 3), np.float32),
+            )
+        )
+        _, frames = depth_img._build(_resolved(image_scale=0.5), "d0")
+        data = frames[1].data
+        assert data is not None
+        assert data.dtype == np.float32
+        assert data.shape == (20, 30, 3)
+
     def test_segmentation_follows_image_scale(self) -> None:
         depth_img = DepthImage(
             DepthImageData(

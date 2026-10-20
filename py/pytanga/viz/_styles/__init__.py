@@ -238,17 +238,17 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
         color="#44ff44", opacity=1.0, point_size=0.06, line_thickness=1.0
     ),
     "Line": LineStyle(color="#44ff44", opacity=0.8, length=20.0, thickness=1.0),
-    "Plane": PlaneStyle(color="#4488ff", opacity=0.3, extent=10.0),
+    "Plane": PlaneStyle(color="#4488ff", opacity=1.0, extent=10.0),
     "Circle": CylinderCircleStyle(color="#ff44ff", opacity=1.0, tube_radius=0.03),
     "Sphere": SphereStyle(
         color="#ffaa00", opacity=1.0, wireframe=True, wireframe_opacity=0.2
     ),
-    "Cylinder": CylinderStyle(color="#44aaff", opacity=0.9),
+    "Cylinder": CylinderStyle(color="#44aaff", opacity=1.0),
     "Arc": ArcStyle(color="#ffcc44", opacity=0.9),
-    "Disk": DiskStyle(color="#ff8844", opacity=0.9, thickness=0.02),
-    "PartialDisk": PartialDiskStyle(color="#ffcc44", opacity=0.9, thickness=0.02),
-    "Box": BoxStyle(color="#88ccff", opacity=0.9),
-    "Ellipsoid": EllipsoidStyle(color="#ffaa00", opacity=0.9),
+    "Disk": DiskStyle(color="#ff8844", opacity=1.0, thickness=0.02),
+    "PartialDisk": PartialDiskStyle(color="#ffcc44", opacity=1.0, thickness=0.02),
+    "Box": BoxStyle(color="#88ccff", opacity=1.0),
+    "Ellipsoid": EllipsoidStyle(color="#ffaa00", opacity=1.0),
     "Quadric3D": RayQuadricStyle(color="#ffaa00", opacity=0.7),
     "Ellipse": EllipseStyle(color="#ff44ff", opacity=0.9, thickness=1.0),
     "Hyperbola": HyperbolaStyle(
@@ -266,7 +266,7 @@ _DEFAULT_STYLE_FOR_KIND: dict[str, VizStyle] = {
     "PlaneConic": PlaneConicStyle(color="#44ff44", opacity=0.8, thickness=2.0),
     "PlaneConicPair": PlaneConicPairStyle(color="#44ff44", opacity=0.8, thickness=2.0),
     "Curve": CurveStyle(color="#44ff44", opacity=0.8, thickness=2.0),
-    "Cone": ConeStyle(color="#ffaa00", opacity=0.9),
+    "Cone": ConeStyle(color="#ffaa00", opacity=1.0),
     "Rectangle2D": Rectangle2DStyle(color="#ffffff", opacity=1.0, thickness=2.0),
     "Frustum": FrustumStyle(color="#88ccff", opacity=0.9, thickness=1.0),
     "RegularPolygon": RegularPolygonStyle(color="#44ffaa", opacity=0.9, thickness=0.02),

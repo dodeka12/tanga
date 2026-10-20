@@ -239,6 +239,8 @@ class Visualizer(_JupyterDisplayMixin):
             scene_factory=self._create_scene,
             transport=self._transport,
             client_log=self._client_log,
+            register_pyramid=self._register_pyramid,
+            unregister_pyramid=self._unregister_pyramid,
         )
         self._layout.add_scene("")
         self._theme_host = ThemeHost(self._transport, self._layout)
@@ -1268,6 +1270,16 @@ class Visualizer(_JupyterDisplayMixin):
             self._server.register_image_pyramid(pyramid.image_id, pyramid)
         return pyramid
 
+    def _unregister_pyramid(self, image_id: str) -> None:
+        """Drop a registered image pyramid (and its server copy) by id.
+
+        Called when a bound background ``ImageView`` replaces or removes a tiled
+        layer so a long-running app does not accumulate stale pyramids.
+        """
+        self._image_pyramids.pop(image_id, None)
+        if self._server is not None:
+            self._server.unregister_image_pyramid(image_id)
+
     def _register_background_pyramids(self, root: Any) -> None:
         """Auto-register tiled pyramids behind any ``CameraView.background_image``.
 
@@ -1284,9 +1296,9 @@ class Visualizer(_JupyterDisplayMixin):
             image_view = camera_view.background_image
             if image_view is None:
                 continue
-            image = image_view.primary_image
-            if image is not None and image.tiled is not None:
-                self._register_pyramid(image.tiled)
+            for image in image_view.images:
+                if image.tiled is not None:
+                    self._register_pyramid(image.tiled)
 
     def register_camera_stream(self, stream_id: str, *, fps: int = 30) -> Any:
         """Register an MJPEG camera stream at ``/stream/{stream_id}``.

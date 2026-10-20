@@ -14,7 +14,7 @@ import { createSurfaceMaterial } from './surface-material.js';
 
 export async function createSphere(ent) {
     const color = parseColor(ent, '#ffaa00');
-    const opacity = styleParam(ent, 'opacity', 0.4);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const radius = Math.max(ent.radius || 1.0, 0.001);
 
     // Canonical: a sphere at the origin; placement rides on the node transform.

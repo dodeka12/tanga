@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.21.0] — 2026-10-20
+- Tiled background images register on self-push, re-resolve on zoom, and survive reconnect · solid-surface opacity 1.0 & texture-alpha
+- huge_image_background.py example · depth_surface noise/scale examples
+→ [Details](2026/10/20_10ef04db2.md)
+
 ## [Since 2.20.0] — 2026-10-19
 - Surface texture mapping (image / custom shader / both) + standard surface shaders · in-place shader uniform updates batched on `flush()` · shader compile error reporting · scrollable banners · layered image views (8 layers, per-layer colormap + RGBA alpha) · pinhole depth mode · `look_at_matrix`
 → [Details](2026/10/19_05574a546.md)

@@ -12,6 +12,9 @@
 //     `vec3 surfaceColor(vec3 baseColor, vec3 n, vec3 p)`, which the host
 //     `main()` calls.  `baseColor` is `u_color` for a custom shader, or the
 //     sampled first texture for the standard texture map.
+//   - `u_opacity` is the entity's resolved opacity.  The standard texture map
+//     outputs `u_opacity * textureAlpha`; a custom shader decides how to use
+//     `u_opacity` (the host still applies it as the fragment alpha).
 
 import { lightPreamble } from './shader-lighting.js';
 
@@ -52,6 +55,9 @@ export function buildSurfaceFragment({
     const baseColorExpr = sampleTexture
         ? `texture2D(${sampleTexture}, vUv).rgb`
         : 'u_color';
+    const alphaExpr = sampleTexture
+        ? `u_opacity * texture2D(${sampleTexture}, vUv).a`
+        : 'u_opacity';
     const surfaceColorBody = userFragment || buildStandardTextureSurfaceColor();
 
     return `
@@ -86,6 +92,6 @@ void main() {
     vec3 baseColor = ${baseColorExpr};
     vec3 n = normalize(vNormal);
     vec3 p = vWorldPosition;
-    fragColor = vec4(surfaceColor(baseColor, n, p), u_opacity);
+    fragColor = vec4(surfaceColor(baseColor, n, p), ${alphaExpr});
 }`;
 }

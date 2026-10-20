@@ -599,7 +599,9 @@ def main() -> None:
             )
         else:
             background.update(data=default_data)
-        left.camera_view.background_image.set_image(background)
+        camera_view = left.camera_view
+        if camera_view is not None and camera_view.background_image is not None:
+            camera_view.background_image.set_image(background)
 
     async def _on_swap(_value: Any, _event: ControlEvent) -> None:
         # Reordering the split re-pushes the layout; the reused `background`

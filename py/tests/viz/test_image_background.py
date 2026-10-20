@@ -445,3 +445,93 @@ def test_unbound_mutators_emit_nothing():  # noqa: ANN201
     bg.remove_layer(1)
     assert bg.uniforms["u_layer1_enabled"] == 0
 
+def test_bound_set_image_registers_tiled_pyramid():  # noqa: ANN201
+    from pytanga.viz import ImageView, Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+
+    bg = ImageView("camera")
+    bg.set_image(ImageData("camera", data=np.zeros((60, 80, 3), dtype=np.uint8)))
+    viz.set_layout(SceneView("main", camera_view=CameraView(background_image=bg)))
+
+    big = ImageData("camera", data=np.zeros((5000, 100, 3), dtype=np.uint8))
+    assert big.source == "tiled"
+    bg.set_image(big)
+    assert "camera" in viz._image_pyramids
+    assert viz._image_pyramids["camera"] is big.tiled
+
+    big2 = ImageData("camera", data=np.ones((5000, 100, 3), dtype=np.uint8))
+    bg.set_image(big2)
+    assert viz._image_pyramids["camera"] is big2.tiled
+    assert big2.tiled.version > big.tiled.version
+
+
+def test_bound_set_layer_registers_and_remove_layer_prunes():  # noqa: ANN201
+    from pytanga.viz import ImageView, Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+
+    bg = ImageView("bg")
+    bg.set_image(ImageData("img0", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    bg.add_layer(ImageData("img1", data=np.zeros((8, 12), dtype=np.uint8)))
+    bg.add_layer(ImageData("img2", data=np.zeros((8, 12), dtype=np.uint8)))
+    viz.set_layout(SceneView("main", camera_view=CameraView(background_image=bg)))
+
+    tiled = ImageData("layer2", data=np.zeros((5000, 100, 3), dtype=np.uint8))
+    assert tiled.source == "tiled"
+    bg.set_layer(2, tiled)
+    assert "layer2" in viz._image_pyramids
+    assert viz._image_pyramids["layer2"] is tiled.tiled
+
+    bg.remove_layer(2)
+    assert "layer2" not in viz._image_pyramids
+
+
+def test_set_layout_registers_tiled_layer_1():  # noqa: ANN201
+    from pytanga.viz import ImageView, Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+
+    bg = ImageView("bg")
+    bg.set_image(ImageData("img0", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    tiled = ImageData("big1", data=np.zeros((5000, 100, 3), dtype=np.uint8))
+    bg.add_layer(tiled)
+
+    viz.set_layout(SceneView("main", camera_view=CameraView(background_image=bg)))
+
+    assert "big1" in viz._image_pyramids
+    assert viz._image_pyramids["big1"] is tiled.tiled
+
+
+def test_bound_set_image_refreshes_layout_and_prunes_frame():  # noqa: ANN201
+    from pytanga.viz import ImageView, Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    fake = _FakeTransport()
+    viz._layout._transport = fake  # type: ignore[attr-defined]
+
+    bg = ImageView("camera")
+    bg.set_image(ImageData("camera", data=np.zeros((60, 80, 3), dtype=np.uint8)))
+    viz.set_layout(SceneView("main", camera_view=CameraView(background_image=bg)))
+    # The placeholder's binary frame is cached for reconnect.
+    assert "camera" in viz._layout._background_frames
+
+    big = ImageData("camera", data=np.zeros((5000, 100, 3), dtype=np.uint8))
+    bg.set_image(big)
+
+    # A tiled image is served as metadata + tiles, so the stale placeholder frame
+    # must be pruned from the reconnect cache.
+    assert "camera" not in viz._layout._background_frames
+    # The cached layout must reflect the tiled source so a hard refresh rebuilds
+    # it (instead of the pre-swap placeholder).
+    serialized = viz._layout._layouts_serialized[""]
+    meta = serialized["root"]["camera_view"]["background_image"]
+    assert meta["source"] == "tiled"
+    assert meta["tile_version"] == 1
+

@@ -830,6 +830,10 @@ class VizServer:
         """Register an image pyramid by id for the ``/image/...`` tile route."""
         self._image_pyramids[image_id] = pyramid
 
+    def unregister_image_pyramid(self, image_id: str) -> None:
+        """Drop a registered image pyramid by id (e.g. a removed layer)."""
+        self._image_pyramids.pop(image_id, None)
+
     async def _image_tile_handler(self, request: web.Request) -> web.StreamResponse:
         """Serve one encoded image-pyramid tile
         (``/image/{id}/{version}/{level}/{x}/{y}``).

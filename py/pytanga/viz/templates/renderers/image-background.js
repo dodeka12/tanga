@@ -9,7 +9,8 @@
 
 import * as THREE from 'three';
 
-import { addCustomUniforms, applyImageUniforms, buildColorUniforms, buildLayerUniforms, makeEncodedTexture, makeStreamTexture, makeTiledTexture } from './image.js';
+import { addCustomUniforms, applyImageUniforms, buildColorUniforms, buildLayerUniforms, buildTiledTextureAtLevel, makeEncodedTexture, makeStreamTexture, updateImageLod } from './image.js';
+import { levelForScreen } from './image-tiles.js';
 import { buildImageLayerPipeline } from './image-shader.js';
 import { hasImageFrame, registerImageFrameConsumer, takeImageFrame } from '../image-frames.js';
 
@@ -103,9 +104,6 @@ function _backgroundTexture(img) {
             );
         });
     }
-    if (img.source === 'tiled') {
-        return makeTiledTexture(img);
-    }
     const frame = hasImageFrame(img.id) ? takeImageFrame(img.id) : null;
     if (!frame) return Promise.resolve(null);   // no pixel frame yet — caller decides
     // `makeEncodedTexture` applies the correct per-codec orientation itself
@@ -132,6 +130,14 @@ function _bindLayerTexture(material, img, i) {
         material.uniforms[key].value = null;
         return;
     }
+    if (img.source === 'tiled') {
+        const level = levelForScreen(img, 2048);
+        buildTiledTextureAtLevel(img, level).then((tex) => {
+            material.uniforms[key].value = tex;
+        });
+        material.userData._tiledLayers.push({ img, index: i, level });
+        return;
+    }
     _backgroundTexture(img).then((tex) => {
         if (tex) {
             material.uniforms[key].value = tex;
@@ -155,6 +161,9 @@ export function createImageBackground(imageMeta) {
     const img = imageMeta || {};
     const geometry = new THREE.PlaneGeometry(2, 2);
     const material = _buildMaterial(img);
+    // Tiled layers re-resolve their pyramid level when the view zooms; keep the
+    // per-layer state on the material so `updateImageLod` can swap them.
+    material.userData._tiledLayers = [];
     const mesh = new THREE.Mesh(geometry, material);
     mesh.frustumCulled = false;
     mesh.renderOrder = -1;
@@ -191,18 +200,12 @@ export function updateImageBackground(mesh, imageMeta) {
     mat.uniforms.uImageAspect.value = width / height;
     // Re-apply color-processing + custom uniforms from the new metadata.
     applyImageUniforms(mesh, img.uniforms);
+    // Rebuild the tiled-layer LOD state from the new metadata.
+    mat.userData._tiledLayers = [];
     const layers = _layersOf(img);
     const layerCount = Number(img.max_layers) || 8;
     for (let i = 0; i < layers.length && i < layerCount; i++) {
-        const layer = layers[i];
-        const key = `uImage${i}`;
-        if (!layer) {
-            mat.uniforms[key].value = null;
-            continue;
-        }
-        _backgroundTexture(layer).then((tex) => {
-            if (tex) mat.uniforms[key].value = tex;
-        });
+        _bindLayerTexture(mat, layers[i], i);
     }
 }
 

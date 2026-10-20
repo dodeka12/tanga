@@ -103,6 +103,9 @@ class ImageView:
         self._transport: Any = None
         self._view_id: str | None = None
         self._record_frame: Any = None
+        self._register_pyramid: Any = None
+        self._unregister_pyramid: Any = None
+        self._refresh_layout: Any = None
 
     # -- image layers -------------------------------------------------
 
@@ -203,21 +206,40 @@ class ImageView:
 
     # -- background binding / push ---------------------------------
 
-    def _bind_background(self, transport: Any, view_id: str, record_frame: Any) -> None:
+    def _bind_background(
+        self,
+        transport: Any,
+        view_id: str,
+        record_frame: Any,
+        register_pyramid: Any = None,
+        unregister_pyramid: Any = None,
+        refresh_layout: Any = None,
+    ) -> None:
         """Bind this view to a pane background so mutators push their own updates.
 
         *record_frame* is a callback ``(image_id, frame_or_none)`` the layout
         host supplies to keep its reconnect frame cache in sync (``None`` prunes).
+        *register_pyramid* / *unregister_pyramid* keep the ``Visualizer`` tile
+        registry in sync for tiled images (``register_pyramid(pyramid)`` /
+        ``unregister_pyramid(image_id)``).  *refresh_layout* re-serializes the
+        cached layout after a pixel change so a reconnect/hard refresh re-sends
+        the current image metadata.
         """
         self._transport = transport
         self._view_id = view_id
         self._record_frame = record_frame
+        self._register_pyramid = register_pyramid
+        self._unregister_pyramid = unregister_pyramid
+        self._refresh_layout = refresh_layout
 
     def _unbind_background(self) -> None:
         """Detach from the pane background (mutators become local-only again)."""
         self._transport = None
         self._view_id = None
         self._record_frame = None
+        self._register_pyramid = None
+        self._unregister_pyramid = None
+        self._refresh_layout = None
 
     def _push_background_uniforms(self, patch: dict[str, float | int]) -> None:
         """Send a granular ``view_background_uniforms`` patch (no pixel bytes)."""
@@ -239,20 +261,32 @@ class ImageView:
         from ._image_wire import encode_image_frame
 
         for image in self._images:
-            if image is None or image.data is None or image.id not in changed_ids:
+            if image is None or image.id not in changed_ids:
                 continue
-            frame = encode_image_frame(
-                image.id,
-                image.data,
-                codec=image.codec,
-                jpeg_quality=image.jpeg_quality or 85,
-            )
-            self._transport.send_bytes(frame)
-            if self._record_frame is not None:
-                self._record_frame(image.id, frame)
+            if image.data is not None:
+                frame = encode_image_frame(
+                    image.id,
+                    image.data,
+                    codec=image.codec,
+                    jpeg_quality=image.jpeg_quality or 85,
+                )
+                self._transport.send_bytes(frame)
+                if self._record_frame is not None:
+                    self._record_frame(image.id, frame)
+            elif image.tiled is not None:
+                # Tiled images have no pixel frame; register their pyramid so the
+                # /image/... tile route can serve the frontend's on-demand tiles,
+                # and drop any stale cached frame for this id (a tiled image is
+                # re-sent as metadata + tiles, never as one binary frame).
+                if self._register_pyramid is not None:
+                    self._register_pyramid(image.tiled)
+                if self._record_frame is not None:
+                    self._record_frame(image.id, None)
         for image_id in prune_ids:
             if self._record_frame is not None:
                 self._record_frame(image_id, None)
+            if self._unregister_pyramid is not None:
+                self._unregister_pyramid(image_id)
         self._transport.send(
             {
                 "type": "view_background_image",
@@ -260,6 +294,11 @@ class ImageView:
                 "image": self.background_meta(),
             }
         )
+        if self._refresh_layout is not None:
+            # Keep the cached serialized layout in sync so a reconnect/hard
+            # refresh re-sends the current (e.g. tiled) metadata instead of the
+            # pre-swap placeholder.
+            self._refresh_layout()
 
     def set_layer_style(self, index: int, style: ImageLayerStyle) -> None:
         """Merge *style* into layer *index* (``None`` fields keep current values)."""

@@ -49,7 +49,7 @@ function _planeGeometry(ent) {
 
 export async function createPlane(ent) {
     const color = parseColor(ent, '#4488ff');
-    const opacity = styleParam(ent, 'opacity', 0.3);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const extent = ent.extent ?? styleParam(ent, 'extent', 10.0);
 
     const spanGeometry = _planeGeometry(ent);

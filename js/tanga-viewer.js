@@ -344,17 +344,32 @@ function applyStyleUpdate(mesh, ent) {
     const fillOpacity = styleParam(ent, 'fill_opacity', undefined);
     if (opacity !== undefined || fillOpacity !== undefined) {
         mesh.traverse((child) => {
-            if (child.material && child.material.opacity !== undefined) {
+            const material = child.material;
+            if (!material) return;
+            // Surface ShaderMaterials drive alpha via `u_opacity` (and may keep
+            // an alpha texture that stays transparent at full opacity).
+            if (material.uniforms && material.uniforms.uOpacity) {
+                const target = opacity;
+                if (target !== undefined) {
+                    const alphaTex = !!(material.userData && material.userData._alphaTexture);
+                    material.uniforms.uOpacity.value = target;
+                    material.transparent = target < 1.0 || alphaTex;
+                    material.depthWrite = target >= 0.99 && !alphaTex;
+                    material.needsUpdate = true;
+                }
+                return;
+            }
+            if (material.opacity !== undefined) {
                 // A fill quad (Rectangle2D) has its own opacity key: the
                 // top-level `opacity` drives the outline only.
                 const isFill = !!(child.userData && child.userData.isFillQuad);
                 if (isFill && fillOpacity === undefined) return;
                 const target = isFill ? fillOpacity : opacity;
                 if (target !== undefined) {
-                    child.material.opacity = target;
-                    child.material.transparent = target < 1.0;
-                    child.material.depthWrite = target >= 0.99;
-                    child.material.needsUpdate = true;
+                    material.opacity = target;
+                    material.transparent = target < 1.0;
+                    material.depthWrite = target >= 0.99;
+                    material.needsUpdate = true;
                 }
             }
         });
@@ -1157,7 +1172,7 @@ function _planeGeometry(ent) {
 
 async function createPlane(ent) {
     const color = parseColor(ent, '#4488ff');
-    const opacity = styleParam(ent, 'opacity', 0.3);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const extent = ent.extent ?? styleParam(ent, 'extent', 10.0);
 
     const spanGeometry = _planeGeometry(ent);
@@ -1416,7 +1431,7 @@ function resolveHeight(ent) {
 
 function createCone(ent) {
     const color = parseColor(ent, '#ffaa00');
-    const opacity = styleParam(ent, 'opacity', 0.9);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const halfAngle = Math.max(ent.halfAngle || 0.3, 0.01);
     const height = resolveHeight(ent);
     const radius = height * Math.tan(halfAngle);
@@ -1481,7 +1496,7 @@ function resolveCylinderRadius(ent) {
 
 function createCylinder(ent) {
     const color = parseColor(ent, '#44aaff');
-    const opacity = styleParam(ent, 'opacity', 0.9);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const radius = resolveCylinderRadius(ent);
     const length = resolveCylinderLength(ent);
 
@@ -1523,7 +1538,7 @@ function updateCylinder(mesh, ent, prev) {
 
 function createBox(ent) {
     const color = parseColor(ent, '#88ccff');
-    const opacity = styleParam(ent, 'opacity', 0.9);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const size = ent.size || [1, 1, 1];
 
     // Canonical: an axis-aligned box centered at the origin; placement (center
@@ -1555,7 +1570,7 @@ function createBox(ent) {
 
 function createDisk(ent) {
     const color = parseColor(ent, '#ff8844');
-    const opacity = styleParam(ent, 'opacity', 0.9);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const radius = Math.max(ent.radius || 1.0, 0.001);
     const thickness = Math.max(styleParam(ent, 'thickness', 0.02), 0.001);
     // Canonical plane is XY (normal +Z): the disk slab's cylinder axis (+Y) is
@@ -1642,7 +1657,7 @@ function updateEllipse(mesh, ent, prev) {
 
 function createEllipsoid(ent) {
     const color = parseColor(ent, '#ffaa00');
-    const opacity = styleParam(ent, 'opacity', 0.9);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const radii = ent.radii || [1, 1, 1];
 
     // Canonical: a unit sphere scaled by per-axis radii at the origin;
@@ -1684,7 +1699,7 @@ function rotationFromAxes(normal, inPlane) {
 
 function createPartialDisk(ent) {
     const color = parseColor(ent, '#ffcc44');
-    const opacity = styleParam(ent, 'opacity', 0.9);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const radius = Math.max(ent.radius || 1.0, 0.001);
     const thickness = Math.max(styleParam(ent, 'thickness', 0.02), 0.001);
     // Canonical plane is XY (normal +Z), sector start is +X; placement rides on
@@ -2105,7 +2120,7 @@ function updatePointSet(mesh, ent, prev) {
 
 async function createSphere(ent) {
     const color = parseColor(ent, '#ffaa00');
-    const opacity = styleParam(ent, 'opacity', 0.4);
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const radius = Math.max(ent.radius || 1.0, 0.001);
 
     // Canonical: a sphere at the origin; placement rides on the node transform.
@@ -3593,9 +3608,6 @@ function _backgroundTexture(img) {
             );
         });
     }
-    if (img.source === 'tiled') {
-        return makeTiledTexture(img);
-    }
     const frame = hasImageFrame(img.id) ? takeImageFrame(img.id) : null;
     if (!frame) return Promise.resolve(null);   // no pixel frame yet — caller decides
     // `makeEncodedTexture` applies the correct per-codec orientation itself
@@ -3622,6 +3634,14 @@ function _bindLayerTexture(material, img, i) {
         material.uniforms[key].value = null;
         return;
     }
+    if (img.source === 'tiled') {
+        const level = levelForScreen(img, 2048);
+        buildTiledTextureAtLevel(img, level).then((tex) => {
+            material.uniforms[key].value = tex;
+        });
+        material.userData._tiledLayers.push({ img, index: i, level });
+        return;
+    }
     _backgroundTexture(img).then((tex) => {
         if (tex) {
             material.uniforms[key].value = tex;
@@ -3645,6 +3665,9 @@ function createImageBackground(imageMeta) {
     const img = imageMeta || {};
     const geometry = new THREE.PlaneGeometry(2, 2);
     const material = _buildMaterial(img);
+    // Tiled layers re-resolve their pyramid level when the view zooms; keep the
+    // per-layer state on the material so `updateImageLod` can swap them.
+    material.userData._tiledLayers = [];
     const mesh = new THREE.Mesh(geometry, material);
     mesh.frustumCulled = false;
     mesh.renderOrder = -1;
@@ -3681,18 +3704,12 @@ function updateImageBackground(mesh, imageMeta) {
     mat.uniforms.uImageAspect.value = width / height;
     // Re-apply color-processing + custom uniforms from the new metadata.
     applyImageUniforms(mesh, img.uniforms);
+    // Rebuild the tiled-layer LOD state from the new metadata.
+    mat.userData._tiledLayers = [];
     const layers = _layersOf(img);
     const layerCount = Number(img.max_layers) || 8;
     for (let i = 0; i < layers.length && i < layerCount; i++) {
-        const layer = layers[i];
-        const key = `uImage${i}`;
-        if (!layer) {
-            mat.uniforms[key].value = null;
-            continue;
-        }
-        _backgroundTexture(layer).then((tex) => {
-            if (tex) mat.uniforms[key].value = tex;
-        });
+        _bindLayerTexture(mat, layers[i], i);
     }
 }
 
@@ -3974,6 +3991,9 @@ function installShaderErrorHook(renderer, onError) {
 //     `vec3 surfaceColor(vec3 baseColor, vec3 n, vec3 p)`, which the host
 //     `main()` calls.  `baseColor` is `u_color` for a custom shader, or the
 //     sampled first texture for the standard texture map.
+//   - `u_opacity` is the entity's resolved opacity.  The standard texture map
+//     outputs `u_opacity * textureAlpha`; a custom shader decides how to use
+//     `u_opacity` (the host still applies it as the fragment alpha).
 
 function buildSurfaceVertex() {
     return `
@@ -4012,6 +4032,9 @@ function buildSurfaceFragment({
     const baseColorExpr = sampleTexture
         ? `texture2D(${sampleTexture}, vUv).rgb`
         : 'u_color';
+    const alphaExpr = sampleTexture
+        ? `u_opacity * texture2D(${sampleTexture}, vUv).a`
+        : 'u_opacity';
     const surfaceColorBody = userFragment || buildStandardTextureSurfaceColor();
 
     return `
@@ -4046,7 +4069,7 @@ void main() {
     vec3 baseColor = ${baseColorExpr};
     vec3 n = normalize(vNormal);
     vec3 p = vWorldPosition;
-    fragColor = vec4(surfaceColor(baseColor, n, p), u_opacity);
+    fragColor = vec4(surfaceColor(baseColor, n, p), ${alphaExpr});
 }`;
 }
 
@@ -4179,15 +4202,17 @@ function createSurfaceMaterial(ent, { fallbackMaterial } = {}) {
     const surface = ent.style && ent.style.surface;
     if (!surface) return fallbackMaterial;
 
-    // Surface materials are opaque: the entity's canonical "shell" opacity
-    // (e.g. a translucent Plane) does not apply to a textured/shader surface.
-    const opacity = 1.0;
+    // The surface material honors the entity's resolved opacity: the standard
+    // texture map multiplies it by the texture alpha channel, and a custom
+    // shader receives it as `u_opacity`.
+    const opacity = styleParam(ent, 'opacity', 1.0);
     const [r, g, b] = parseHexColor(ent.color, [1, 1, 1]);
 
     const hasShader = !!(surface.shader && surface.shader.fragment);
     const textures = surface.textures || [];
 
     if (hasShader) {
+        const hasAlphaTexture = textures.some((t) => t && t.channels === 4);
         const uniforms = {
             u_color: { value: new THREE.Vector3(r, g, b) },
             u_opacity: { value: opacity },
@@ -4206,16 +4231,18 @@ function createSurfaceMaterial(ent, { fallbackMaterial } = {}) {
             }),
             uniforms,
             glslVersion: THREE.GLSL3,
-            transparent: opacity < 1.0,
-            depthWrite: opacity >= 0.99,
+            transparent: opacity < 1.0 || hasAlphaTexture,
+            depthWrite: opacity >= 0.99 && !hasAlphaTexture,
             depthTest: true,
             side: THREE.DoubleSide,
         });
+        material.userData._alphaTexture = hasAlphaTexture;
         bindSurfaceTextures(material, textures);
         return material;
     }
 
     if (textures.length) {
+        const hasAlphaTexture = !!(textures[0] && textures[0].channels === 4);
         const uniforms = {
             u_color: { value: new THREE.Vector3(r, g, b) },
             u_opacity: { value: opacity },
@@ -4233,11 +4260,12 @@ function createSurfaceMaterial(ent, { fallbackMaterial } = {}) {
             }),
             uniforms,
             glslVersion: THREE.GLSL3,
-            transparent: opacity < 1.0,
-            depthWrite: opacity >= 0.99,
+            transparent: opacity < 1.0 || hasAlphaTexture,
+            depthWrite: opacity >= 0.99 && !hasAlphaTexture,
             depthTest: true,
             side: THREE.DoubleSide,
         });
+        material.userData._alphaTexture = hasAlphaTexture;
         // Only the first texture drives the standard texture map.
         _bindTexture(uniforms.uTexture, textures[0]);
         return material;

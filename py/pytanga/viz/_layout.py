@@ -764,11 +764,15 @@ class LayoutHostImpl:
         scene_factory: Callable[[str, int | None], Scene],
         transport: Any = None,
         client_log: Any = None,
+        register_pyramid: Any = None,
+        unregister_pyramid: Any = None,
     ) -> None:
         self._state = state
         self._scene_factory = scene_factory
         self._transport = transport
         self._client_log = client_log
+        self._register_pyramid = register_pyramid
+        self._unregister_pyramid = unregister_pyramid
         self._layout_control_ids: set[str] = set()
         self._scenes: dict[str, Scene] = {}
         self._overlay = OverlayContainer(
@@ -844,7 +848,12 @@ class LayoutHostImpl:
             image_view = camera_view.background_image
             if isinstance(image_view, ImageView):
                 image_view._bind_background(
-                    self._transport, scene_view.id, self._record_background_frame
+                    self._transport,
+                    scene_view.id,
+                    self._record_background_frame,
+                    self._register_pyramid,
+                    self._unregister_pyramid,
+                    self._reserialize_overlays,
                 )
 
     def _collect_background_frames(self, root: View) -> dict[str, bytes]:
@@ -945,7 +954,12 @@ class LayoutHostImpl:
         image_view = view.camera_view.background_image
         if isinstance(image_view, ImageView):
             image_view._bind_background(
-                self._transport, view.id, self._record_background_frame
+                self._transport,
+                view.id,
+                self._record_background_frame,
+                self._register_pyramid,
+                self._unregister_pyramid,
+                self._reserialize_overlays,
             )
 
         if image_view is not None:

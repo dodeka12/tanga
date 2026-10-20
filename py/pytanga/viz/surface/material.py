@@ -31,7 +31,8 @@ class SurfaceShader:
     ``vWorldPosition`` and ``vLocalPos``, the lighting uniforms
     (``uLightCount``/``uLightDir[]``/``uLightColor[]``/``uAmbientColor``) plus a
     ``tangaLight(albedo, n, p)`` helper, and the uniforms ``u_color`` /
-    ``u_opacity``.  The fragment must define
+    ``u_opacity`` (the entity's resolved opacity, which the shader may use as it
+    likes).  The fragment must define
     ``vec3 surfaceColor(vec3 baseColor, vec3 n, vec3 p)``.
 
     ``uniforms`` holds the runtime values for any extra ``uniform`` declarations
