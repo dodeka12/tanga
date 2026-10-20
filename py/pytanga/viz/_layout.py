@@ -1011,7 +1011,7 @@ class LayoutHostImpl:
         Returns the set of control/group view ids (for unregistration on
         replacement).
         """
-        from .views import iter_control_views, iter_group_views, iter_log_views
+        from .views import iter_control_views, iter_group_views, iter_log_views, iter_scene_views
 
         registered: set[str] = set()
         for view in iter_control_views(root):
@@ -1019,6 +1019,8 @@ class LayoutHostImpl:
             view._push = self._push_control_update
             view._push_state = self._push_control_state
             registered.add(view.id)
+        for view in iter_scene_views(root):
+            view._push_visibility = self._push_view_visibility
         for view in iter_log_views(root):
             view._push = self._push_log_update
         for view in iter_group_views(root):
@@ -1131,6 +1133,16 @@ class LayoutHostImpl:
     def _push_control_state(self, cid: str, state: dict[str, Any]) -> None:
         """Push a lightweight ``control_state`` message for one control."""
         self._transport.send({"type": "control_state", "id": cid, **state})
+
+    def _push_view_visibility(self, scene_view: SceneView) -> None:
+        """Push a per-pane ``view_visibility`` message (full hide state)."""
+        self._transport.send(
+            {
+                "type": "view_visibility",
+                "view_id": scene_view.id,
+                "hide": sorted(scene_view._hide),
+            }
+        )
 
     def set_control_enabled(self, cid: str, enabled: bool) -> None:
         """Set a control's enabled state and push ``control_state``.

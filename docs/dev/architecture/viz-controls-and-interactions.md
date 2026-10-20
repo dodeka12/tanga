@@ -446,13 +446,14 @@ frame and recompute ticks/grid locally, so pan/zoom needs no backend round-trip.
 ## Per-pane camera view & visibility
 
 `SceneView(camera_view=…)` (a `CameraView` bundling `camera` + `lock` +
-`navigation` + per-pane `controls` + `viewport` + `background_image`) and
-`SceneView(hide=…)` / `SceneView(show=…)` are **per-pane** attributes, not new
-`(id, event)` controls.  They serialize as fields on the `scene_view` node and
-are applied by `ThreeJsView` (`setCamera`, `applyCameraLock`, `configureControls`
-for the `"2d"` navigation mode, the viewport crop via `applyPinhole`, the NDC
-background quad, and a build-time visibility filter) — they register no handlers
-and send no control/interaction events.
+`navigation` + per-pane `controls` + `viewport` + `background_image`) is a
+**per-pane** attribute, not a new `(id, event)` control.  It serializes as fields
+on the `scene_view` node and is applied by `ThreeJsView` (`setCamera`,
+`applyCameraLock`, `configureControls` for the `"2d"` navigation mode, the
+viewport crop via `applyPinhole`, and the NDC background quad).  Per-pane entity
+visibility is runtime state too: `SceneView.set_visible(entity_id, visible)`
+pushes a `view_visibility` message, and `Scene.new/add(..., visible_in={view_ids})`
+gives an entity a static per-view scope (never constructed outside those views).
 
 Viewport state is set at runtime through the **existing message dispatch**, not
 a new channel: `Visualizer.set_viewport(view, …)` pushes a `view_viewport`
@@ -460,6 +461,10 @@ message (handled in `viewer.js` next to `view_camera`, dispatched to
 `ThreeJsView.setViewport`), and `set_viewport(scene_name=…)` /
 `VizSceneHandle.set_viewport(…)` re-push the existing `scene_config` with a
 `viewport` field.  See [`viz-architecture.md`](viz-architecture.md).
+
+Per-pane visibility is updated the same way: `SceneView.set_visible(entity_id,
+visible)` sends a `view_visibility` message (handled in `viewer.js` next to the
+other `view_*` messages, dispatched to `ThreeJsView.setVisibility`).
 
 Background images are swapped the same way:
 `Visualizer.set_background_image(view, image)` sends the new pixel frame (binary)

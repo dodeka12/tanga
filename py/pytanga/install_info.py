@@ -15,8 +15,8 @@ def install_info() -> tuple[Path, Path]:
     Runs :func:`install_docs` then :func:`install_examples` and returns the two
     target directories as a ``(docs_dir, examples_dir)`` tuple.  This is a
     convenience wrapper so a single command mirrors both the packaged ``_docs/``
-    and ``_examples/`` trees into ``.dep-docs/pytanga/`` and
-    ``.dep-examples/pytanga/``.
+    and ``_examples/`` trees into ``_dep-info/pytanga/docs/`` and
+    ``_dep-info/pytanga/examples/``.
     """
     docs_dir = install_docs()
     examples_dir = install_examples()

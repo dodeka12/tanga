@@ -7,8 +7,7 @@ Shows one calibrated scene in two panes so the pinhole :class:`~pytanga.viz.Dept
 fix can be checked visually:
 
 - **left** — the calibrated camera view (``navigation="2d"``) with the synthetic
-  test image as a full-viewport background; the depth surface is hidden here via
-  ``SceneView(hide=...)``.
+  test image as a full-viewport background.
 - **right** — the same scene from a 3D overview camera, showing the depth
   surface textured with that image (plus the camera frustum for reference).
 
@@ -16,13 +15,13 @@ The test image is a 2D sine pattern whose spatial frequency increases toward the
 bottom-right corner, so both left/right and top/bottom orientation are
 unambiguous.  The depth map is that same sine pattern's amplitude, mapped into
 the axial depth range, so the reconstructed surface follows the image pattern.
-Because both panes share the ``"world"`` scene, the hidden left pane never builds
-the surface (and therefore never consumes its binary frames), while the right
-pane still renders it.
+The depth surface is added with ``visible_in={right.id}`` so it is only
+constructed in the 3D pane; the left calibrated camera pane never builds it
+(and therefore never consumes its binary frames).
 
 Run with:  uv run python py/examples/viz/image/pinhole_depth.py
 
-Keywords: depth image, pinhole, camera calibration, split view, image background, hide, frustum
+Keywords: depth image, pinhole, camera calibration, split view, image background, visible_in, frustum
 """
 
 from __future__ import annotations
@@ -185,18 +184,6 @@ def main() -> None:
     frustum = Frustum.from_camera(cam, near=0.5, far=4.0)
     frustum_ref = world.new(frustum, color="#ffcc44")
 
-    depth_ref = world.new(
-        DepthImage(DepthImageData(image=_image(_IMAGE_H, _IMAGE_W), depth=depth)),
-        style=DepthImageStyle(
-            camera=calib,
-            depth_kind="axial",
-            apply_pose=True,
-            render_mode="image",
-            depth_min=_NEAR,
-            depth_max=_FAR,
-        ),
-    )
-
     overview_cam = _overview_camera(
         np.vstack([_frustum_corners(frustum), _surface_corners(calib)])
     )
@@ -209,9 +196,25 @@ def main() -> None:
             viewport=ViewportConfig(zoom=1.0, pan=(0.0, 0.0)),
             background_image=background,
         ),
-        hide={depth_ref.id, frustum_ref.id},
     )
-    right = SceneView("world", camera_view=CameraView(overview_cam))
+    right = SceneView("world", id="3d", camera_view=CameraView(overview_cam))
+
+    # Add the depth surface only to the 3D pane via `visible_in`, so the left
+    # calibrated camera pane never constructs (or consumes) it.
+    world.new(
+        DepthImage(DepthImageData(image=_image(_IMAGE_H, _IMAGE_W), depth=depth)),
+        style=DepthImageStyle(
+            camera=calib,
+            depth_kind="axial",
+            apply_pose=True,
+            render_mode="image",
+            depth_min=_NEAR,
+            depth_max=_FAR,
+        ),
+        visible_in={right.id},
+    )
+
+    left.set_visible(frustum_ref.id, False)
 
     viz.show(layout=SplitView("horizontal", [left, right]))
     viz.wait()

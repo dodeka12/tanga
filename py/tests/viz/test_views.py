@@ -191,19 +191,30 @@ class TestSceneView:
         with pytest.raises(ValueError):
             CameraView(lock={"bogus"})
 
-    def test_hide_show_serialize(self):  # noqa: ANN201
-        node = serialize_layout(SceneView("main", hide={"a", "b"}, show={"c"}))["root"]
-        assert node["hide"] == ["a", "b"]
-        assert node["show"] == ["c"]
+    def test_set_visible_serializes_hide(self):  # noqa: ANN201
+        v = SceneView("main")
+        v.set_visible("a", False)
+        v.set_visible("b", False)
+        assert serialize_layout(v)["root"]["hide"] == ["a", "b"]
 
-    def test_hide_show_omitted_when_empty(self):  # noqa: ANN201
-        node = serialize_layout(SceneView("main"))["root"]
-        assert "hide" not in node
-        assert "show" not in node
+    def test_set_visible_show_empties_hide(self):  # noqa: ANN201
+        v = SceneView("main")
+        v.set_visible("a", False)
+        v.set_visible("a", True)
+        assert "hide" not in serialize_layout(v)["root"]
 
-    def test_hide_rejects_non_string(self):  # noqa: ANN201
+    def test_set_visible_rejects_non_string(self):  # noqa: ANN201
+        v = SceneView("main")
         with pytest.raises(ValueError):
-            SceneView("main", hide={1})
+            v.set_visible(1, False)
+
+    def test_set_visible_pushes_when_mounted(self):  # noqa: ANN201
+        v = SceneView("main")
+        pushed: list[SceneView] = []
+        v._push_visibility = pushed.append
+        v.set_visible("a", False)
+        assert pushed == [v]
+        assert v._hide == {"a"}
 
 
 class TestGroupView:

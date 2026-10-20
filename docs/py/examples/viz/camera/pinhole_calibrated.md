@@ -248,7 +248,8 @@ def main() -> None:
         background_image=background,
     )
 
-    left = SceneView("world", camera_view=cam_view, hide={frustum_ref.id})
+    left = SceneView("world", camera_view=cam_view)
+    left.set_visible(frustum_ref.id, False)
     right = SceneView(
         "world",
         camera_view=CameraView(overview_cam),

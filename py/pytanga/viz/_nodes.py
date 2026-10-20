@@ -137,6 +137,20 @@ def _coerce_transform_matrix(obj: Any) -> np.ndarray:
     return _T.operator_to_matrix(cast("_T.TransformOperator", obj))
 
 
+def _normalize_visible_in(visible_in: Any) -> set[str] | None:
+    """Validate a ``visible_in`` scope to a set of non-empty strings (or ``None``)."""
+    if visible_in is None:
+        return None
+    result: set[str] = set()
+    for view_id in visible_in:
+        if not isinstance(view_id, str) or not view_id:
+            raise ValueError(
+                f"visible_in entries must be non-empty strings, got {view_id!r}"
+            )
+        result.add(view_id)
+    return result or None
+
+
 class VizNode:
     """Base scene-graph node with aspect-dirty tracking."""
 
@@ -244,6 +258,7 @@ class VizSceneObject(VizNode):
         props: dict[str, Any] | None = None,
         styles_map: StylesMap | None = None,
         epsilon: float = DEFAULT_DIFF_EPSILON,
+        visible_in: set[str] | None = None,
     ) -> None:
         super().__init__(
             id or generate_id(),
@@ -274,6 +289,7 @@ class VizSceneObject(VizNode):
         self.children: list[VizSceneObject] = []
         self._props: dict[str, Any] = dict(props) if props else {}
         self._styles_map: StylesMap | None = styles_map
+        self.visible_in: set[str] | None = _normalize_visible_in(visible_in)
         if parent is not None:
             parent.add_child(self)
 
@@ -354,6 +370,8 @@ class VizSceneObject(VizNode):
             "transform": self.transform.to_dict(),
             "visible": self.visible,
         }
+        if self.visible_in:
+            result["visible_in"] = sorted(self.visible_in)
         result.update(self._serialize_content(styles_map=styles_map, props=props))
         return result
 
@@ -718,6 +736,7 @@ class VizDepthImage(VizSceneObject):
         name: str = "depth_image",
         images: list[Any] | None = None,
         transform: Transform | None = None,
+        visible_in: set[str] | None = None,
     ) -> None:
         super().__init__(
             id or generate_id(),
@@ -726,6 +745,7 @@ class VizDepthImage(VizSceneObject):
             name=name,
             kind="depth_image",
             transform=transform,
+            visible_in=visible_in,
         )
         self.payload = payload
         self.images: list[Any] = list(images) if images else []
@@ -745,6 +765,8 @@ class VizDepthImage(VizSceneObject):
             "transform": self.transform.to_dict(),
             "visible": self.visible,
         }
+        if self.visible_in:
+            result["visible_in"] = sorted(self.visible_in)
         result.update(self.payload or {})
         return result
 

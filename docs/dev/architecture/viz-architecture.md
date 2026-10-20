@@ -573,10 +573,14 @@ pane through a clean three-layer model — camera data → camera view → pane:
   `set_layer`/`set_layer_style`/`set_uniform`/`remove_layer`) push the granular
   `view_background_uniforms` / `view_background_image` updates themselves —
   per-layer pixel changes re-send only the changed layer's frame.
-- **Per-pane visibility** — `SceneView(hide=…, show=…)` filters which entities a
-  pane builds (each pane has its own object registry, so no scene duplication).
+- **Per-pane visibility** — `SceneView.set_visible(entity_id, visible)` toggles an
+  entity in one pane at runtime via a granular `view_visibility` message (no
+  layout re-push, no rebuild); `Scene.new`/`add` (and `VizSceneHandle.new` /
+  `Visualizer.add`) accept `visible_in={view_ids}` to give an entity a static
+  per-view scope so it is never constructed in panes outside that scope
+  (default = all views).
 - **Runtime entity visibility** — `Scene.set_visible` /
-  `Visualizer.set_visible(…, scene_name=…)` / `VizSceneHandle.hide` set a node's
+  `Visualizer.set_visible(…, scene_name=…)` / `VizSceneHandle.set_visible` set a node's
   `visible` flag and emit a granular `visible` aspect patch on the `object_update`
   channel (frontend sets `THREE.Object3D.visible`), so toggling visibility never
   re-serializes geometry/style.  Action objects add

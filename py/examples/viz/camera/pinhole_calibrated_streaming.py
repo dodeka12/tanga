@@ -100,7 +100,8 @@ def main() -> None:
         background_image=_noise(rng),
     )
 
-    left = SceneView("world", camera_view=cam_view, hide={frustum_ref.id})
+    left = SceneView("world", camera_view=cam_view)
+    left.set_visible(frustum_ref.id, False)
     right = SceneView("world")  # default (auto-fit) camera, shows the frustum
     body = SplitView("horizontal", [left, right])
 

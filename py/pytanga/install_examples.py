@@ -11,9 +11,9 @@ from ._install import find_repo_root, replace_dir
 def install_examples() -> Path:
     """Copy packaged (or dev) examples into the current project tree.
 
-    Target directory: ``<repo-root>/.dep-examples/pytanga/`` (if a repo root is
-    found by walking up from the current working directory) or
-    ``./.dep-examples/pytanga/`` as fallback.
+    Target directory: ``<repo-root>/_dep-info/pytanga/examples/`` (if a repo
+    root is found by walking up from the current working directory) or
+    ``./_dep-info/pytanga/examples/`` as fallback.
 
     When the function detects that it is running from an installed wheel (i.e.
     ``pytanga/_examples`` exists inside the package directory), the examples
@@ -29,9 +29,9 @@ def install_examples() -> Path:
     cwd = Path.cwd()
     repo = find_repo_root(cwd)
     target_dir = (
-        (repo / ".dep-examples" / "pytanga")
+        (repo / "_dep-info" / "pytanga" / "examples")
         if repo
-        else (cwd / ".dep-examples" / "pytanga")
+        else (cwd / "_dep-info" / "pytanga" / "examples")
     )
 
     # ----- resolve the *source* of examples ------------------------------

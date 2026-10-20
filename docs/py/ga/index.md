@@ -62,20 +62,20 @@ available via:
 ```python
 import pytanga
 
-pytanga.install_docs()     # copies docs to .dep-docs/pytanga/
-pytanga.install_examples() # copies examples to .dep-examples/pytanga/
+pytanga.install_docs()     # copies docs to _dep-info/pytanga/docs/
+pytanga.install_examples() # copies examples to _dep-info/pytanga/examples/
 pytanga.install_info()     # installs docs and examples in one call
 ```
 
 `install_docs()` copies the packaged `_docs/` directory (or the local
-`docs/` in a source checkout) to `.dep-docs/pytanga/`. AI tools can then
-read e.g. `.dep-docs/pytanga/py/ga/geometry/entities.md` without needing the
-full tanga source.
+`docs/` in a source checkout) to `_dep-info/pytanga/docs/`. AI tools can then
+read e.g. `_dep-info/pytanga/docs/py/ga/geometry/entities.md` without needing
+the full tanga source.
 
 `install_examples()` copies the packaged `_examples/` directory (or the
-local `py/examples/` in a source checkout) to `.dep-examples/pytanga/`.
-AI tools can then reference e.g.
-`.dep-examples/pytanga/geometry/e3_entities.py` for usage examples.
+local `py/examples/` in a source checkout) to
+`_dep-info/pytanga/examples/`. AI tools can then reference e.g.
+`_dep-info/pytanga/examples/ga/geometry/e3_entities.py` for usage examples.
 
 `install_info()` runs `install_docs()` followed by `install_examples()`. Each
 function removes any previously installed copy first, so the target is always a

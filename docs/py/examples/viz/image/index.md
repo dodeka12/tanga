@@ -9,10 +9,10 @@
 | [Image Canvas](image_canvas.md) | image, ImageCanvas, rectangle, Rectangle2D, shader, uniform, overlay, pixels | Display a numpy image and draw pixel-coordinate overlays |
 | [Image Layers](image_layers.md) | image, ImageCanvas, layers, blend, opacity, segmentation, depth, controls | Mix multiple image layers (image, depth, segmentation) |
 | [Load Image From Disk](load_image_from_disk.md) | image, ImageCanvas, menu, FileChooserDialog, split view, PIL, file open, contrast, EXR, HDR, pyramid, tiled, progress, progress bar, dialog | Open an image from disk via a File → Open… menu |
-| [Pinhole Depth](pinhole_depth.md) | depth image, pinhole, camera calibration, split view, image background, hide, frustum | a calibrated depth surface next to its 2D image |
+| [Pinhole Depth](pinhole_depth.md) | depth image, pinhole, camera calibration, split view, image background, visible_in, frustum | a calibrated depth surface next to its 2D image |
 | [Raw Image](raw_image.md) | image, ImageCanvas, ImageData, uint16, lossless, codec, zlib | Display a 16-bit image over the lossless (zlib) transport |
 | [Standard Image](standard_image.md) | image, ImageCanvas, ImageData, jpeg, codec, uint8 | Display an 8-bit image over the default (JPEG) transport |
 
 ## Keywords
 
-CameraView · EXR · FileChooserDialog · GLSL · HDR · ImageCanvas · ImageData · ImageView · PIL · RGB · Rectangle2D · background · blend · camera calibration · codec · contrast · controls · custom shader · depth · depth image · dialog · drag · file open · frustum · hide · image · image background · jpeg · large image · layers · lossless · menu · navigation · numpy · opacity · overlay · pan · pinhole · pixels · progress · progress bar · pyramid · rectangle · register_image_pyramid · rotation · segmentation · shader · split view · surface · tiled · tiles · uint16 · uint8 · uniform · zlib · zoom
+CameraView · EXR · FileChooserDialog · GLSL · HDR · ImageCanvas · ImageData · ImageView · PIL · RGB · Rectangle2D · background · blend · camera calibration · codec · contrast · controls · custom shader · depth · depth image · dialog · drag · file open · frustum · image · image background · jpeg · large image · layers · lossless · menu · navigation · numpy · opacity · overlay · pan · pinhole · pixels · progress · progress bar · pyramid · rectangle · register_image_pyramid · rotation · segmentation · shader · split view · surface · tiled · tiles · uint16 · uint8 · uniform · visible_in · zlib · zoom

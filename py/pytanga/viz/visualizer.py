@@ -686,6 +686,7 @@ class Visualizer(_JupyterDisplayMixin):
         parent_id: str | None = None,
         attach_to: str | None = None,
         surface: Any = None,
+        visible_in: set[str] | None = None,
     ) -> str: ...
     def add(
         self,
@@ -705,6 +706,7 @@ class Visualizer(_JupyterDisplayMixin):
         parent_id: str | None = None,
         attach_to: str | None = None,
         surface: Any = None,
+        visible_in: set[str] | None = None,
     ) -> str | None:
         """Add an entity to the main scene, or a :class:`View` to the overlay.
 
@@ -740,6 +742,7 @@ class Visualizer(_JupyterDisplayMixin):
             parent_id=parent_id,
             attach_to=attach_to,
             surface=surface,
+            visible_in=visible_in,
         )
 
     def new(
@@ -760,6 +763,7 @@ class Visualizer(_JupyterDisplayMixin):
         parent_id: str | None = None,
         attach_to: str | None = None,
         surface: Any = None,
+        visible_in: set[str] | None = None,
     ) -> "VizObjectRef":
         """Like :meth:`add`, but returns a :class:`VizObjectRef` instead of a ``str``."""
         from ._object_ref import VizObjectRef
@@ -777,6 +781,7 @@ class Visualizer(_JupyterDisplayMixin):
             parent_id=parent_id,
             attach_to=attach_to,
             surface=surface,
+            visible_in=visible_in,
         )
         node = self._layout.scenes[""].get_node(eid)
         return VizObjectRef(VizSceneHandle(self, ""), node)
@@ -799,6 +804,7 @@ class Visualizer(_JupyterDisplayMixin):
         parent_id: str | None = None,
         attach_to: str | None = None,
         surface: Any = None,
+        visible_in: set[str] | None = None,
     ) -> "VizObjectRef":
         """Shorthand for :meth:`new`: ``viz(point, color=...)``.
 
@@ -824,6 +830,7 @@ class Visualizer(_JupyterDisplayMixin):
             parent_id=parent_id,
             attach_to=attach_to,
             surface=surface,
+            visible_in=visible_in,
         )
 
     def add_group(

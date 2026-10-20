@@ -11,9 +11,9 @@ from ._install import find_repo_root, replace_dir
 def install_docs() -> Path:
     """Copy packaged (or dev) docs into the current project tree.
 
-    Target directory: ``<repo-root>/.dep-docs/pytanga/`` (if a repo root is
+    Target directory: ``<repo-root>/_dep-info/pytanga/docs/`` (if a repo root is
     found by walking up from the current working directory) or
-    ``./.dep-docs/pytanga/`` as fallback.
+    ``./_dep-info/pytanga/docs/`` as fallback.
 
     When the function detects that it is running from an installed wheel (i.e.
     ``pytanga/_docs`` exists inside the package directory), the docs will be
@@ -28,7 +28,9 @@ def install_docs() -> Path:
     cwd = Path.cwd()
     repo = find_repo_root(cwd)
     target_dir = (
-        (repo / ".dep-docs" / "pytanga") if repo else (cwd / ".dep-docs" / "pytanga")
+        (repo / "_dep-info" / "pytanga" / "docs")
+        if repo
+        else (cwd / "_dep-info" / "pytanga" / "docs")
     )
 
     # ----- resolve the *source* of docs ---------------------------------
