@@ -8,7 +8,7 @@
     background: var(--tanga-border-strong);
     border-radius: 2px;
     outline: none;
-    margin: 4px 0;
+    margin: var(--tanga-range-margin-y) 0;
 }
 
 .tanga-range-input::-webkit-slider-thumb {

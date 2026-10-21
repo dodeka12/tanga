@@ -14,7 +14,7 @@
     border-radius: 4px;
     color: var(--tanga-fg);
     padding: 4px 6px;
-    font-size: 13px;
+    font-size: var(--tanga-font-size-body);
     outline: none;
     text-align: right;
 }
@@ -30,7 +30,7 @@
     border: 1px solid var(--tanga-border-strong);
     border-radius: 4px;
     color: var(--tanga-fg-strong);
-    font-size: 12px;
+    font-size: var(--tanga-font-size-label);
     cursor: pointer;
     display: flex;
     align-items: center;

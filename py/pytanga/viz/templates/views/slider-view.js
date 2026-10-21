@@ -6,6 +6,7 @@ import { createSlider } from '../controls/slider.js';
 export class SliderView extends ControlView {
     constructor({ id, label = '', tooltip = '', min = 0, max = 1, step = 0.01, value = undefined, variant = 'default', enabled = undefined } = {}) {
         super({ id, label, tooltip });
+        this.el.classList.add('tanga-slider-view');
         this.min = min;
         this.max = max;
         this.step = step;
@@ -29,6 +30,7 @@ export class SliderView extends ControlView {
             id: this.controlId,
             owner: 'layout',
             label: this.label,
+            hide_label: this.hide_label,
             tooltip: this.tooltip,
             min: this.min,
             max: this.max,

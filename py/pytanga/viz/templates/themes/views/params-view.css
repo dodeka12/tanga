@@ -1,0 +1,48 @@
+/* Tanga viewer — params view (key-label + control rows). */
+
+.tanga-params-view {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tanga-params-row-gap);
+    min-width: var(--tanga-params-min-width);
+}
+
+.tanga-params-title {
+    font-size: var(--tanga-font-size-body);
+    font-weight: 600;
+    color: var(--tanga-fg-strong);
+    margin-bottom: var(--tanga-params-title-margin);
+}
+
+.tanga-params-row {
+    display: grid;
+    grid-template-columns: minmax(0, auto) 1fr;
+    align-items: center;
+    gap: var(--tanga-params-key-gap);
+}
+
+.tanga-params-key {
+    font-size: var(--tanga-font-size-label);
+    color: var(--tanga-fg-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tanga-params-control {
+    min-width: 0;
+}
+
+/* Short controls (e.g. a bare checkbox) are much shorter than the control view's
+ * min-height; center them so they align with the key label in the row. */
+.tanga-params-control .tanga-control-view {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* A params row shows its own title in the left column, so drop the per-control
+ * vertical margin (the row gap above provides the spacing). */
+.tanga-params-control .tanga-control {
+    margin: 0;
+}

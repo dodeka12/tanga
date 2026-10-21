@@ -23,6 +23,7 @@ export class DropdownView extends ControlView {
             id: this.controlId,
             owner: 'layout',
             label: this.label,
+            hide_label: this.hide_label,
             tooltip: this.tooltip,
             options: this.options,
             value: this.value,

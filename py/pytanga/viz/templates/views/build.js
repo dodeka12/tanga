@@ -8,6 +8,7 @@ import { StackView } from './stack-view.js';
 import { ToolbarView } from './toolbar-view.js';
 import { GroupView } from './group-view.js';
 import { MenuView } from './menu-view.js';
+import { ParamsView } from './params-view.js';
 import { ThreeJsView } from './three-view.js';
 import { SliderView } from './slider-view.js';
 import { ButtonView } from './button-view.js';
@@ -150,6 +151,24 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             menu.addChild(buildViewTree(childNode, ws, reuse, registry, newScenes));
         }
         return registerView(registry, menu, node);
+    }
+
+    if (node.type === 'params_view') {
+        const existing = (reuse && reuse.get(node.id)) || null;
+        let paramsView;
+        if (existing) {
+            for (const child of [...existing.children]) existing.removeChild(child);
+            existing.update(node);
+            paramsView = existing;
+        } else {
+            paramsView = new ParamsView({ title: node.title });
+        }
+        applySizeSpecs(paramsView, node);
+        for (const row of node.rows || []) {
+            const child = buildViewTree(row.control, ws, reuse, registry, newScenes);
+            paramsView.addRow({ key: row.key, title: row.title, control: child });
+        }
+        return registerView(registry, paramsView, node);
     }
 
     if (node.type === 'scene_view') {
@@ -364,6 +383,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
     } else {
         view = new View();
     }
+    if (node.hide_label !== undefined) view.hide_label = !!node.hide_label;
     applySizeSpecs(view, node);
     // A control serialized with `visible: false` starts collapsed (the same
     // `View.setHidden` the runtime `control_state` path uses); non-control nodes

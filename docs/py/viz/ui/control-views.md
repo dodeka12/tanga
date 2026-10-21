@@ -44,10 +44,12 @@ Every view is a `View`. Containers arrange their children; the leaves render
 content. For the full view model — `Size` units, splitters, per-pane cameras —
 see [Split Views](split-views.md).
 
-Every control view is a `ControlView`. By default it sets a size floor of
-`min_width=Size.px(120)` and `min_height=Size.px(32)` so a `StackView`/`GroupView`
-can size to its controls; pass `min_width=None` / `min_height=None` to disable
-the floors.
+Every control view is a `ControlView`. It sets **no explicit size floor** by
+default (`min_width` / `min_height` are `None`); the on-screen density floor comes
+from the theme's `--tanga-control-min-width` / `--tanga-control-min-height` tokens
+(120 px × 32 px by default, 28 px × 28 px for icon-only buttons).  Pass
+`min_width=` / `min_height=` to override the floor for a single control, or switch
+to the `"compact"` theme to lower it globally.
 
 ### View
 
@@ -531,6 +533,58 @@ template; `convert_column` applies (or rejects) a type change and fires
 
 `on_change` is a bulk handler that fires once with the full grid value on
 undo/redo (see [Controls](controls.md)).
+
+## ParamsView
+
+`ParamsView` renders a mapping of values as a two-column table — the key/title on
+the left, a matching control on the right.  It accepts a plain `dict` (with an
+optional `styles` dict of `ControlUI` specs) or a `@dataclass` instance whose
+fields carry per-field UI metadata.
+
+```python
+from pytanga.viz import ParamsView, SliderUI, CheckboxUI
+
+# dict mode — styles is a dict of ControlUI specs
+ParamsView({"radius": 2.0, "wireframe": False},
+           styles={"radius": SliderUI(title="Radius", min=0.1, max=5.0),
+                   "wireframe": CheckboxUI(title="Wireframe")})
+
+# dataclass mode — metadata lives on the fields (param_ui() or raw field())
+from dataclasses import dataclass, field
+from pytanga.viz import param_ui
+
+@dataclass
+class P:
+    radius: float = param_ui(2.0, ui=SliderUI(title="Radius", min=0.1, max=5.0))
+    wireframe: bool = field(default=False, metadata={"param_ui": CheckboxUI(title="Wireframe")})
+
+ParamsView(P())
+```
+
+`param_ui(default, *, ui=ControlUI, **extra)` is sugar for
+`dataclasses.field(metadata={"param_ui": <ControlUI>})`; the raw `field()` form
+is equivalent.  `ui=` takes one `ControlUI` class per control type (`SliderUI`,
+`ValueEditUI`, `DropdownUI`, `CheckboxUI`, `TextFieldUI`, `TextAreaUI`,
+`ColorPickerUI`, `ButtonUI`, `LabelUI`, `MarkdownUI`, `ProgressBarUI`) — the
+class itself encodes the control type, and any extra `metadata` keys are the
+user's own and are ignored.
+
+When a key has no `ControlUI` spec, the control is inferred from the value/field
+type: `bool` → checkbox, `int`/`float` → stepper, `str` → text field (color
+picker for `#rgb`/`#rrggbb`), `list`/`tuple` → dropdown.
+
+`on_change(state, event)` fires on every change with the full state — the live
+`dict` (dict mode) or the dataclass instance (dataclass mode, mutated in place).
+`view.get_value()` / `view.set_value(key, value)` / `view.set_values(mapping)`
+read and update the state (pushing per-control `control_update`s).  See
+`py/examples/viz/ui/controls/params_view.py`.
+
+`ParamsView` accepts the standard `View` size parameters (`size=`, `min_width=`,
+`min_height=`, `preferred_width=`, `preferred_height=`, `max_width=`,
+`max_height=`) to size a single instance.  It stretches to fill its container by
+default, with a minimum width from the theme's `--tanga-params-min-width` token
+(220 px default, 200 px in the `compact` theme); pass `min_width=Size.px(...)` or
+`size=Size.px(...)` to override it per instance.
 
 ## Runtime helpers
 

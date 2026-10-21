@@ -6,9 +6,11 @@ export function createColorPicker(ctrl) {
     const wrapper = document.createElement('div');
     wrapper.className = 'tanga-control tanga-color-picker';
 
-    const label = document.createElement('label');
-    label.textContent = ctrl.label || ctrl.id;
-    wrapper.appendChild(label);
+    if (!ctrl.hide_label) {
+        const label = document.createElement('label');
+        label.textContent = ctrl.label || ctrl.id;
+        wrapper.appendChild(label);
+    }
 
     const input = document.createElement('input');
     input.type = 'color';

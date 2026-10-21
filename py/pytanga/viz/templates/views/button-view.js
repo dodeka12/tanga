@@ -9,12 +9,14 @@ export class ButtonView extends ControlView {
         this.icon = icon;
         this.icon_only = icon_only;
         this.variant = variant;
+        if (icon_only) this.el.classList.add('tanga-icon-only');
     }
 
     update(node) {
         this.icon = node.icon ?? this.icon;
         this.icon_only = node.icon_only ?? this.icon_only;
         this.variant = node.variant ?? this.variant;
+        this.el.classList.toggle('tanga-icon-only', !!this.icon_only);
         super.update(node);
     }
 

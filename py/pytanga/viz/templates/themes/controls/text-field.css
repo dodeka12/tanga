@@ -7,7 +7,7 @@
     border-radius: 4px;
     color: var(--tanga-fg);
     padding: 4px 6px;
-    font-size: 13px;
+    font-size: var(--tanga-font-size-body);
     outline: none;
 }
 

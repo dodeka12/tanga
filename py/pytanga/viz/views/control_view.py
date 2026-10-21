@@ -9,7 +9,7 @@ from typing import Any, Generic, TypeVar
 
 from ._base import View
 from .._controls import Control
-from .._size import Size, SizeSpec
+from .._size import SizeSpec
 
 C = TypeVar("C", bound=Control)
 
@@ -45,8 +45,8 @@ class ControlView(View, Generic[C]):
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
-        min_width: SizeSpec = Size.px(120),
-        min_height: SizeSpec = Size.px(32),
+        min_width: SizeSpec = None,
+        min_height: SizeSpec = None,
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:

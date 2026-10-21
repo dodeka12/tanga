@@ -32,6 +32,7 @@ _COMPONENTS = [
     "views/label-view.css",
     "views/message-view.css",
     "views/markdown-view.css",
+    "views/params-view.css",
     "views/separator-view.css",
     "views/stack-view.css",
     "views/toolbar-view.css",
@@ -39,7 +40,7 @@ _COMPONENTS = [
 
 
 def test_list_themes() -> None:
-    assert list_themes() == ["dark", "light", "pastel"]
+    assert list_themes() == ["dark", "light", "pastel", "compact"]
 
 
 def test_default_theme_is_dark() -> None:
@@ -49,6 +50,7 @@ def test_default_theme_is_dark() -> None:
 def test_theme_label() -> None:
     assert theme_label("dark") == "Dark"
     assert theme_label("light") == "Light"
+    assert theme_label("compact") == "Compact"
 
 
 def test_dark_resolved_order() -> None:
@@ -78,6 +80,17 @@ def test_pastel_resolved_order() -> None:
         "pastel/overrides/checkbox.css",
     ]
     assert theme_css_files("pastel") == expected
+
+
+def test_compact_resolved_order() -> None:
+    expected = [
+        "base.css",
+        "tokens.css",
+        "compact/tokens.css",
+        *_COMPONENTS,
+        "compact/overrides/value-edit.css",
+    ]
+    assert theme_css_files("compact") == expected
 
 
 def test_unknown_theme_raises() -> None:
@@ -210,7 +223,7 @@ def test_register_external_theme_resolution(tmp_path):  # noqa: ANN001, ANN201
     theme_dir = _external_theme_dir(tmp_path)
     reg.register("corp", theme_dir, label="Corporate")
 
-    assert reg.list_themes() == ["dark", "light", "pastel", "corp"]
+    assert reg.list_themes() == ["dark", "light", "pastel", "compact", "corp"]
     assert reg.default_theme() == "dark"
     assert reg.theme_label("corp") == "Corporate"
 

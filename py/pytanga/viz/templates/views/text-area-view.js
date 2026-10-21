@@ -23,6 +23,7 @@ export class TextAreaView extends ControlView {
             id: this.controlId,
             owner: 'layout',
             label: this.label,
+            hide_label: this.hide_label,
             tooltip: this.tooltip,
             value: this.value,
             placeholder: this.placeholder,

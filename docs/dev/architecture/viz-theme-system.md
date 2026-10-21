@@ -35,6 +35,32 @@ appearance**.  Only *computed geometry* (overlay anchors, banner/dialog
 `transform: translate(-x%,-y%)`, drag `left/top`) stays inline.  Overrides and
 themes target those stable classes.
 
+## Density & typography tokens
+
+Control density and typography are tokenized so a theme can re-size controls
+without touching the layout model:
+
+- `--tanga-control-min-width` / `--tanga-control-min-height` — the
+  `.tanga-control-view` min floor (default 120 × 32 px; 28 × 28 px for
+  `.tanga-icon-only` buttons).  These replace the former Python-serialized
+  `min_width`/`min_height` defaults, which are now `None` by default on every
+  control view; the JS `ControlView.minSizePx` reads the computed CSS floor so
+  `StackView`/`GroupView`/`SplitView` can still size to their controls.
+- `--tanga-control-min-width-narrow` — a smaller floor (default 60 px) for the
+  value-bearing controls with a `width: 100%` input (`tanga-slider-view`,
+  `tanga-text-field-view`, `tanga-value-edit-view`, `tanga-color-picker-view`).
+- `--tanga-control-margin-y` / `--tanga-range-margin-y` — vertical control /
+  slider spacing (default 6 px / 4 px).
+- `--tanga-params-row-gap` / `--tanga-params-key-gap` / `--tanga-params-title-margin`
+  / `--tanga-params-min-width` — the `ParamsView` grid spacing and min width
+  (default 4 / 8 / 2 / 220 px).  The view stretches to fill its container; only
+  its height is measured from the rendered rows.
+- `--tanga-font-size-title` / `--tanga-font-size-body` / `--tanga-font-size-label` /
+  `--tanga-font-size-value` — the typography scale (14 / 13 / 12 / 12 px).
+
+The built-in `compact` theme overrides these tokens and re-lays-out the
+value-edit stepper via a `value-edit` override, producing a dense variant.
+
 ## Wire message
 
 ```json

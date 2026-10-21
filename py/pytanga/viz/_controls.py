@@ -300,6 +300,11 @@ class Control:
     """Whether the control renders in its active/selected state.  For a button
     this highlights it like a toggle button (e.g. an armed toolbar tool)."""
 
+    hide_label: bool = False
+    """When ``True``, render the control without its own label.  Used by
+    :class:`ParamsView` so the key/title lives in the params row's left column
+    instead of inside the control."""
+
     def handle_event(self, event: str, payload: dict[str, Any]) -> Dispatch:
         """Apply an incoming frontend *event* and return the dispatch to run.
 
@@ -367,6 +372,8 @@ class Control:
             result["visible"] = False
         if self.selected:
             result["selected"] = True
+        if self.hide_label:
+            result["hide_label"] = True
         result.update(self._fields())
         return result
 

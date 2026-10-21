@@ -26,10 +26,14 @@ print(viz.theme)         # "light"
 ```python
 from pytanga.viz import list_themes, theme_css_files, theme_label
 
-list_themes()                 # ["dark", "light", "pastel"]
+list_themes()                 # ["dark", "light", "pastel", "compact"]
 theme_label("light")          # "Light"
 theme_css_files("light")      # the ordered CSS file list
 ```
+
+The built-in themes are `dark` (default), `light`, `pastel`, and `compact` — the
+last is a dark-based **density variant**: smaller fonts, tighter control spacing,
+and a stacked/borderless numeric stepper.
 
 ## Themed exports
 

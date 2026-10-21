@@ -656,6 +656,9 @@
                 "Hide Sphere": "py/examples/viz/ui/controls/hide_sphere.md"
               },
               {
+                "Params View": "py/examples/viz/ui/controls/params_view.md"
+              },
+              {
                 "Progress Bar": "py/examples/viz/ui/controls/progress_bar.md"
               },
               {

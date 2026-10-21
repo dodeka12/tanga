@@ -19,9 +19,11 @@ export function createSlider(ctrl) {
     const ctrlValue = ctrl.value !== undefined ? ctrl.value : ctrl.min;
     valueSpan.textContent = String(ctrlValue);
 
-    labelRow.appendChild(label);
-    labelRow.appendChild(valueSpan);
-    wrapper.appendChild(labelRow);
+    if (!ctrl.hide_label) {
+        labelRow.appendChild(label);
+        labelRow.appendChild(valueSpan);
+        wrapper.appendChild(labelRow);
+    }
 
     const input = document.createElement('input');
     input.type = 'range';

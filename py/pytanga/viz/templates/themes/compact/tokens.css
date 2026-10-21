@@ -1,0 +1,21 @@
+/* Tanga viewer — compact (dense) theme token overrides.
+ * Inherits the base (dark) palette and only tightens density + typography, so a
+ * theme swap re-sizes every control without touching the layout model. */
+
+:root {
+    /* Tighter control density. */
+    --tanga-control-min-width: 96px;
+    --tanga-control-min-height: 22px;
+    --tanga-control-min-width-narrow: 48px;
+    --tanga-control-margin-y: 2px;
+    --tanga-range-margin-y: 2px;
+    --tanga-params-row-gap: 2px;
+    --tanga-params-key-gap: 6px;
+    --tanga-params-min-width: 200px;
+
+    /* Slightly smaller typography. */
+    --tanga-font-size-title: 13px;
+    --tanga-font-size-body: 12px;
+    --tanga-font-size-label: 11px;
+    --tanga-font-size-value: 11px;
+}

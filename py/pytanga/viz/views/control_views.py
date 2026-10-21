@@ -54,8 +54,8 @@ class SliderView(ControlView[Slider]):
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
-        min_width: SizeSpec = Size.px(120),
-        min_height: SizeSpec = Size.px(32),
+        min_width: SizeSpec = None,
+        min_height: SizeSpec = None,
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:
@@ -175,20 +175,11 @@ class ButtonView(ControlView[Button]):
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
-        min_width: SizeSpec = Size.px(120),
-        min_height: SizeSpec = Size.px(32),
+        min_width: SizeSpec = None,
+        min_height: SizeSpec = None,
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:
-        if icon_only:
-            # Icon-only buttons render as a small square tile; shrink the
-            # generic control floor (120×32) to match so adjacent icons don't
-            # get a large empty gap around them.  Explicit ``min_width=`` /
-            # ``min_height=`` still win.
-            if min_width == Size.px(120):
-                min_width = Size.px(28)
-            if min_height == Size.px(32):
-                min_height = Size.px(28)
         super().__init__(
             cid,
             label=label,
@@ -250,8 +241,8 @@ class DropdownView(ControlView[Dropdown]):
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
-        min_width: SizeSpec = Size.px(120),
-        min_height: SizeSpec = Size.px(32),
+        min_width: SizeSpec = None,
+        min_height: SizeSpec = None,
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:
@@ -409,8 +400,8 @@ class TextFieldView(ControlView[TextField]):
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
-        min_width: SizeSpec = Size.px(120),
-        min_height: SizeSpec = Size.px(32),
+        min_width: SizeSpec = None,
+        min_height: SizeSpec = None,
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:
@@ -469,8 +460,8 @@ class TextAreaView(ControlView[TextArea]):
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
-        min_width: SizeSpec = Size.px(120),
-        min_height: SizeSpec = Size.px(32),
+        min_width: SizeSpec = None,
+        min_height: SizeSpec = None,
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:
@@ -533,8 +524,8 @@ class ColorPickerView(ControlView[ColorPicker]):
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
-        min_width: SizeSpec = Size.px(120),
-        min_height: SizeSpec = Size.px(32),
+        min_width: SizeSpec = None,
+        min_height: SizeSpec = None,
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:
@@ -586,8 +577,8 @@ class CheckboxView(ControlView[Checkbox]):
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
-        min_width: SizeSpec = Size.px(120),
-        min_height: SizeSpec = Size.px(32),
+        min_width: SizeSpec = None,
+        min_height: SizeSpec = None,
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:
@@ -649,8 +640,8 @@ class ValueEditView(ControlView[ValueEdit]):
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
-        min_width: SizeSpec = Size.px(120),
-        min_height: SizeSpec = Size.px(32),
+        min_width: SizeSpec = None,
+        min_height: SizeSpec = None,
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:
@@ -761,8 +752,8 @@ class LabelView(ControlView[Label]):
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
-        min_width: SizeSpec = Size.px(120),
-        min_height: SizeSpec = Size.px(32),
+        min_width: SizeSpec = None,
+        min_height: SizeSpec = None,
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:
@@ -810,8 +801,8 @@ class MarkdownView(ControlView[Markdown]):
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
-        min_width: SizeSpec = Size.px(120),
-        min_height: SizeSpec = Size.px(32),
+        min_width: SizeSpec = None,
+        min_height: SizeSpec = None,
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:
