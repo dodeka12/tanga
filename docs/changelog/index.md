@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.22.0 (2.23.0-rc2)] — 2026-10-21
+- ParamsView follow-up: full-width rows (`ControlUI.full_width`) + `ButtonUI.label`, nested-group `on_change` with dotted `event.key`, dotted row API + recursive `set_state`, `GroupView` `set_visible`/`set_enabled`/`set_title`, `GroupUI.extra_rows`
+→ [Details](2026/10/21_e1b7f575b.md)
+
 ## [Since 2.22.0 (2.23.0-rc1)] — 2026-10-21
 - ParamsView enhancements: nested dataclass groups, `extra_rows`, per-row `set_visible`/`set_enabled`/`set_title`/`set_options`, `set_state`/`add`/`remove`, type coercion + `Enum`/`Literal` inference, `(value, label)` dropdowns, `validate`, tooltips, `Visualizer(theme=…)`
 - Breaking: dropdown `options` serialize as `{"value","label"}` objects
