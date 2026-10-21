@@ -7,7 +7,7 @@
     border: 1px solid var(--tanga-border-strong);
     border-radius: 4px;
     color: var(--tanga-fg-strong);
-    font-size: 13px;
+    font-size: var(--tanga-font-size-body);
     cursor: pointer;
     transition: background 0.15s;
 }

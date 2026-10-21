@@ -1,0 +1,35 @@
+/* Tanga viewer — compact theme value-edit override.
+ * Stacks the up/down step buttons in a narrow, borderless column beside the
+ * input, saving horizontal space versus the default side-by-side layout. */
+
+.tanga-value-edit-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 2px;
+}
+
+.tanga-value-input {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+}
+
+.tanga-step-button {
+    grid-column: 2;
+    width: 16px;
+    border: none;
+    background: none;
+    border-radius: 2px;
+}
+
+.tanga-step-button:first-of-type {
+    grid-row: 1;
+}
+
+.tanga-step-button:last-of-type {
+    grid-row: 2;
+}
+
+.tanga-step-button:hover {
+    background: var(--tanga-surface);
+}

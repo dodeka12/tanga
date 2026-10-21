@@ -6,9 +6,11 @@ export function createTextArea(ctrl) {
     const wrapper = document.createElement('div');
     wrapper.className = 'tanga-control tanga-text-area';
 
-    const label = document.createElement('label');
-    label.textContent = ctrl.label || ctrl.id;
-    wrapper.appendChild(label);
+    if (!ctrl.hide_label) {
+        const label = document.createElement('label');
+        label.textContent = ctrl.label || ctrl.id;
+        wrapper.appendChild(label);
+    }
 
     const input = document.createElement('textarea');
     input.value = ctrl.value || '';

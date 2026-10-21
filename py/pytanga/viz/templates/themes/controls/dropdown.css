@@ -8,7 +8,7 @@
     color: var(--tanga-fg);
     color-scheme: var(--tanga-color-scheme);
     padding: 4px 6px;
-    font-size: 13px;
+    font-size: var(--tanga-font-size-body);
     outline: none;
     cursor: pointer;
 }
@@ -26,6 +26,6 @@
  * a common height. */
 .tanga-toolbar-item .tanga-select-input {
     padding: 2px 6px;
-    font-size: 12px;
+    font-size: var(--tanga-font-size-label);
 }
 

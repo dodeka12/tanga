@@ -7,9 +7,11 @@ export function createDropdown(ctrl) {
     wrapper.className = 'tanga-control tanga-dropdown';
     if (ctrl.variant === 'toolbar') wrapper.classList.add('tanga-toolbar-item');
 
-    const label = document.createElement('label');
-    label.textContent = ctrl.label || ctrl.id;
-    wrapper.appendChild(label);
+    if (!ctrl.hide_label) {
+        const label = document.createElement('label');
+        label.textContent = ctrl.label || ctrl.id;
+        wrapper.appendChild(label);
+    }
 
     const select = document.createElement('select');
     select.className = 'tanga-select-input';

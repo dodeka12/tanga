@@ -21,6 +21,7 @@
     "views/label-view.css",
     "views/message-view.css",
     "views/markdown-view.css",
+    "views/params-view.css",
     "views/separator-view.css",
     "views/stack-view.css",
     "views/toolbar-view.css"
@@ -45,6 +46,13 @@
       "overrides": {
         "button": "pastel/overrides/button.css",
         "checkbox": "pastel/overrides/checkbox.css"
+      }
+    },
+    "compact": {
+      "label": "Compact",
+      "tokens": "compact/tokens.css",
+      "overrides": {
+        "value-edit": "compact/overrides/value-edit.css"
       }
     }
   }

@@ -16,7 +16,7 @@
 }
 
 .tanga-checkbox-label {
-    font-size: 12px;
+    font-size: var(--tanga-font-size-label);
     color: var(--tanga-fg);
 }
 

@@ -4,17 +4,32 @@
 import { View } from './view.js';
 
 export class ControlView extends View {
-    constructor({ id, label = '', tooltip = '' } = {}) {
+    constructor({ id, label = '', tooltip = '', hide_label = false } = {}) {
         super();
         this.controlId = id;
         this.label = label;
         this.tooltip = tooltip;
+        this.hide_label = hide_label;
         this.el.classList.add('tanga-control-view');
-        // Sensible floors so a StackView can size to its controls.  These are a
-        // safety net for direct JS construction; `build.js` overrides them with
-        // the Python-serialized values (which may be `null` to disable them).
-        this.minWidth = { value: 120, unit: 'px' };
-        this.minHeight = { value: 32, unit: 'px' };
+        // Density floors live in CSS (`.tanga-control-view` min-width/min-height),
+        // not here, so a theme can re-size controls.  `build.js` still applies any
+        // explicit `min_width`/`min_height` serialized from Python.
+    }
+
+    /**
+     * A control's minimum size is its theme-driven CSS floor (`.tanga-control-view`
+     * `min-width`/`min-height`) unless the view carries an explicit `min_*`.
+     * Reading the computed style keeps StackView/GroupView/SplitView able to size
+     * to their controls while letting a theme change the density.
+     */
+    minSizePx(axis, available) {
+        if (this._hidden) return 0;
+        const explicit = super.minSizePx(axis, available);
+        if (explicit > 0) return explicit;
+        if (typeof getComputedStyle !== 'function') return 0;
+        const prop = axis === 'x' ? 'minWidth' : 'minHeight';
+        const px = parseFloat(getComputedStyle(this.el)[prop]);
+        return Number.isFinite(px) && px > 0 ? px : 0;
     }
 
     _onMounted() {
@@ -32,6 +47,7 @@ export class ControlView extends View {
         this.controlId = node.id ?? this.controlId;
         this.label = node.label ?? this.label;
         this.tooltip = node.tooltip ?? this.tooltip;
+        this.hide_label = node.hide_label ?? this.hide_label;
     }
 
     /** Return the control DOM element (subclass responsibility). */

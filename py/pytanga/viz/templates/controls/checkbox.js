@@ -8,21 +8,25 @@ export function createCheckbox(ctrl) {
     if (ctrl.variant === 'menu') wrapper.classList.add('tanga-menu-item');
     if (ctrl.variant === 'toolbar') wrapper.classList.add('tanga-toolbar-item');
 
-    const row = document.createElement('label');
-    row.className = 'tanga-checkbox-row';
-
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.checked = !!ctrl.value;
     input.className = 'tanga-checkbox-input';
 
-    const text = document.createElement('span');
-    text.className = 'tanga-checkbox-label';
-    text.textContent = ctrl.label || ctrl.id;
+    if (ctrl.hide_label) {
+        wrapper.appendChild(input);
+    } else {
+        const row = document.createElement('label');
+        row.className = 'tanga-checkbox-row';
 
-    row.appendChild(input);
-    row.appendChild(text);
-    wrapper.appendChild(row);
+        const text = document.createElement('span');
+        text.className = 'tanga-checkbox-label';
+        text.textContent = ctrl.label || ctrl.id;
+
+        row.appendChild(input);
+        row.appendChild(text);
+        wrapper.appendChild(row);
+    }
 
     input.addEventListener('change', () => {
         sendControlEvent('control:change', ctrl.id, input.checked);

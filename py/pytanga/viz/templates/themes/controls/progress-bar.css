@@ -1,7 +1,7 @@
 /* Tanga viewer — progress bar control (determinate + indeterminate). */
 
 .tanga-progress-title {
-    font-size: 12px;
+    font-size: var(--tanga-font-size-label);
     font-weight: 600;
     color: var(--tanga-fg-strong);
     margin-bottom: 4px;
@@ -43,7 +43,7 @@
 }
 
 .tanga-progress-value {
-    font-size: 12px;
+    font-size: var(--tanga-font-size-label);
     font-weight: 600;
     color: var(--tanga-accent-soft);
     text-align: right;
@@ -51,7 +51,7 @@
 }
 
 .tanga-progress-text {
-    font-size: 12px;
+    font-size: var(--tanga-font-size-label);
     color: var(--tanga-fg-muted);
     margin-top: 2px;
     overflow-wrap: anywhere;

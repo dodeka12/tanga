@@ -318,6 +318,23 @@ envelope, targeting a backend-only `ClientLog` control (`_controls.py`, id
    browser only (see `Table.handle_event_async` for `enum_options`).
 5. **Tests** — serialization round-trip, registration, and dispatch.
 
+### `ParamsView` (composite control view)
+
+`ParamsView` (`py/pytanga/viz/views/params_view.py`) is **not** a new control
+kind — it is a plain `View` whose `children` are ordinary `ControlView`s, one per
+key/field of a `dict` or `@dataclass`.  Its `_serialize` emits a `params_view`
+node with `rows = [{key, title, control}]` (each `control` is a full control-view
+node); `build.js` recursively builds each row's control, so handler registration
+and event routing reuse the existing `(id, event)` registry unchanged.
+
+- Per-field UI metadata is a `ControlUI` spec (`py/pytanga/viz/_params_ui.py`),
+  written via `param_ui(default, ui=<ControlUI>)` or raw
+  `field(metadata={"param_ui": <ControlUI>})`; keys with no spec are inferred
+  from the value/field type.
+- The new `Control.hide_label` field (serialized only when `True`) makes a control
+  factory render without its own label — the params row's left column shows the
+  title instead.
+
 ## Interactive objects
 
 Register handlers with `Visualizer.on_interaction(object_id, event_type,

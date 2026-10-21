@@ -57,6 +57,26 @@
     /* Typography. */
     --tanga-font: sans-serif;
 
+    /* Density + typography scale (theme-able).  The control-view min floors
+       replace the former Python-serialized ``min_width``/``min_height``
+       defaults, so a theme can re-size controls without touching the layout
+       model. */
+    --tanga-control-min-width: 120px;
+    --tanga-control-min-height: 32px;
+    --tanga-icon-control-size: 28px;
+    --tanga-control-min-width-narrow: 60px;
+    --tanga-control-margin-y: 6px;
+    --tanga-range-margin-y: 4px;
+    --tanga-params-row-gap: 4px;
+    --tanga-params-key-gap: 8px;
+    --tanga-params-title-margin: 2px;
+    --tanga-params-min-width: 220px;
+
+    --tanga-font-size-title: 14px;
+    --tanga-font-size-body: 13px;
+    --tanga-font-size-label: 12px;
+    --tanga-font-size-value: 12px;
+
     /* Status + loading. */
     --tanga-status-ok: #4f4;
     --tanga-status-err: #f44;
@@ -187,13 +207,36 @@ canvas {
 }
 
 /* Shared control chrome — applies to every rendered control regardless of kind. */
+
+/* Control-view density floors — theme-driven, replacing the former serialized
+ * min_width/min_height defaults (see the tokens above).  A compact theme lowers
+ * the ``--tanga-control-*`` tokens; icon-only buttons keep a small square tile. */
+.tanga-control-view {
+    min-width: var(--tanga-control-min-width);
+    min-height: var(--tanga-control-min-height);
+}
+
+.tanga-control-view.tanga-icon-only {
+    min-width: var(--tanga-icon-control-size);
+    min-height: var(--tanga-icon-control-size);
+}
+
+/* Value-bearing controls with a `width: 100%` input can shrink far below the
+ * generic floor; give them a smaller min-width so narrow panes stay compact. */
+.tanga-control-view.tanga-slider-view,
+.tanga-control-view.tanga-text-field-view,
+.tanga-control-view.tanga-value-edit-view,
+.tanga-control-view.tanga-color-picker-view {
+    min-width: var(--tanga-control-min-width-narrow);
+}
+
 .tanga-control {
-    margin: 6px 0;
+    margin: var(--tanga-control-margin-y) 0;
 }
 
 .tanga-control label {
     display: block;
-    font-size: 12px;
+    font-size: var(--tanga-font-size-label);
     color: var(--tanga-fg-muted);
     margin-bottom: 2px;
 }
@@ -209,7 +252,7 @@ canvas {
 }
 
 .tanga-value {
-    font-size: 12px;
+    font-size: var(--tanga-font-size-value);
     color: var(--tanga-accent-soft);
     font-weight: 600;
     min-width: 36px;

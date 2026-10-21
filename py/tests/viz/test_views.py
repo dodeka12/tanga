@@ -504,27 +504,29 @@ class TestControlViews:
         assert node["id"] == "b1"
         assert node["label"] == "Go"
 
-    def test_button_default_min_floors(self):  # noqa: ANN201
+    def test_button_default_no_min_floors(self):  # noqa: ANN201
+        # Control density floors live in the theme (CSS), not the view model, so
+        # a plain control serializes no explicit min and a theme can size it.
         view = ButtonView("b1")
-        assert view.min_width == Size.px(120)
-        assert view.min_height == Size.px(32)
-
-    def test_button_min_floor_disable(self):  # noqa: ANN201
-        view = ButtonView("b1", min_width=None)
         assert view.min_width is None
-        assert view.min_height == Size.px(32)
+        assert view.min_height is None
 
-    def test_button_icon_only_min_floors(self):  # noqa: ANN201
+    def test_button_min_floor_explicit(self):  # noqa: ANN201
+        view = ButtonView("b1", min_width=Size.px(140), min_height=Size.px(40))
+        assert view.min_width == Size.px(140)
+        assert view.min_height == Size.px(40)
+
+    def test_button_icon_only_no_special_floor(self):  # noqa: ANN201
         view = ButtonView("b1", icon="material:add", icon_only=True)
-        assert view.min_width == Size.px(28)
-        assert view.min_height == Size.px(28)
+        assert view.min_width is None
+        assert view.min_height is None
 
     def test_button_icon_only_explicit_min_override(self):  # noqa: ANN201
         view = ButtonView(
             "b1", icon="material:add", icon_only=True, min_width=Size.px(40)
         )
         assert view.min_width == Size.px(40)
-        assert view.min_height == Size.px(28)
+        assert view.min_height is None
 
     def test_dropdown_serialize(self):  # noqa: ANN201
         node = serialize_layout(

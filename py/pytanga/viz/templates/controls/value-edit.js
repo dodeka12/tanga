@@ -6,9 +6,11 @@ export function createValueEdit(ctrl) {
     const wrapper = document.createElement('div');
     wrapper.className = 'tanga-control tanga-value-edit';
 
-    const label = document.createElement('label');
-    label.textContent = ctrl.label || ctrl.id;
-    wrapper.appendChild(label);
+    if (!ctrl.hide_label) {
+        const label = document.createElement('label');
+        label.textContent = ctrl.label || ctrl.id;
+        wrapper.appendChild(label);
+    }
 
     let min = ctrl.min !== undefined ? ctrl.min : 0;
     let max = ctrl.max !== undefined ? ctrl.max : 1;

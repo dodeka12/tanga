@@ -76,7 +76,8 @@ A theme's `tokens.css` overrides any of the CSS custom properties defined in
 | Borders | `--tanga-border`, `--tanga-border-strong`, `--tanga-border-subtle` |
 | Scrollbar | `--tanga-scrollbar-thumb`, `--tanga-scrollbar-thumb-hover`, `--tanga-scrollbar-track` |
 | Elevation | `--tanga-shadow` |
-| Typography | `--tanga-font` |
+| Typography | `--tanga-font`, `--tanga-font-size-title`, `--tanga-font-size-body`, `--tanga-font-size-label`, `--tanga-font-size-value` |
+| Density | `--tanga-control-min-width`, `--tanga-control-min-height`, `--tanga-icon-control-size`, `--tanga-control-min-width-narrow`, `--tanga-control-margin-y`, `--tanga-range-margin-y`, `--tanga-params-row-gap`, `--tanga-params-key-gap`, `--tanga-params-title-margin`, `--tanga-params-min-width` |
 | Status/loading | `--tanga-status-ok`, `--tanga-status-err`, `--tanga-loading-bg`, `--tanga-spinner` |
 | Warning banner | `--tanga-warning-bg`, `--tanga-warning-fg`, `--tanga-warning-button-bg`, `--tanga-warning-button-fg` |
 
