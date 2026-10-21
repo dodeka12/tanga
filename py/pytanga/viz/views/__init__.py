@@ -40,7 +40,8 @@ from .control_views import (
 from .group_view import GroupView
 from .log_view import LogView
 from .menu_view import MenuView
-from .params_view import ParamsView, RowSpec
+from .._params_ui import RowSpec
+from .params_view import ParamsView
 from .scene_view import SceneView
 from .separator_view import SeparatorView
 from .spacer_view import SpacerView

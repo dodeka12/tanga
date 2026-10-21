@@ -342,15 +342,27 @@ and event routing reuse the existing `(id, event)` registry unchanged.
   override), and `ControlUI.validate` can reject a change (the control reverts).
 - **Non-parameter rows** are declared with `extra_rows=[RowSpec(key, ui, …)]`
   (position `"above"`/`"below"`); they render as ordinary child controls.
+- **Full-width / captioned rows** — `ControlUI.full_width` renders a row without
+  a key column (serialized as `full_width: true`; `params-view.js` treats it like
+  a nested group).  It defaults `True` on `ButtonUI`/`MarkdownUI`/`ProgressBarUI`;
+  `ButtonUI.label` is the button's own caption (rendered instead of the key title).
 - **Nested dataclasses** render as a nested `GroupView` (tagged
   `tanga-group-nested` in the frontend) wrapping a nested `ParamsView` whose id
-  is `f"{view.id}.{key}"`; `GroupUI(title=…, collapsed=…)` customizes it.
-- **Row state** (`set_visible`/`set_enabled`/`set_title`/`set_options`) reuses the
-  existing `control_state` message (keyed by the row's control id for
-  visible/enabled, and `{row, title}` on the `ParamsView` id for titles); the
-  frontend `params-view.js` tracks rows by key and hides/greys/relabels the whole
-  row.  `set_state`/`add`/`remove` rebind the source or mutate the row list and
-  re-push the layout via the injected `_push_layout` callback.
+  is `f"{view.id}.{key}"`; `GroupUI(title=…, collapsed=…, extra_rows=[…])`
+  customizes it.  The nested view inherits the parent's `on_change` and carries a
+  `key_prefix`, so a nested change fires the shared handler with a dotted
+  `event.key` like `"surface.scale"` (the handler still receives the top-level
+  state).
+- **Row state** (`set_visible`/`set_enabled`/`set_title`/`set_options`/`set_value`)
+  reuses the existing `control_state` message and resolves **dotted keys**
+  (`"surface.scale"`) down nested groups.  Group rows support
+  `set_visible`/`set_enabled`/`set_title` too: `GroupView` carries
+  `visible`/`enabled`/`title` and pushes `control_state {visible}`/`{enabled}`/
+  `{title}`; `viewer.js` routes `{enabled}` to the group's `setEnabled` (greys
+  the header, collapses the pane, locks the fold toggle) and `{title}` (without
+  `row`) to the group's `setTitle`.  `set_state`/`add`/`remove` rebind the source
+  (nested groups recursively) or mutate the row list and re-push the layout via
+  the injected `_push_layout` callback.
 
 ## Interactive objects
 

@@ -25,6 +25,7 @@ export class GroupView extends StackView {
         direction = 'vertical',
         position = null,
         collapsed = false,
+        enabled = true,
         scrollable = false,
         gap = null,
         align = 'stretch',
@@ -40,6 +41,7 @@ export class GroupView extends StackView {
         this.title = title;
         this.position = position;
         this.collapsed = collapsed;
+        this.enabled = enabled;
         this.scrollable = scrollable;
         this._collapseMin = null;   // stashed explicit main-axis min (Size|null)
         this._collapseMax = null;   // stashed explicit main-axis max (Size|null)
@@ -59,6 +61,7 @@ export class GroupView extends StackView {
 
         this.el.classList.add('tanga-group');
         this._setupChrome();
+        if (!this.enabled) this.setEnabled(false);
 
         for (const child of children) this.addChild(child);
     }
@@ -166,6 +169,9 @@ export class GroupView extends StackView {
         if (node.collapsed !== undefined) {
             this.setCollapsed(!!node.collapsed);
         }
+        if (node.enabled !== undefined) {
+            this.setEnabled(!!node.enabled);
+        }
     }
 
     _applyCollapsed() {
@@ -179,6 +185,20 @@ export class GroupView extends StackView {
                 this.collapsed ? 'material:expand_less' : 'material:expand_more'
             )
         );
+    }
+
+    // Enable/disable.  Disabling greys the header, collapses the pane, and locks
+    // the fold toggle so it cannot be expanded while disabled.
+    setEnabled(enabled) {
+        this.enabled = !!enabled;
+        this.el.classList.toggle('tanga-group-disabled', !this.enabled);
+        if (this._toggleBtn) this._toggleBtn.disabled = !this.enabled;
+        if (!this.enabled) this.setCollapsed(true);
+    }
+
+    setTitle(title) {
+        this.title = title;
+        this._renderTitle();
     }
 
     // Collapse/expand.  When collapsed the pane is reduced to its title bar, so

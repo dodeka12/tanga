@@ -310,6 +310,91 @@ def test_nested_controls_register() -> None:
     assert any(i.endswith(".inner.x") for i in ids)
 
 
+def test_nested_change_fires_shared_with_dotted_key() -> None:
+    calls: list[tuple[Any, ControlEvent]] = []
+
+    async def shared(state: Any, event: ControlEvent) -> None:
+        calls.append((state, event))
+
+    pv = ParamsView(_Outer(), on_change=shared)
+    nested_ctrl = pv._control_views["inner"].children[0]._control_views["x"].control
+    asyncio.run(nested_ctrl.on_change(2.5, ControlEvent()))
+
+    assert len(calls) == 1
+    state, event = calls[0]
+    assert event.key == "inner.x"
+    assert event.value == 2.5
+    assert isinstance(state, _Outer)
+    assert state.inner.x == 2.5
+
+
+def test_nested_per_field_handler_still_fires() -> None:
+    per_field: list[tuple[Any, str]] = []
+    shared: list[str] = []
+
+    async def _per_field(value: Any, event: ControlEvent) -> None:
+        per_field.append((value, event.key))
+
+    async def _shared(state: Any, event: ControlEvent) -> None:
+        shared.append(event.key)
+
+    @dataclass
+    class Inner2:
+        x: float = param_ui(1.0, ui=SliderUI(on_change=_per_field))
+
+    @dataclass
+    class Outer2:
+        inner: Inner2 = field(default_factory=Inner2)
+
+    pv = ParamsView(Outer2(), on_change=_shared)
+    nested_ctrl = pv._control_views["inner"].children[0]._control_views["x"].control
+    asyncio.run(nested_ctrl.on_change(3.0, ControlEvent()))
+
+    assert per_field == [(3.0, "inner.x")]
+    assert shared == []
+
+
+def test_dotted_set_value() -> None:
+    pv = ParamsView(_Outer())
+    pv.set_value("inner.x", 3.5)
+    assert pv.instance.inner.x == 3.5
+    assert pv.get_value()["inner"].x == 3.5
+
+
+def test_dotted_set_visible() -> None:
+    pv = ParamsView(_Outer())
+    pv.set_visible("inner.x", False)
+    nested_view = pv._control_views["inner"].children[0]
+    assert nested_view._control_views["x"].control.visible is False
+
+
+def test_set_state_rebinds_nested() -> None:
+    pv = ParamsView(_Outer())
+    new_outer = _Outer(name="b", inner=_Inner(x=9.0))
+    pv.set_state(new_outer)
+    assert pv.instance is new_outer
+    assert pv.instance.inner is new_outer.inner
+    nested_view = pv._control_views["inner"].children[0]
+    assert nested_view.instance is new_outer.inner
+    assert nested_view._control_views["x"].control.value == 9.0
+
+
+def test_nested_group_extra_rows() -> None:
+    pv = ParamsView(
+        _Outer(),
+        styles={
+            "inner": GroupUI(
+                extra_rows=[RowSpec("run", ButtonUI(label="Run"), position="above")]
+            )
+        },
+    )
+    group_node = pv._serialize()["rows"][1]["control"]
+    assert group_node["type"] == "group"
+    nested = group_node["children"][0]
+    assert nested["type"] == "params_view"
+    assert [r["key"] for r in nested["rows"]] == ["run", "x"]
+
+
 def test_set_state_updates_without_on_change() -> None:
     calls: list[Any] = []
 
@@ -392,3 +477,21 @@ def test_title_from_name() -> None:
 def test_dense_serializes() -> None:
     pv = ParamsView({"a": 1}, dense=True)
     assert pv._serialize()["dense"] is True
+
+
+def test_button_caption_and_full_width() -> None:
+    pv = ParamsView(
+        {"a": 1},
+        extra_rows=[
+            RowSpec("run", ButtonUI(label="Compute circles"), position="above"),
+            RowSpec("status", MarkdownUI(), "**Idle**"),
+        ],
+    )
+    node = pv._serialize()
+    run_row, a_row, status_row = node["rows"]
+    assert run_row["full_width"] is True
+    assert run_row["control"]["label"] == "Compute circles"
+    assert "hide_label" not in run_row["control"]
+    assert "full_width" not in a_row
+    assert a_row["control"]["hide_label"] is True
+    assert status_row["full_width"] is True

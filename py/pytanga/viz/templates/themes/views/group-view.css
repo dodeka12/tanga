@@ -54,6 +54,11 @@
     color: var(--tanga-fg-strong);
 }
 
+/* A disabled group greys its whole header (title + fold toggle). */
+.tanga-group.tanga-group-disabled .tanga-group-header {
+    opacity: var(--tanga-disabled-opacity);
+}
+
 /* A group nested inside a `ParamsView` renders a smaller title (it is a
  * subsection, not a top-level panel). */
 .tanga-group.tanga-group-nested .tanga-group-title {

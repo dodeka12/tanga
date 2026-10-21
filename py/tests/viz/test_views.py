@@ -246,6 +246,52 @@ class TestGroupView:
         g.set_collapsed(True)
         assert g.collapsed is True  # no _push_state → no push, no raise
 
+    def test_set_visible_mutates_and_pushes(self):  # noqa: ANN201
+        g = GroupView("Actions")
+        pushed: list[tuple[str, dict[str, bool]]] = []
+
+        def _capture(cid: str, state: dict[str, bool]) -> None:
+            pushed.append((cid, state))
+
+        g._push_state = _capture
+        g.set_visible(False)
+        assert g.visible is False
+        assert pushed == [(g.id, {"visible": False})]
+
+    def test_set_enabled_mutates_and_pushes(self):  # noqa: ANN201
+        g = GroupView("Actions")
+        pushed: list[tuple[str, dict[str, bool]]] = []
+
+        def _capture(cid: str, state: dict[str, bool]) -> None:
+            pushed.append((cid, state))
+
+        g._push_state = _capture
+        g.set_enabled(False)
+        assert g.enabled is False
+        assert pushed == [(g.id, {"enabled": False})]
+
+    def test_set_title_mutates_and_pushes(self):  # noqa: ANN201
+        g = GroupView("Actions")
+        pushed: list[tuple[str, dict[str, str]]] = []
+
+        def _capture(cid: str, state: dict[str, str]) -> None:
+            pushed.append((cid, state))
+
+        g._push_state = _capture
+        g.set_title("Renamed")
+        assert g.title == "Renamed"
+        assert pushed == [(g.id, {"title": "Renamed"})]
+
+    def test_visible_enabled_serialize_when_non_default(self):  # noqa: ANN201
+        node = serialize_layout(GroupView("Actions", visible=False, enabled=False))[
+            "root"
+        ]
+        assert node["visible"] is False
+        assert node["enabled"] is False
+        defaults = serialize_layout(GroupView("Actions"))["root"]
+        assert "visible" not in defaults
+        assert "enabled" not in defaults
+
     def test_on_toggle_stored(self):  # noqa: ANN201
         async def _on_toggle(value, event):  # noqa: ANN001, ANN202
             pass

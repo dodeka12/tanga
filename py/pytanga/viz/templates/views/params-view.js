@@ -39,20 +39,22 @@ export class ParamsView extends View {
         this._invalidateContent();
     }
 
-    addRow({ key, title, control }) {
+    addRow({ key, title, control, full_width = false }) {
         const row = document.createElement('div');
         row.className = 'tanga-params-row';
 
         const cell = document.createElement('div');
         cell.className = 'tanga-params-control';
 
-        // A nested `GroupView` control spans the whole row (it renders its own
-        // title), so it has no separate key label.
+        // A nested `GroupView` (it renders its own title) and a `full_width`
+        // row (a button/markdown/progress without a key label) span the whole
+        // row, so neither gets a separate key element.
         const isGroup = control && control.typeTag === 'group';
+        const isFullWidth = full_width || isGroup;
         let keyEl = null;
-        if (isGroup) {
+        if (isFullWidth) {
             row.classList.add('tanga-params-row-group');
-            control.el.classList.add('tanga-group-nested');
+            if (isGroup) control.el.classList.add('tanga-group-nested');
         } else {
             keyEl = document.createElement('span');
             keyEl.className = 'tanga-params-key';

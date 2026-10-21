@@ -10,10 +10,13 @@ from enum import Enum
 from typing import Literal, Optional
 
 from pytanga.viz import (
+    ButtonUI,
     CheckboxUI,
     ColorPickerUI,
     ControlUI,
     DropdownUI,
+    MarkdownUI,
+    ProgressBarUI,
     SliderUI,
     TextFieldUI,
     ValueEditUI,
@@ -39,11 +42,23 @@ def test_kinds_and_fields() -> None:
         "on_change",
         "coerce",
         "validate",
+        "full_width",
         "min",
         "max",
         "step",
         "integer",
     ]
+
+
+def test_full_width_defaults() -> None:
+    assert ButtonUI().full_width is True
+    assert MarkdownUI().full_width is True
+    assert ProgressBarUI().full_width is True
+    assert SliderUI().full_width is False
+
+
+def test_button_label() -> None:
+    assert ButtonUI(label="Compute circles").label == "Compute circles"
 
 
 def test_param_ui_stores_under_reserved_key() -> None:
