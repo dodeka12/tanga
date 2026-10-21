@@ -7,6 +7,17 @@
     min-width: var(--tanga-params-min-width);
 }
 
+/* A dense ParamsView tightens its own spacing/control density without changing
+ * the global theme (mirrors the compact theme tokens). */
+.tanga-params-view.tanga-params-dense {
+    --tanga-params-row-gap: 2px;
+    --tanga-params-key-gap: 6px;
+    --tanga-control-min-height: 22px;
+    --tanga-control-min-width: 96px;
+    --tanga-control-min-width-narrow: 48px;
+    --tanga-control-margin-y: 2px;
+}
+
 .tanga-params-title {
     font-size: var(--tanga-font-size-body);
     font-weight: 600;
@@ -19,6 +30,11 @@
     grid-template-columns: minmax(0, auto) 1fr;
     align-items: center;
     gap: var(--tanga-params-key-gap);
+}
+
+/* A nested group row has no key label; its control spans the full width. */
+.tanga-params-row.tanga-params-row-group {
+    grid-template-columns: 1fr;
 }
 
 .tanga-params-key {
@@ -45,4 +61,10 @@
  * vertical margin (the row gap above provides the spacing). */
 .tanga-params-control .tanga-control {
     margin: 0;
+}
+
+/* When a row's control is disabled (`.tanga-control-disabled`), grey the key
+ * label too, so the whole row reads as disabled. */
+.tanga-params-row:has(.tanga-control-disabled) .tanga-params-key {
+    opacity: var(--tanga-disabled-opacity);
 }

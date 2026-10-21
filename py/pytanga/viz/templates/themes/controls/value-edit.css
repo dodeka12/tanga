@@ -46,3 +46,10 @@
     line-height: 1;
 }
 
+.tanga-value-unit {
+    align-self: center;
+    font-size: var(--tanga-font-size-label);
+    color: var(--tanga-fg-muted);
+    white-space: nowrap;
+}
+

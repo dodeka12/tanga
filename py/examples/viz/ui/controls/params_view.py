@@ -3,38 +3,44 @@
 
 """params_view.py — Map a dict/dataclass to a two-column table of controls.
 
-A horizontal ``SplitView`` puts four ``ParamsView`` instances on the left and a
-sphere in the ``SceneView`` on the right.  Each ``ParamsView`` renders every key
+A horizontal ``SplitView`` puts several ``ParamsView`` instances on the left and
+a sphere in the ``SceneView`` on the right.  Each ``ParamsView`` renders every key
 as a title on the left and a matching control on the right, and fires one
-``on_change`` with the full state.  Four ways to describe the UI are shown: a
-plain ``dict`` with a ``styles`` dict of ``ControlUI`` specs, a plain ``dict``
-with no ``styles`` (controls inferred from the value types), a ``@dataclass``
-using the ``param_ui()`` helper, and a ``@dataclass`` using raw
-``dataclasses.field(metadata={"param_ui": …})``.  A theme ``DropdownView`` at the
-top switches the active theme live across every built-in theme, and a shared
+``on_change`` with the full state.  Ways to describe the UI are shown: a plain
+``dict`` with a ``styles`` dict of ``ControlUI`` specs, a plain ``dict`` with no
+``styles`` (controls inferred from the value types), a ``@dataclass`` using the
+``param_ui()`` helper (plus ``extra_rows`` button/status rows), a ``@dataclass``
+using raw ``dataclasses.field(metadata={"param_ui": …})``, and a ``@dataclass``
+with a nested dataclass (rendered as a sub-group), an ``Enum`` field, and an
+``int`` field (coerced back to ``int``).  A theme ``DropdownView`` at the top
+switches the active theme live across every built-in theme, and a shared
 ``PARAMS_MIN_WIDTH`` sets a fixed minimum width on every ``ParamsView``
 (overriding the theme's ``--tanga-params-min-width`` default).
 
 Run with:  uv run python py/examples/viz/ui/controls/params_view.py
 
-Keywords: params view, controls, dict, dataclass, param_ui, theme, set_theme
+Keywords: params view, controls, dict, dataclass, param_ui, extra_rows, enum, nested
 """
 
 from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
 
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
+    ButtonUI,
     CheckboxUI,
     ColorPickerUI,
     ControlEvent,
     DropdownUI,
     DropdownView,
     GroupView,
+    MarkdownUI,
     ParamsView,
+    RowSpec,
     SceneView,
     Size,
     SliderUI,
@@ -117,6 +123,29 @@ class RawParams:
     )
 
 
+# ── 4. nested dataclass + Enum + int coercion ──────────────────────────────
+class RenderMode(Enum):
+    SOLID = "solid"
+    WIRE = "wire"
+
+
+@dataclass
+class BoundsParams:
+    low: float = 0.1
+    high: float = 5.0
+
+
+@dataclass
+class AdvancedParams:
+    segments: int = 32
+    mode: RenderMode = RenderMode.SOLID
+    bounds: BoundsParams = field(default_factory=BoundsParams)
+
+
+async def _on_update(value: Any, event: ControlEvent) -> None:
+    print(f"Update clicked ({event.key})")
+
+
 layout = SplitView(
     orientation="horizontal",
     sizes=[Size.percent(35), Size.percent(65)],
@@ -158,6 +187,29 @@ layout = SplitView(
                     [
                         ParamsView(
                             SphereParams(),
+                            min_width=PARAMS_MIN_WIDTH,
+                            on_change=_on_change,
+                            extra_rows=[
+                                RowSpec(
+                                    "run",
+                                    ButtonUI(title="Update"),
+                                    on_click=_on_update,
+                                    position="above",
+                                ),
+                                RowSpec(
+                                    "status",
+                                    MarkdownUI(title="Status"),
+                                    "**Idle**",
+                                ),
+                            ],
+                        )
+                    ],
+                ),
+                GroupView(
+                    "Nested + coercion",
+                    [
+                        ParamsView(
+                            AdvancedParams(),
                             min_width=PARAMS_MIN_WIDTH,
                             on_change=_on_change,
                         )

@@ -40,7 +40,7 @@ from .control_views import (
 from .group_view import GroupView
 from .log_view import LogView
 from .menu_view import MenuView
-from .params_view import ParamsView
+from .params_view import ParamsView, RowSpec
 from .scene_view import SceneView
 from .separator_view import SeparatorView
 from .spacer_view import SpacerView
@@ -52,6 +52,7 @@ from .functions import (
     iter_control_views,
     iter_group_views,
     iter_log_views,
+    iter_params_views,
     iter_scene_names,
     iter_scene_views,
     serialize_layout,
@@ -76,6 +77,7 @@ __all__ = [
     "MenuView",
     "ParamsView",
     "ProgressBarView",
+    "RowSpec",
     "SceneView",
     "SeparatorView",
     "SizeSpec",
@@ -93,6 +95,7 @@ __all__ = [
     "iter_control_views",
     "iter_group_views",
     "iter_log_views",
+    "iter_params_views",
     "iter_scene_names",
     "iter_scene_views",
     "serialize_layout",

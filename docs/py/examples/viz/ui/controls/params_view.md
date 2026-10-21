@@ -1,16 +1,18 @@
 # Map a dict/dataclass to a two-column table of controls
 
-**Keywords:** params view · controls · dict · dataclass · param_ui · theme · set_theme
+**Keywords:** params view · controls · dict · dataclass · param_ui · extra_rows · enum · nested
 
-A horizontal `SplitView` puts four `ParamsView` instances on the left and a
-sphere in the `SceneView` on the right.  Each `ParamsView` renders every key
+A horizontal `SplitView` puts several `ParamsView` instances on the left and
+a sphere in the `SceneView` on the right.  Each `ParamsView` renders every key
 as a title on the left and a matching control on the right, and fires one
-`on_change` with the full state.  Four ways to describe the UI are shown: a
-plain `dict` with a `styles` dict of `ControlUI` specs, a plain `dict`
-with no `styles` (controls inferred from the value types), a `@dataclass`
-using the `param_ui()` helper, and a `@dataclass` using raw
-`dataclasses.field(metadata={"param_ui": …})`.  A theme `DropdownView` at the
-top switches the active theme live across every built-in theme, and a shared
+`on_change` with the full state.  Ways to describe the UI are shown: a plain
+`dict` with a `styles` dict of `ControlUI` specs, a plain `dict` with no
+`styles` (controls inferred from the value types), a `@dataclass` using the
+`param_ui()` helper (plus `extra_rows` button/status rows), a `@dataclass`
+using raw `dataclasses.field(metadata={"param_ui": …})`, and a `@dataclass`
+with a nested dataclass (rendered as a sub-group), an `Enum` field, and an
+`int` field (coerced back to `int`).  A theme `DropdownView` at the top
+switches the active theme live across every built-in theme, and a shared
 `PARAMS_MIN_WIDTH` sets a fixed minimum width on every `ParamsView`
 (overriding the theme's `--tanga-params-min-width` default).
 
@@ -32,38 +34,44 @@ uv run python py/examples/viz/ui/controls/params_view.py
 
 """params_view.py — Map a dict/dataclass to a two-column table of controls.
 
-A horizontal ``SplitView`` puts four ``ParamsView`` instances on the left and a
-sphere in the ``SceneView`` on the right.  Each ``ParamsView`` renders every key
+A horizontal ``SplitView`` puts several ``ParamsView`` instances on the left and
+a sphere in the ``SceneView`` on the right.  Each ``ParamsView`` renders every key
 as a title on the left and a matching control on the right, and fires one
-``on_change`` with the full state.  Four ways to describe the UI are shown: a
-plain ``dict`` with a ``styles`` dict of ``ControlUI`` specs, a plain ``dict``
-with no ``styles`` (controls inferred from the value types), a ``@dataclass``
-using the ``param_ui()`` helper, and a ``@dataclass`` using raw
-``dataclasses.field(metadata={"param_ui": …})``.  A theme ``DropdownView`` at the
-top switches the active theme live across every built-in theme, and a shared
+``on_change`` with the full state.  Ways to describe the UI are shown: a plain
+``dict`` with a ``styles`` dict of ``ControlUI`` specs, a plain ``dict`` with no
+``styles`` (controls inferred from the value types), a ``@dataclass`` using the
+``param_ui()`` helper (plus ``extra_rows`` button/status rows), a ``@dataclass``
+using raw ``dataclasses.field(metadata={"param_ui": …})``, and a ``@dataclass``
+with a nested dataclass (rendered as a sub-group), an ``Enum`` field, and an
+``int`` field (coerced back to ``int``).  A theme ``DropdownView`` at the top
+switches the active theme live across every built-in theme, and a shared
 ``PARAMS_MIN_WIDTH`` sets a fixed minimum width on every ``ParamsView``
 (overriding the theme's ``--tanga-params-min-width`` default).
 
 Run with:  uv run python py/examples/viz/ui/controls/params_view.py
 
-Keywords: params view, controls, dict, dataclass, param_ui, theme, set_theme
+Keywords: params view, controls, dict, dataclass, param_ui, extra_rows, enum, nested
 """
 
 from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
 
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
+    ButtonUI,
     CheckboxUI,
     ColorPickerUI,
     ControlEvent,
     DropdownUI,
     DropdownView,
     GroupView,
+    MarkdownUI,
     ParamsView,
+    RowSpec,
     SceneView,
     Size,
     SliderUI,
@@ -97,7 +105,9 @@ async def _on_change(state: Any, _event: ControlEvent) -> None:
     if "color" in d:
         viz.update("sphere", color=str(d["color"]))
     if "mode" in d:
-        viz.update("sphere", opacity={"solid": 0.3, "wire": 0.15}.get(str(d["mode"]), 0.3))
+        viz.update(
+            "sphere", opacity={"solid": 0.3, "wire": 0.15}.get(str(d["mode"]), 0.3)
+        )
     viz.flush()
 
 
@@ -107,7 +117,7 @@ async def _on_theme(value: Any, _event: ControlEvent) -> None:
 
 #: Fixed minimum width applied to every ParamsView below.  Remove the
 #: ``min_width=`` arguments to fall back to the theme's ``--tanga-params-min-width``.
-PARAMS_MIN_WIDTH = Size.px(280)
+PARAMS_MIN_WIDTH = Size.px(150)
 
 
 # ── 1. dict mode — `styles` is a dict of `ControlUI` specs ───────────────────
@@ -130,7 +140,9 @@ class SphereParams:
     )
     wireframe: bool = param_ui(False, ui=CheckboxUI(title="Wireframe"))
     color: str = param_ui("#4488ff", ui=ColorPickerUI(title="Color"))
-    mode: str = param_ui("solid", ui=DropdownUI(title="Mode", options=["solid", "wire"]))
+    mode: str = param_ui(
+        "solid", ui=DropdownUI(title="Mode", options=["solid", "wire"])
+    )
 
 
 # ── 3. dataclass mode via raw field(metadata=…) (no helper) ──────────────────
@@ -140,6 +152,29 @@ class RawParams:
         default=2.0,
         metadata={"param_ui": SliderUI(title="Radius", min=0.1, max=5.0, step=0.05)},
     )
+
+
+# ── 4. nested dataclass + Enum + int coercion ──────────────────────────────
+class RenderMode(Enum):
+    SOLID = "solid"
+    WIRE = "wire"
+
+
+@dataclass
+class BoundsParams:
+    low: float = 0.1
+    high: float = 5.0
+
+
+@dataclass
+class AdvancedParams:
+    segments: int = 32
+    mode: RenderMode = RenderMode.SOLID
+    bounds: BoundsParams = field(default_factory=BoundsParams)
+
+
+async def _on_update(value: Any, event: ControlEvent) -> None:
+    print(f"Update clicked ({event.key})")
 
 
 layout = SplitView(
@@ -178,8 +213,49 @@ layout = SplitView(
                         ),
                     ],
                 ),
-                GroupView("Dataclass (param_ui)", [ParamsView(SphereParams(), min_width=PARAMS_MIN_WIDTH, on_change=_on_change)]),
-                GroupView("Dataclass (field metadata)", [ParamsView(RawParams(), min_width=PARAMS_MIN_WIDTH, on_change=_on_change)]),
+                GroupView(
+                    "Dataclass (param_ui)",
+                    [
+                        ParamsView(
+                            SphereParams(),
+                            min_width=PARAMS_MIN_WIDTH,
+                            on_change=_on_change,
+                            extra_rows=[
+                                RowSpec(
+                                    "run",
+                                    ButtonUI(title="Update"),
+                                    on_click=_on_update,
+                                    position="above",
+                                ),
+                                RowSpec(
+                                    "status",
+                                    MarkdownUI(title="Status"),
+                                    "**Idle**",
+                                ),
+                            ],
+                        )
+                    ],
+                ),
+                GroupView(
+                    "Nested + coercion",
+                    [
+                        ParamsView(
+                            AdvancedParams(),
+                            min_width=PARAMS_MIN_WIDTH,
+                            on_change=_on_change,
+                        )
+                    ],
+                ),
+                GroupView(
+                    "Dataclass (field metadata)",
+                    [
+                        ParamsView(
+                            RawParams(),
+                            min_width=PARAMS_MIN_WIDTH,
+                            on_change=_on_change,
+                        )
+                    ],
+                ),
             ],
         ),
         SceneView(""),

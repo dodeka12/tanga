@@ -54,9 +54,12 @@ class OverlayHost:
 class ThemeHost(OverlayHost):
     """Theme selection: state, validation, push, and file-watching."""
 
-    def __init__(self, transport: Any, layout: Any) -> None:
+    def __init__(self, transport: Any, layout: Any, theme: str = "dark") -> None:
         super().__init__(transport, layout)
-        self._theme = "dark"
+        from ._themes import theme_css_files
+
+        theme_css_files(theme)  # raises KeyError on unknown theme
+        self._theme = theme
         self._theme_version = 0
         self._theme_watch_thread: Any = None
         self._theme_watch_stop: Any = None

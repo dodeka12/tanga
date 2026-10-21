@@ -206,7 +206,7 @@ uv run python py/examples/<path>.py
 
 - **control update** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
 
-- **controls** — [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
+- **controls** — [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
 - **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md)
 
@@ -240,7 +240,7 @@ uv run python py/examples/<path>.py
 
 - **DataArray** — [Expressions, variables, and DataArray bindings](expression_dataarray.md), [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md)
 
-- **dataclass** — [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md)
+- **dataclass** — [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
 
 - **debug** — [Capture a shader compile error and show it in a banner](viz/surface/shader_errors.md)
 
@@ -308,7 +308,7 @@ uv run python py/examples/<path>.py
 
 - **entity** — [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
-- **enum** — [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md)
+- **enum** — [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md)
 
 - **Euclidean** — [Euclidean 3D geometric algebra  G(3, 0)](ga/basis/base_e3_demo.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md)
 
@@ -321,6 +321,8 @@ uv run python py/examples/<path>.py
 - **expressions** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md), [Solve a single-linear-map AffineExpression](ga/expression/affine_linear_solve.md), [Bind a variable to a sub-expression (composition)](ga/expression/bind_subexpression.md), [Expression.compile() for fast repeated evaluation](ga/expression/compile_fastpath.md), [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md), [Named GA product functions over variables](ga/expression/named_products.md), [Polynomial (repeated-variable) expressions and affine sums](ga/expression/polynomial_demo.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [multilinear AffineExpression.get_tensor()](ga/expression/quadratic_get_tensor.md), [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Solve the general multivector equation A X = B with expressions](ga/expression/solve_ax_b.md), [get_tensor() (raw MVTensor) + get_array() (named bases)](ga/expression/tensor_named_basis.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
 - **EXR** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
+
+- **extra_rows** — [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
 
 - **figure** — [Presentation figure export with FigureStyle](viz/export/figure.md), [Export](viz/jupyter/export.md)
 
@@ -574,7 +576,7 @@ uv run python py/examples/<path>.py
 
 - **navigation** — [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
 
-- **nested** — [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md)
+- **nested** — [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
 
 - **nested loops** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
@@ -632,9 +634,9 @@ uv run python py/examples/<path>.py
 
 - **paraboloid** — [draw arbitrary quadrics via entities + GA translation](ga/quadric/general_quadric.md)
 
-- **param_ui** — [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md)
+- **param_ui** — [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
 
-- **params view** — [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md)
+- **params view** — [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
 
 - **parent_id** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
@@ -796,7 +798,9 @@ uv run python py/examples/<path>.py
 
 - **set_default_color** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
-- **set_theme** — [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
+- **set_state** — [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
+
+- **set_theme** — [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
 - **shader** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Switch between standard and custom surface texture mapping](viz/surface/texture_mapping.md)
 
@@ -898,7 +902,7 @@ uv run python py/examples/<path>.py
 
 - **texture mapping** — [Switch between standard and custom surface texture mapping](viz/surface/texture_mapping.md)
 
-- **theme** — [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
+- **theme** — [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
 - **theme switching** — [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
@@ -957,6 +961,8 @@ uv run python py/examples/<path>.py
 - **update** — [Labels with custom styling, dynamic update, and removal](viz/labels/basic.md)
 
 - **update in place** — [Animation](viz/jupyter/animation.md)
+
+- **validate** — [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
 
 - **variable** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 

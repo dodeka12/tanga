@@ -18,9 +18,15 @@ export function createDropdown(ctrl) {
     const options = ctrl.options || [];
     for (const opt of options) {
         const option = document.createElement('option');
-        option.value = opt;
-        option.textContent = opt;
-        if (opt === ctrl.value) option.selected = true;
+        if (typeof opt === 'string') {
+            option.value = opt;
+            option.textContent = opt;
+            if (opt === ctrl.value) option.selected = true;
+        } else {
+            option.value = opt.value;
+            option.textContent = opt.label;
+            if (opt.value === ctrl.value) option.selected = true;
+        }
         select.appendChild(option);
     }
     wrapper.appendChild(select);
@@ -35,6 +41,22 @@ export function createDropdown(ctrl) {
         kind: 'dropdown',
         el: wrapper,
         apply: (value) => { select.value = value == null ? '' : String(value); },
+        applyState: (state) => {
+            if (state.options !== undefined) {
+                const current = select.value;
+                select.replaceChildren();
+                for (const opt of state.options) {
+                    const option = document.createElement('option');
+                    option.value = typeof opt === 'string' ? opt : opt.value;
+                    option.textContent = typeof opt === 'string' ? opt : opt.label;
+                    select.appendChild(option);
+                }
+                if (Array.from(select.options).some((o) => o.value === current)) {
+                    select.value = current;
+                }
+            }
+            applyControlStateToElement(wrapper, state);
+        },
     });
     applyTooltip(wrapper, ctrl);
     applyControlStateToElement(wrapper, ctrl);

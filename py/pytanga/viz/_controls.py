@@ -53,17 +53,20 @@ class VariantControl(Protocol):
 class ControlEvent:
     """Base for every event handed to a viz handler.
 
-    Carries the fields shared by all events — today only *browser_id* — and is
-    the base of the interaction events
-    (:class:`~pytanga.viz.InteractionEvent` and its subclasses ``ClickEvent`` /
-    ``DragEvent`` / ``ScrollEvent``), which add the object, event-type and
-    camera fields.
+    Carries the fields shared by all events — *browser_id*, plus optional
+    *key*/*value* (the changed field name and value, filled by
+    :class:`~pytanga.viz.ParamsView`) — and is the base of the interaction
+    events (:class:`~pytanga.viz.InteractionEvent` and its subclasses
+    ``ClickEvent`` / ``DragEvent`` / ``ScrollEvent``), which add the object,
+    event-type and camera fields.
 
     Extra fields may be added here without breaking existing handler
     signatures: the event is always the last argument, after the value.
     """
 
     browser_id: str | None = None
+    key: str | None = None
+    value: Any = None
 
 
 #: Reserved control id for the backend-only client → server log sink.
@@ -421,9 +424,27 @@ class Slider(Control):
     on_release: ControlHandler | None = None
 
 
+def normalize_dropdown_options(options: Any) -> list[dict[str, str]]:
+    """Serialize dropdown options to ``{"value", "label"}`` dicts.
+
+    A bare string option becomes ``{"value": s, "label": s}``; a ``(value, label)``
+    pair becomes ``{"value": v, "label": l}``.
+    """
+    return [
+        {"value": o, "label": o}
+        if isinstance(o, str)
+        else {"value": o[0], "label": o[1]}
+        for o in options
+    ]
+
+
 @dataclass
 class Dropdown(Control):
-    """A dropdown / select control with a fixed set of string options."""
+    """A dropdown / select control with a fixed set of string options.
+
+    Each option is either a bare string (value == label) or a ``(value, label)``
+    pair, serialized as ``{"value": …, "label": …}`` for the frontend.
+    """
 
     kind: str = "dropdown"
     _value_type: ClassVar[type | None] = str
@@ -431,12 +452,12 @@ class Dropdown(Control):
     def _fields(self) -> dict[str, Any]:
         return {
             "variant": str(self.variant),
-            "options": list(self.options),
+            "options": normalize_dropdown_options(self.options),
             "value": self.value,
         }
 
     variant: EControlVariant = EControlVariant.DEFAULT
-    options: list[str] = field(default_factory=list)
+    options: list[str | tuple[str, str]] = field(default_factory=list)
     value: str = ""
     on_change: ControlHandler | None = None
 
@@ -564,6 +585,7 @@ class ValueEdit(Control):
             "digits": self.digits,
             "value": self.value,
             "editable": self.editable,
+            "unit": self.unit,
         }
 
     min: float = 0.0
@@ -572,6 +594,7 @@ class ValueEdit(Control):
     digits: int = 2
     value: float = 0.0
     editable: bool = True
+    unit: str = ""
     on_change: ControlHandler | None = None
 
 

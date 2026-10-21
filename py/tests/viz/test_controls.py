@@ -251,7 +251,11 @@ def test_serialize_dropdown() -> None:
         "kind": "dropdown",
         "label": "Mode",
         "variant": "default",
-        "options": ["Wireframe", "Solid", "Translucent"],
+        "options": [
+            {"value": "Wireframe", "label": "Wireframe"},
+            {"value": "Solid", "label": "Solid"},
+            {"value": "Translucent", "label": "Translucent"},
+        ],
         "value": "Solid",
     }
 
@@ -428,6 +432,7 @@ def test_serialize_value_edit() -> None:
         "digits": 2,
         "value": 1.5,
         "editable": True,
+        "unit": "",
     }
 
 

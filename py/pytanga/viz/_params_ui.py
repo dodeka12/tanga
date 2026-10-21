@@ -13,8 +13,13 @@ from the field and the ``ParamsView`` respectively.
 from __future__ import annotations
 
 import re
+import types
+from collections.abc import Sequence
 from dataclasses import dataclass, field, fields
-from typing import Any, ClassVar, get_origin
+from enum import Enum
+from typing import Any, Callable, ClassVar, Literal, Union, get_args, get_origin
+
+from ._controls import ControlHandler
 
 
 @dataclass
@@ -24,7 +29,11 @@ class ControlUI:
     title: str | None = None
     tooltip: str | None = None
     enabled: bool | None = None
+    visible: bool | None = None
     skip: bool = False
+    on_change: ControlHandler | None = None
+    coerce: Callable[[Any], Any] | None = None
+    validate: Callable[[Any], bool | str] | None = None
     kind: ClassVar[str] = ""
 
 
@@ -36,6 +45,7 @@ class SliderUI(ControlUI):
     min: float | None = None
     max: float | None = None
     step: float | None = None
+    integer: bool = False
 
 
 @dataclass
@@ -48,6 +58,16 @@ class ValueEditUI(ControlUI):
     step: float | None = None
     digits: int | None = None
     editable: bool | None = None
+    integer: bool = False
+    unit: str | None = None
+
+
+@dataclass
+class GroupUI(ControlUI):
+    """UI spec for a nested group (a dataclass field rendered as a sub-panel)."""
+
+    kind: ClassVar[str] = "group"
+    collapsed: bool = False
 
 
 @dataclass
@@ -55,7 +75,7 @@ class DropdownUI(ControlUI):
     """UI spec for a dropdown control."""
 
     kind: ClassVar[str] = "dropdown"
-    options: list[str] | None = None
+    options: Sequence[str | tuple[str, str]] | None = None
 
 
 @dataclass
@@ -148,7 +168,19 @@ def param_ui(
 
 
 #: Shared ``ControlUI`` fields that are not forwarded to the control constructor.
-_SHARED_UI_FIELDS = frozenset({"title", "tooltip", "enabled", "skip"})
+_SHARED_UI_FIELDS = frozenset(
+    {
+        "title",
+        "tooltip",
+        "enabled",
+        "visible",
+        "skip",
+        "on_change",
+        "coerce",
+        "validate",
+        "integer",
+    }
+)
 
 _COLOR_RE = re.compile(r"#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})")
 
@@ -166,18 +198,63 @@ def _is_sequence(py_type: Any, value: Any) -> bool:
     return origin in (list, tuple) or py_type in (list, tuple)
 
 
+def _is_enum(py_type: Any) -> bool:
+    """True when *py_type* is an :class:`Enum` subclass."""
+    return isinstance(py_type, type) and issubclass(py_type, Enum)
+
+
+def _unwrap_optional(py_type: Any) -> Any:
+    """Unwrap ``X | None`` / ``Optional[X]`` to ``X`` (identity otherwise)."""
+    origin = get_origin(py_type)
+    if origin in (Union, types.UnionType):
+        args = get_args(py_type)
+        non_none = [a for a in args if a is not type(None)]
+        if len(non_none) == 1:
+            return non_none[0]
+    return py_type
+
+
+def coerce_value(py_type: Any, value: Any) -> Any:
+    """Coerce *value* to *py_type* (``None`` and unresolved types pass through)."""
+    if value is None or py_type is None:
+        return value
+    py_type = _unwrap_optional(py_type)
+    if py_type is bool:
+        return bool(value)
+    if py_type is int:
+        return int(value)
+    if py_type is float:
+        return float(value)
+    if py_type is str:
+        return str(value)
+    if _is_enum(py_type):
+        return py_type(value)
+    if get_origin(py_type) is Literal:
+        for option in get_args(py_type):
+            if option == value or str(option) == str(value):
+                return option
+        return value
+    return value
+
+
 def infer_control_ui(py_type: Any, value: Any) -> ControlUI:
     """Infer a :class:`ControlUI` from a field/value type.
 
     Used by :class:`ParamsView` when a key has no explicit UI spec (no
-    ``styles[key]`` and no ``"param_ui"`` field metadata).
+    ``styles[key]`` and no ``"param_ui"`` field metadata).  ``Enum`` / ``Literal``
+    types infer a dropdown, and ``Optional[X]`` / ``X | None`` unwrap to ``X``.
     """
+    py_type = _unwrap_optional(py_type)
     if py_type is bool:
         return CheckboxUI()
     if py_type is int:
         return ValueEditUI(step=1, digits=0)
     if py_type is float:
         return ValueEditUI()
+    if _is_enum(py_type):
+        return DropdownUI(options=[m.value for m in py_type])
+    if get_origin(py_type) is Literal:
+        return DropdownUI(options=[str(a) for a in get_args(py_type)])
     if py_type is str or isinstance(value, str):
         if isinstance(value, str) and _looks_like_color(value):
             return ColorPickerUI()

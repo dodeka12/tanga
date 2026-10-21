@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from .._controls import (
@@ -25,6 +26,7 @@ from .._controls import (
     TextArea,
     TextField,
     ValueEdit,
+    normalize_dropdown_options,
 )
 from ._helpers import _TABLE_COLUMN_MIN_PX
 from .._icons import Icon
@@ -234,7 +236,7 @@ class DropdownView(ControlView[Dropdown]):
         *,
         label: str = "",
         variant: EControlVariant = EControlVariant.DEFAULT,
-        options: list[str] | tuple[str, ...] = (),
+        options: Sequence[str | tuple[str, str]] = (),
         value: str = "",
         on_change: ControlHandler | None = None,
         tooltip: str = "",
@@ -274,7 +276,7 @@ class DropdownView(ControlView[Dropdown]):
         return self.control.variant
 
     @property
-    def options(self) -> list[str]:
+    def options(self) -> list[str | tuple[str, str]]:
         """The fixed set of selectable options."""
         return self.control.options
 
@@ -287,6 +289,17 @@ class DropdownView(ControlView[Dropdown]):
     def on_change(self) -> ControlHandler | None:
         """The ``change`` event handler."""
         return self.control.on_change
+
+    def set_options(
+        self,
+        options: Sequence[str | tuple[str, str]],
+    ) -> None:
+        """Replace the dropdown's options at runtime and push ``control_state``."""
+        self.control.options = list(options)
+        if self._push_state is not None:
+            self._push_state(
+                self.id, {"options": normalize_dropdown_options(self.control.options)}
+            )
 
 
 class FileChooserView(ControlView[FileChooser]):
@@ -635,6 +648,7 @@ class ValueEditView(ControlView[ValueEdit]):
         digits: int = 2,
         value: float = 0.0,
         editable: bool = True,
+        unit: str = "",
         tooltip: str = "",
         on_change: ControlHandler | None = None,
         size: SizeSpec = None,
@@ -667,6 +681,7 @@ class ValueEditView(ControlView[ValueEdit]):
             digits=int(digits),
             value=float(value),
             editable=editable,
+            unit=unit,
             on_change=on_change,
         )
 
@@ -699,6 +714,11 @@ class ValueEditView(ControlView[ValueEdit]):
     def editable(self) -> bool:
         """Whether the value can be typed directly."""
         return self.control.editable
+
+    @property
+    def unit(self) -> str:
+        """The unit suffix shown after the value."""
+        return self.control.unit
 
     @property
     def on_change(self) -> ControlHandler | None:

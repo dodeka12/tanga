@@ -1011,7 +1011,13 @@ class LayoutHostImpl:
         Returns the set of control/group view ids (for unregistration on
         replacement).
         """
-        from .views import iter_control_views, iter_group_views, iter_log_views, iter_scene_views
+        from .views import (
+            iter_control_views,
+            iter_group_views,
+            iter_log_views,
+            iter_params_views,
+            iter_scene_views,
+        )
 
         registered: set[str] = set()
         for view in iter_control_views(root):
@@ -1028,6 +1034,9 @@ class LayoutHostImpl:
             registered.add(view.id)
             if view.on_toggle is not None:
                 self._transport.register(view.id, view.on_toggle, event="toggle")
+        for view in iter_params_views(root):
+            view._push_state = self._push_control_state
+            view._push_layout = self._sync_overlays
         return registered
 
     def resolve_control(self, cid: str) -> Any | None:

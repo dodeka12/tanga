@@ -136,6 +136,10 @@ export class View extends EventTarget {
         this.emit('preferredchange', { fields: ['preferredWidth', 'preferredHeight'] });
     }
 
+    get hidden() {
+        return this._hidden;
+    }
+
     get fixedX() {
         return this._minWidth !== null && this._maxWidth !== null
             && this._minWidth.equals(this._maxWidth);

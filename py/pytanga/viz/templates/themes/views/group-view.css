@@ -54,6 +54,12 @@
     color: var(--tanga-fg-strong);
 }
 
+/* A group nested inside a `ParamsView` renders a smaller title (it is a
+ * subsection, not a top-level panel). */
+.tanga-group.tanga-group-nested .tanga-group-title {
+    font-size: var(--tanga-group-nested-title-size);
+}
+
 .tanga-group-title-wrap {
     display: flex;
     align-items: center;

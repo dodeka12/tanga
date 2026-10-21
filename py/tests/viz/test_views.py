@@ -533,7 +533,10 @@ class TestControlViews:
             DropdownView("d1", label="Mode", options=["a", "b"], value="a")
         )["root"]
         assert node["type"] == "dropdown_view"
-        assert node["options"] == ["a", "b"]
+        assert node["options"] == [
+            {"value": "a", "label": "a"},
+            {"value": "b", "label": "b"},
+        ]
         assert node["value"] == "a"
         assert node["variant"] == "default"
 

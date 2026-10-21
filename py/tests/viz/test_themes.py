@@ -159,6 +159,16 @@ def test_visualizer_theme_default_and_set() -> None:
         viz.set_theme("nope")
 
 
+def test_visualizer_theme_constructor_arg() -> None:
+    from pytanga.viz import Visualizer
+
+    viz = Visualizer(add_default_axes=False, add_default_grid=False, theme="compact")
+    assert viz.theme == "compact"
+
+    with pytest.raises(KeyError):
+        Visualizer(add_default_axes=False, add_default_grid=False, theme="nope")
+
+
 def test_set_theme_emits_theme_define(monkeypatch) -> None:  # noqa: ANN001
     from pytanga.viz import Visualizer
     from pytanga.viz._themes import theme_css_files

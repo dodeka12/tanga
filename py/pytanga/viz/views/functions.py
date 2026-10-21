@@ -38,6 +38,7 @@ from .control_views import (
 )
 from .group_view import GroupView
 from .log_view import LogView
+from .params_view import ParamsView
 from .scene_view import SceneView
 
 
@@ -282,6 +283,22 @@ def iter_group_views(root: View) -> Iterator[GroupView]:
 
     def _visit(view: View) -> Iterator[GroupView]:
         if isinstance(view, GroupView):
+            yield view
+        if isinstance(view, HasChildren):
+            for child in view.children:
+                yield from _visit(child)
+        if isinstance(view, HasOverlay):
+            for child in view.overlay:
+                yield from _visit(child)
+
+    yield from _visit(root)
+
+
+def iter_params_views(root: View) -> Iterator[ParamsView]:
+    """Yield every :class:`ParamsView` in the tree (DFS order)."""
+
+    def _visit(view: View) -> Iterator[ParamsView]:
+        if isinstance(view, ParamsView):
             yield view
         if isinstance(view, HasChildren):
             for child in view.children:

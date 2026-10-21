@@ -63,6 +63,7 @@ class VisualizerApp:
         enable_server_stop_key: bool = False,
         add_default_axes: bool = True,
         add_default_grid: bool = True,
+        theme: str = "dark",
     ) -> None:
         """Create the app and the underlying :class:`~pytanga.viz.Visualizer`.
 
@@ -81,6 +82,7 @@ class VisualizerApp:
             enable_server_stop_key=enable_server_stop_key,
             add_default_axes=add_default_axes,
             add_default_grid=add_default_grid,
+            theme=theme,
         )
         self._stop_requested = threading.Event()
         # The user loop (the loop running ``_app_main``), captured so control
