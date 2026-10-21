@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.21.1 (2.22.0-rc2)] — 2026-10-21
+- Compact control theme (density variant) · ParamsView (dict/dataclass → two-column controls, `ControlUI` + `param_ui()` metadata) · fully themed controls with narrower min-widths
+- Breaking: control-view `min_width`/`min_height` floors moved to the theme (now `None` by default)
+→ [Details](2026/10/21_546548f83.md)
+
 ## [Since 2.21.1 (2.22.0-rc1)] — 2026-10-20
 - DepthImage grazing-angle filter (`max_grazing_angle` → live `u_max_stretch` uniform) · `pinhole_depth.py` box-in-plane + sine slider example
 - Bug fixes: background image layers no longer lose their textures after rapid `set_layer` updates
