@@ -40,6 +40,16 @@ viz.set_theme("corp")   # validate + push the theme live
 viz.show()
 ```
 
+You can also select the theme at construction time, before the browser connects:
+
+```python
+viz = Visualizer(theme="corp")
+```
+
+`VisualizerApp(theme=…)` forwards the same argument.  A single `ParamsView`
+can use a local compact density (`ParamsView(dense=True)`) without changing the
+global theme.
+
 `register_theme` is global: register once, and the id is available to every
 `Visualizer` (and to `list_themes()` / `theme_css_files()`).
 
@@ -77,7 +87,7 @@ A theme's `tokens.css` overrides any of the CSS custom properties defined in
 | Scrollbar | `--tanga-scrollbar-thumb`, `--tanga-scrollbar-thumb-hover`, `--tanga-scrollbar-track` |
 | Elevation | `--tanga-shadow` |
 | Typography | `--tanga-font`, `--tanga-font-size-title`, `--tanga-font-size-body`, `--tanga-font-size-label`, `--tanga-font-size-value` |
-| Density | `--tanga-control-min-width`, `--tanga-control-min-height`, `--tanga-icon-control-size`, `--tanga-control-min-width-narrow`, `--tanga-control-margin-y`, `--tanga-range-margin-y`, `--tanga-params-row-gap`, `--tanga-params-key-gap`, `--tanga-params-title-margin`, `--tanga-params-min-width` |
+| Density | `--tanga-control-min-width`, `--tanga-control-min-height`, `--tanga-icon-control-size`, `--tanga-control-min-width-narrow`, `--tanga-control-margin-y`, `--tanga-range-margin-y`, `--tanga-params-row-gap`, `--tanga-params-key-gap`, `--tanga-params-title-margin`, `--tanga-params-min-width`, `--tanga-group-nested-title-size` |
 | Status/loading | `--tanga-status-ok`, `--tanga-status-err`, `--tanga-loading-bg`, `--tanga-spinner` |
 | Warning banner | `--tanga-warning-bg`, `--tanga-warning-fg`, `--tanga-warning-button-bg`, `--tanga-warning-button-fg` |
 

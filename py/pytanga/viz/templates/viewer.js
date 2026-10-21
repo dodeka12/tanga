@@ -694,6 +694,12 @@ async function handleMessage(msg) {
             const group = _viewRegistry.get(msg.id);
             if (group && typeof group.setCollapsed === 'function') group.setCollapsed(!!msg.collapsed);
         }
+        if (msg.row !== undefined && msg.title !== undefined) {
+            const paramsView = _viewRegistry.get(msg.id);
+            if (paramsView && typeof paramsView.setRowTitle === 'function') {
+                paramsView.setRowTitle(msg.row, msg.title);
+            }
+        }
         return;
     }
 

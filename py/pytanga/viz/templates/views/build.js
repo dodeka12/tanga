@@ -161,7 +161,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             existing.update(node);
             paramsView = existing;
         } else {
-            paramsView = new ParamsView({ title: node.title });
+            paramsView = new ParamsView({ title: node.title, dense: node.dense });
         }
         applySizeSpecs(paramsView, node);
         for (const row of node.rows || []) {
@@ -342,6 +342,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
                 id: node.id, label: node.label, tooltip: node.tooltip,
                 min: node.min, max: node.max, step: node.step,
                 digits: node.digits, value: node.value, editable: node.editable,
+                unit: node.unit,
             });
         }
     } else if (node.type === 'table_view') {

@@ -100,7 +100,7 @@ completely (including the flush)", `False` lets the default behaviour run
 ### Event hierarchy
 
 ```
-ControlEvent                      # shared base: browser_id (+ future fields)
+ControlEvent                      # shared base: browser_id, key, value
 └── InteractionEvent              # + object_id, event_type, camera
     ├── ClickEvent                # + mouse_button, modifiers, screen_position,
     │                               world_position, world_normal, ray_origin,
@@ -330,10 +330,27 @@ and event routing reuse the existing `(id, event)` registry unchanged.
 - Per-field UI metadata is a `ControlUI` spec (`py/pytanga/viz/_params_ui.py`),
   written via `param_ui(default, ui=<ControlUI>)` or raw
   `field(metadata={"param_ui": <ControlUI>})`; keys with no spec are inferred
-  from the value/field type.
+  from the value/field type (including `Enum`/`Literal` → dropdown and
+  `Optional[X]`/`X | None` unwrapping).
 - The new `Control.hide_label` field (serialized only when `True`) makes a control
   factory render without its own label — the params row's left column shows the
   title instead.
+- **Change events** carry the field: `ParamsView` sets `event.key`/`event.value`
+  on the shared `ControlEvent` before firing the handler, and a per-field
+  `ControlUI.on_change` (when set) replaces the view's shared `on_change` for that
+  row.  Values are coerced to the resolved field type (`coerce=`/`integer=` to
+  override), and `ControlUI.validate` can reject a change (the control reverts).
+- **Non-parameter rows** are declared with `extra_rows=[RowSpec(key, ui, …)]`
+  (position `"above"`/`"below"`); they render as ordinary child controls.
+- **Nested dataclasses** render as a nested `GroupView` (tagged
+  `tanga-group-nested` in the frontend) wrapping a nested `ParamsView` whose id
+  is `f"{view.id}.{key}"`; `GroupUI(title=…, collapsed=…)` customizes it.
+- **Row state** (`set_visible`/`set_enabled`/`set_title`/`set_options`) reuses the
+  existing `control_state` message (keyed by the row's control id for
+  visible/enabled, and `{row, title}` on the `ParamsView` id for titles); the
+  frontend `params-view.js` tracks rows by key and hides/greys/relabels the whole
+  row.  `set_state`/`add`/`remove` rebind the source or mutate the row list and
+  re-push the layout via the injected `_push_layout` callback.
 
 ## Interactive objects
 

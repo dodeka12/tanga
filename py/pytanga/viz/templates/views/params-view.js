@@ -7,12 +7,13 @@ import { View } from './view.js';
 import { stackMinSize, stackPreferredSize } from './stack-size.js';
 
 export class ParamsView extends View {
-    constructor({ title = '' } = {}) {
+    constructor({ title = '', dense = false } = {}) {
         super();
         this.title = title;
         this.children = [];
         this._rows = [];
         this.el.classList.add('tanga-params-view');
+        if (dense) this.el.classList.add('tanga-params-dense');
         this._titleEl = document.createElement('div');
         this._titleEl.className = 'tanga-params-title';
         this._setTitle(title);
@@ -42,32 +43,65 @@ export class ParamsView extends View {
         const row = document.createElement('div');
         row.className = 'tanga-params-row';
 
-        const keyEl = document.createElement('span');
-        keyEl.className = 'tanga-params-key';
-        keyEl.textContent = title || key;
-
         const cell = document.createElement('div');
         cell.className = 'tanga-params-control';
 
-        row.appendChild(keyEl);
+        // A nested `GroupView` control spans the whole row (it renders its own
+        // title), so it has no separate key label.
+        const isGroup = control && control.typeTag === 'group';
+        let keyEl = null;
+        if (isGroup) {
+            row.classList.add('tanga-params-row-group');
+            control.el.classList.add('tanga-group-nested');
+        } else {
+            keyEl = document.createElement('span');
+            keyEl.className = 'tanga-params-key';
+            keyEl.textContent = title || key;
+            row.appendChild(keyEl);
+        }
+
         row.appendChild(cell);
         this.el.appendChild(row);
         control.mount(cell);
 
-        this._rows.push({ key, title, control, row });
+        // Track the child's visibility so a server-driven `control_state
+        // {visible}` (which hides the control view) also hides the row's title.
+        const syncVisibility = () => this._syncRowVisibility(key);
+        control.on('constraintschange', syncVisibility);
+        control.on('preferredchange', syncVisibility);
+
+        this._rows.push({ key, title, control, row, keyEl, syncVisibility });
         this.children.push(control);
         this._invalidateContent();
         return control;
+    }
+
+    _syncRowVisibility(key) {
+        const entry = this._rows.find((r) => r.key === key);
+        if (!entry) return;
+        const hidden = entry.control.hidden;
+        entry.row.style.display = hidden ? 'none' : '';
+        this._invalidateContent();
+    }
+
+    setRowTitle(key, title) {
+        const entry = this._rows.find((r) => r.key === key);
+        if (!entry) return;
+        entry.title = title;
+        if (entry.keyEl) entry.keyEl.textContent = title || key;
+        this._invalidateContent();
     }
 
     removeChild(view) {
         const idx = this.children.indexOf(view);
         if (idx === -1) return;
         this.children.splice(idx, 1);
-        const { row } = this._rows[idx];
+        const entry = this._rows[idx];
         this._rows.splice(idx, 1);
+        view.off('constraintschange', entry.syncVisibility);
+        view.off('preferredchange', entry.syncVisibility);
         view.unmount();
-        if (row && row.parentNode) row.remove();
+        if (entry.row && entry.row.parentNode) entry.row.remove();
         this._invalidateContent();
     }
 

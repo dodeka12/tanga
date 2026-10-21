@@ -659,6 +659,9 @@
                 "Params View": "py/examples/viz/ui/controls/params_view.md"
               },
               {
+                "Params View Features": "py/examples/viz/ui/controls/params_view_features.md"
+              },
+              {
                 "Progress Bar": "py/examples/viz/ui/controls/progress_bar.md"
               },
               {

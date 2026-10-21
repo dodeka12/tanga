@@ -565,19 +565,41 @@ ParamsView(P())
 `dataclasses.field(metadata={"param_ui": <ControlUI>})`; the raw `field()` form
 is equivalent.  `ui=` takes one `ControlUI` class per control type (`SliderUI`,
 `ValueEditUI`, `DropdownUI`, `CheckboxUI`, `TextFieldUI`, `TextAreaUI`,
-`ColorPickerUI`, `ButtonUI`, `LabelUI`, `MarkdownUI`, `ProgressBarUI`) — the
-class itself encodes the control type, and any extra `metadata` keys are the
-user's own and are ignored.
+`ColorPickerUI`, `ButtonUI`, `LabelUI`, `MarkdownUI`, `ProgressBarUI`, and
+`GroupUI` for nested groups) — the class itself encodes the control type, and
+any extra `metadata` keys are the user's own and are ignored (except
+`metadata["description"]`, which becomes the row's tooltip).
 
 When a key has no `ControlUI` spec, the control is inferred from the value/field
 type: `bool` → checkbox, `int`/`float` → stepper, `str` → text field (color
-picker for `#rgb`/`#rrggbb`), `list`/`tuple` → dropdown.
+picker for `#rgb`/`#rrggbb`), `list`/`tuple` → dropdown, `Enum`/`Literal` →
+dropdown of the members/values (an `X | None` / `Optional[X]` field unwraps to
+`X`).  A dataclass-valued field renders as a nested `GroupView` (customized with
+`ui=GroupUI(title=…, collapsed=…)`).
 
 `on_change(state, event)` fires on every change with the full state — the live
 `dict` (dict mode) or the dataclass instance (dataclass mode, mutated in place).
-`view.get_value()` / `view.set_value(key, value)` / `view.set_values(mapping)`
-read and update the state (pushing per-control `control_update`s).  See
+`event.key`/`event.value` identify the changed field.  A per-field handler set
+on the `ControlUI` (`ui=SliderUI(on_change=…)`) replaces the shared handler for
+that row.  `view.get_value()` / `view.set_value(key, value)` /
+`view.set_values(mapping)` read and update the state (pushing per-control
+`control_update`s) without firing `on_change`.  See
 `py/examples/viz/ui/controls/params_view.py`.
+
+The `ControlUI` spec also carries `visible` (initial visibility), `coerce`
+(custom value coercion), `validate` (reject invalid changes), `integer` (sugar
+for `coerce=int` on `SliderUI`/`ValueEditUI`), and `unit` (a suffix on
+`ValueEditUI`).  `DropdownUI.options` accepts `(value, label)` pairs so a label
+can differ from its value.
+
+Non-parameter rows are declared with `extra_rows=[RowSpec(key, ui, value=…,
+on_click=…, on_change=…, position="above"|"below")]`; a row's `position` places
+it above or below the parameter rows.  The runtime API is
+`set_visible`/`set_enabled`/`set_title`/`set_options` (whole-row), plus
+`set_state`/`add`/`remove` for replacing or mutating the row set.
+
+`title_from_name=True` derives row titles from snake_case keys (`radius_mm` →
+"Radius mm"), and `dense=True` applies a per-view compact density.
 
 `ParamsView` accepts the standard `View` size parameters (`size=`, `min_width=`,
 `min_height=`, `preferred_width=`, `preferred_height=`, `max_width=`,

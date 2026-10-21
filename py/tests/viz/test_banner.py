@@ -65,7 +65,10 @@ def test_serialize_banner_controls_kind_specific():  # noqa: ANN201
     assert controls[0]["value"] == 5
 
     assert controls[1]["kind"] == "dropdown"
-    assert controls[1]["options"] == ["a", "b"]
+    assert controls[1]["options"] == [
+        {"value": "a", "label": "a"},
+        {"value": "b", "label": "b"},
+    ]
     assert controls[1]["value"] == "a"
 
     assert controls[2]["kind"] == "button"

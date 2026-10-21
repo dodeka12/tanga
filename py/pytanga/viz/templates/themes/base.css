@@ -76,6 +76,7 @@
     --tanga-font-size-body: 13px;
     --tanga-font-size-label: 12px;
     --tanga-font-size-value: 12px;
+    --tanga-group-nested-title-size: var(--tanga-font-size-body);
 
     /* Status + loading. */
     --tanga-status-ok: #4f4;

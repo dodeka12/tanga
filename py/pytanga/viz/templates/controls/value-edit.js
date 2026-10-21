@@ -46,6 +46,12 @@ export function createValueEdit(ctrl) {
     downBtn.appendChild(createIconElement('uc:▼'));
 
     row.appendChild(input);
+    if (ctrl.unit) {
+        const unitEl = document.createElement('span');
+        unitEl.className = 'tanga-value-unit';
+        unitEl.textContent = ctrl.unit;
+        row.appendChild(unitEl);
+    }
     row.appendChild(upBtn);
     row.appendChild(downBtn);
     wrapper.appendChild(row);

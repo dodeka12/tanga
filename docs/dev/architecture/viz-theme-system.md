@@ -57,9 +57,15 @@ without touching the layout model:
   its height is measured from the rendered rows.
 - `--tanga-font-size-title` / `--tanga-font-size-body` / `--tanga-font-size-label` /
   `--tanga-font-size-value` — the typography scale (14 / 13 / 12 / 12 px).
+- `--tanga-group-nested-title-size` — the smaller title font for a `GroupView`
+  nested inside a `ParamsView` (defaults to `var(--tanga-font-size-body)`).
 
 The built-in `compact` theme overrides these tokens and re-lays-out the
-value-edit stepper via a `value-edit` override, producing a dense variant.
+value-edit stepper via a `value-edit` override, producing a dense variant.  The
+active theme is selected at construction with `Visualizer(theme=…)` /
+`VisualizerApp(theme=…)` (equivalent to `set_theme(…)` before the browser
+connects); a single `ParamsView(dense=True)` applies a local compact density via
+the scoped `.tanga-params-dense` override without changing the global theme.
 
 ## Wire message
 

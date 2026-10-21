@@ -151,6 +151,9 @@ class Visualizer(_JupyterDisplayMixin):
         # ``VizSceneHandle.enable_server_stop_key()``.
         enable_server_stop_key: bool = False,
         port_conflict_mode: PortConflictMode | None = None,
+        # Initial UI theme id (e.g. "dark", "light", "compact").  Equivalent to
+        # calling ``set_theme(...)`` before the first browser connects.
+        theme: str = "dark",
     ) -> None:
         if getattr(self, "_initialized", False):
             self._add_default_axes = add_default_axes
@@ -243,7 +246,7 @@ class Visualizer(_JupyterDisplayMixin):
             unregister_pyramid=self._unregister_pyramid,
         )
         self._layout.add_scene("")
-        self._theme_host = ThemeHost(self._transport, self._layout)
+        self._theme_host = ThemeHost(self._transport, self._layout, theme=theme)
         self._interaction_host = InteractionHost(
             self._transport, self._layout, self._handler_registry
         )
