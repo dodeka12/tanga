@@ -60,6 +60,9 @@ without touching the layout model:
 - `--tanga-group-nested-title-size` — the smaller title font for a `GroupView`
   nested inside a `ParamsView` (defaults to `var(--tanga-font-size-body)`).
 
+A disabled `GroupView` (`.tanga-group-disabled`) greys its header with
+`var(--tanga-disabled-opacity)`, the same token controls use when disabled.
+
 The built-in `compact` theme overrides these tokens and re-lays-out the
 value-edit stepper via a `value-edit` override, producing a dense variant.  The
 active theme is selected at construction with `Visualizer(theme=…)` /

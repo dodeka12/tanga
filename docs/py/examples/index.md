@@ -278,6 +278,8 @@ uv run python py/examples/<path>.py
 
 - **display** — [Interactive Visualizer](viz/jupyter/interactive.md)
 
+- **dotted** — [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
+
 - **double pendulum** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
 
 - **drag** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Demo: Drag a 3D point interactively with ActPoint](viz/interaction/act_point.md), [Demo: Drag TWO 3D points interactively with ActPoint](viz/interaction/act_point_two.md), [Demo: Drag TWO 2D points interactively with ActPoint](viz/interaction/act_point_two_2d.md), [Demo: Drag a 3D point interactively with the mouse](viz/interaction/drag_point.md)
@@ -308,7 +310,7 @@ uv run python py/examples/<path>.py
 
 - **entity** — [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
-- **enum** — [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md)
+- **enum** — [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md)
 
 - **Euclidean** — [Euclidean 3D geometric algebra  G(3, 0)](ga/basis/base_e3_demo.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md)
 
@@ -359,6 +361,8 @@ uv run python py/examples/<path>.py
 - **frame streaming** — [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md)
 
 - **frustum** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
+
+- **full_width** — [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
 
 - **G(3,0)** — [Euclidean 3D geometric algebra  G(3, 0)](ga/basis/base_e3_demo.md)
 
@@ -798,8 +802,6 @@ uv run python py/examples/<path>.py
 
 - **set_default_color** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
-- **set_state** — [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
-
 - **set_theme** — [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
 - **shader** — [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Switch between standard and custom surface texture mapping](viz/surface/texture_mapping.md)
@@ -961,8 +963,6 @@ uv run python py/examples/<path>.py
 - **update** — [Labels with custom styling, dynamic update, and removal](viz/labels/basic.md)
 
 - **update in place** — [Animation](viz/jupyter/animation.md)
-
-- **validate** — [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
 
 - **variable** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 

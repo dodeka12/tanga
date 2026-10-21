@@ -575,11 +575,14 @@ type: `bool` → checkbox, `int`/`float` → stepper, `str` → text field (colo
 picker for `#rgb`/`#rrggbb`), `list`/`tuple` → dropdown, `Enum`/`Literal` →
 dropdown of the members/values (an `X | None` / `Optional[X]` field unwraps to
 `X`).  A dataclass-valued field renders as a nested `GroupView` (customized with
-`ui=GroupUI(title=…, collapsed=…)`).
+`ui=GroupUI(title=…, collapsed=…, extra_rows=[…])` — a nested group can carry its
+own button/status rows).
 
 `on_change(state, event)` fires on every change with the full state — the live
 `dict` (dict mode) or the dataclass instance (dataclass mode, mutated in place).
-`event.key`/`event.value` identify the changed field.  A per-field handler set
+`event.key`/`event.value` identify the changed field; a nested-group field
+reports a dotted `event.key` (`"surface.scale"`) and still fires the shared
+handler with the top-level state.  A per-field handler set
 on the `ControlUI` (`ui=SliderUI(on_change=…)`) replaces the shared handler for
 that row.  `view.get_value()` / `view.set_value(key, value)` /
 `view.set_values(mapping)` read and update the state (pushing per-control
@@ -588,15 +591,20 @@ that row.  `view.get_value()` / `view.set_value(key, value)` /
 
 The `ControlUI` spec also carries `visible` (initial visibility), `coerce`
 (custom value coercion), `validate` (reject invalid changes), `integer` (sugar
-for `coerce=int` on `SliderUI`/`ValueEditUI`), and `unit` (a suffix on
-`ValueEditUI`).  `DropdownUI.options` accepts `(value, label)` pairs so a label
-can differ from its value.
+for `coerce=int` on `SliderUI`/`ValueEditUI`), `unit` (a suffix on
+`ValueEditUI`), and `full_width` (render the row without a key column; default
+on `ButtonUI`/`MarkdownUI`/`ProgressBarUI`).  `DropdownUI.options` accepts
+`(value, label)` pairs so a label can differ from its value, and
+`ButtonUI.label` is the button's own caption.
 
 Non-parameter rows are declared with `extra_rows=[RowSpec(key, ui, value=…,
 on_click=…, on_change=…, position="above"|"below")]`; a row's `position` places
 it above or below the parameter rows.  The runtime API is
-`set_visible`/`set_enabled`/`set_title`/`set_options` (whole-row), plus
-`set_state`/`add`/`remove` for replacing or mutating the row set.
+`set_visible`/`set_enabled`/`set_title`/`set_options`/`set_value` (which accept
+dotted keys like `set_value("surface.scale", 2.0)` and also act on nested-group
+rows — `set_enabled("surface", False)` greys + collapses the group), plus
+`set_state`/`add`/`remove` for replacing or mutating the row set
+(`set_state` rebinds nested groups recursively).
 
 `title_from_name=True` derives row titles from snake_case keys (`radius_mm` →
 "Radius mm"), and `dense=True` applies a per-view compact density.

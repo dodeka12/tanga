@@ -71,10 +71,11 @@ inbound dispatch that resolves them.
 - **`ParamsView`** — a composite view (`views/params_view.py`) that renders a
   dict or a `@dataclass` as one child `ControlView` per key (title in the left
   column, control on the right).  Nested dataclasses render as nested
-  `GroupView`s, and `extra_rows=[RowSpec(…)]` adds non-parameter rows.  The
-  children are ordinary control views, so their handlers register on the same
-  `(id, event)` registry; the new `Control.hide_label` flag makes each render
-  label-less.  See
+  `GroupView`s (sharing the parent `on_change` via dotted `event.key`), and
+  `extra_rows=[RowSpec(…)]` (top-level or per-`GroupUI`) adds non-parameter rows;
+  `ControlUI.full_width` rows render without a key column.  The children are
+  ordinary control views, so their handlers register on the same `(id, event)`
+  registry; the new `Control.hide_label` flag makes each render label-less.  See
   [`viz-controls-and-interactions.md`](viz-controls-and-interactions.md).
 - **Inbound control event** — `control:*` -> `LayoutHost.dispatch_control_event` ->
   `resolve_control` **tree-walk** (layouts + dialogs) -> `control.handle_event`

@@ -34,6 +34,7 @@ class ControlUI:
     on_change: ControlHandler | None = None
     coerce: Callable[[Any], Any] | None = None
     validate: Callable[[Any], bool | str] | None = None
+    full_width: bool = False
     kind: ClassVar[str] = ""
 
 
@@ -68,6 +69,7 @@ class GroupUI(ControlUI):
 
     kind: ClassVar[str] = "group"
     collapsed: bool = False
+    extra_rows: list[RowSpec] | None = None
 
 
 @dataclass
@@ -114,8 +116,10 @@ class ButtonUI(ControlUI):
     """UI spec for a button (an action, not a value)."""
 
     kind: ClassVar[str] = "button"
+    label: str | None = None
     icon: str | None = None
     icon_only: bool = False
+    full_width: bool = True
 
 
 @dataclass
@@ -131,6 +135,7 @@ class MarkdownUI(ControlUI):
     """UI spec for read-only rendered markdown."""
 
     kind: ClassVar[str] = "markdown"
+    full_width: bool = True
 
 
 @dataclass
@@ -141,6 +146,25 @@ class ProgressBarUI(ControlUI):
     total: float | None = None
     indeterminate: bool | None = None
     text: str | None = None
+    full_width: bool = True
+
+
+@dataclass
+class RowSpec:
+    """A non-parameter row rendered inside a :class:`~pytanga.viz.ParamsView`.
+
+    ``ui`` is the row's :class:`ControlUI` spec (a button, label, markdown,
+    progress bar, …), ``value`` its initial value, and ``on_click`` / ``on_change``
+    the row's handler (falling back to the ``ParamsView``'s shared ``on_change``
+    when unset).  ``position`` places the row above or below the parameter rows.
+    """
+
+    key: str
+    ui: ControlUI
+    value: Any = None
+    on_click: ControlHandler | None = None
+    on_change: ControlHandler | None = None
+    position: Literal["above", "below"] = "below"
 
 
 #: The reserved ``dataclasses.field(metadata=…)`` key that holds a
@@ -179,6 +203,9 @@ _SHARED_UI_FIELDS = frozenset(
         "coerce",
         "validate",
         "integer",
+        "full_width",
+        "label",
+        "extra_rows",
     }
 )
 

@@ -105,6 +105,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
                 direction: node.direction,
                 position: node.position,
                 collapsed: node.collapsed,
+                enabled: node.enabled,
                 scrollable: node.scrollable,
                 gap: node.gap,
                 align: node.align,
@@ -166,7 +167,9 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
         applySizeSpecs(paramsView, node);
         for (const row of node.rows || []) {
             const child = buildViewTree(row.control, ws, reuse, registry, newScenes);
-            paramsView.addRow({ key: row.key, title: row.title, control: child });
+            paramsView.addRow({
+                key: row.key, title: row.title, control: child, full_width: row.full_width,
+            });
         }
         return registerView(registry, paramsView, node);
     }

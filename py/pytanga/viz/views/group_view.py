@@ -34,6 +34,8 @@ class GroupView(StackView):
         direction: EStackDirection | str = EStackDirection.VERTICAL,
         position: EAnchor | str | None = None,
         collapsed: bool = False,
+        visible: bool = True,
+        enabled: bool = True,
         scrollable: bool = False,
         gap: int | None = None,
         align: EStackAlign | str = EStackAlign.STRETCH,
@@ -71,6 +73,8 @@ class GroupView(StackView):
         self.title = title
         self.position = position
         self.collapsed = collapsed
+        self.visible = visible
+        self.enabled = enabled
         self.icon = icon
         self.icon_only = icon_only
         self.tooltip = tooltip
@@ -84,11 +88,33 @@ class GroupView(StackView):
         if self._push_state is not None:
             self._push_state(self.id, {"collapsed": self.collapsed})
 
+    def set_visible(self, visible: bool) -> None:
+        """Show/hide this group and push ``control_state`` (if mounted)."""
+        self.visible = bool(visible)
+        if self._push_state is not None:
+            self._push_state(self.id, {"visible": self.visible})
+
+    def set_enabled(self, enabled: bool) -> None:
+        """Enable/disable this group and push ``control_state`` (if mounted)."""
+        self.enabled = bool(enabled)
+        if self._push_state is not None:
+            self._push_state(self.id, {"enabled": self.enabled})
+
+    def set_title(self, title: str) -> None:
+        """Rename this group's header and push ``control_state`` (if mounted)."""
+        self.title = title
+        if self._push_state is not None:
+            self._push_state(self.id, {"title": title})
+
     def _serialize(self) -> dict[str, Any]:
         result = super()._serialize()
         result["title"] = self.title
         result["position"] = self.position
         result["collapsed"] = self.collapsed
+        if not self.visible:
+            result["visible"] = False
+        if not self.enabled:
+            result["enabled"] = False
         if self.icon is not None:
             result["icon"] = str(self.icon)
         result["icon_only"] = self.icon_only

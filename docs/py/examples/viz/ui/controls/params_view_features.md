@@ -1,6 +1,6 @@
 # ParamsView: a tour of the advanced features
 
-**Keywords:** params view · controls · param_ui · dataclass · enum · extra_rows · nested · set_state · validate
+**Keywords:** params view · controls · param_ui · dataclass · extra_rows · nested · dotted · full_width
 
 One `ParamsView` per panel demonstrates the features added on top of the basic
 dict/dataclass → controls mapping:
@@ -11,10 +11,14 @@ dict/dataclass → controls mapping:
 - **Inference** — `Enum` / `Literal` / `Optional[X]` fields infer dropdowns,
   and an `int` field is coerced back to `int` (printed via `event.key` /
   `event.value`).
-- **Nested + extra rows** — a dataclass field renders as a nested `GroupView`,
-  and `extra_rows` adds a button (above) and a status `MarkdownUI` (below).
+- **Nested + extra rows** — a dataclass field renders as a nested `GroupView`
+  (with its own `extra_rows` button), and `extra_rows` adds a checkbox that
+  enables/disables the group, a captioned full-width button (above), and a
+  full-width status `MarkdownUI` (below).
 - **Runtime API** — buttons call `set_visible` / `set_enabled` / `set_title`
-  / `set_options` / `add` / `remove` / `set_state` on a live `ParamsView`.
+  / `set_options` / `add` / `remove` / `set_state` on a live `ParamsView`;
+  nested fields are addressed by dotted key (`set_value("bounds.low", …)`, and
+  the shared handler reports a dotted `event.key`).
 - **Ergonomics** — `title_from_name=True` (snake_case → "Title Case") and
   `dense=True` (per-view compact density).
 
@@ -45,16 +49,20 @@ dict/dataclass → controls mapping:
 - **Inference** — ``Enum`` / ``Literal`` / ``Optional[X]`` fields infer dropdowns,
   and an ``int`` field is coerced back to ``int`` (printed via ``event.key`` /
   ``event.value``).
-- **Nested + extra rows** — a dataclass field renders as a nested ``GroupView``,
-  and ``extra_rows`` adds a button (above) and a status ``MarkdownUI`` (below).
+- **Nested + extra rows** — a dataclass field renders as a nested ``GroupView``
+  (with its own ``extra_rows`` button), and ``extra_rows`` adds a checkbox that
+  enables/disables the group, a captioned full-width button (above), and a
+  full-width status ``MarkdownUI`` (below).
 - **Runtime API** — buttons call ``set_visible`` / ``set_enabled`` / ``set_title``
-  / ``set_options`` / ``add`` / ``remove`` / ``set_state`` on a live ``ParamsView``.
+  / ``set_options`` / ``add`` / ``remove`` / ``set_state`` on a live ``ParamsView``;
+  nested fields are addressed by dotted key (``set_value("bounds.low", …)``, and
+  the shared handler reports a dotted ``event.key``).
 - **Ergonomics** — ``title_from_name=True`` (snake_case → "Title Case") and
   ``dense=True`` (per-view compact density).
 
 Run with:  uv run python py/examples/viz/ui/controls/params_view_features.py
 
-Keywords: params view, controls, param_ui, dataclass, enum, extra_rows, nested, set_state, validate
+Keywords: params view, controls, param_ui, dataclass, extra_rows, nested, dotted, full_width
 """
 
 from __future__ import annotations
@@ -68,6 +76,7 @@ from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
     ButtonUI,
     ButtonView,
+    CheckboxUI,
     ControlEvent,
     DropdownUI,
     GroupUI,
@@ -191,14 +200,45 @@ async def _on_detect(value: Any, event: ControlEvent) -> None:
     print(f"  button: {event.key!r} clicked")
 
 
+async def _on_reset_bounds(value: Any, event: ControlEvent) -> None:
+    # Dotted keys address a field inside the nested group.
+    nested_view.set_value("bounds.low", 0.1)
+    nested_view.set_value("bounds.high", 5.0)
+
+
+async def _on_toggle_bounds(value: Any, event: ControlEvent) -> None:
+    # A checkbox row disables/enables the nested "bounds" group.
+    nested_view.set_enabled("bounds", bool(value))
+
+
 nested_view = ParamsView(
     NestedParams(),
     min_width=Size.px(240),
     on_change=_on_change,
-    styles={"bounds": GroupUI(title="Bounds", collapsed=False)},
+    styles={
+        "bounds": GroupUI(
+            title="Bounds",
+            collapsed=False,
+            extra_rows=[
+                RowSpec(
+                    "reset_bounds",
+                    ButtonUI(label="Reset bounds"),
+                    on_click=_on_reset_bounds,
+                    position="above",
+                ),
+            ],
+        ),
+    },
     extra_rows=[
-        RowSpec("detect", ButtonUI(title="Detect rim"), on_click=_on_detect, position="above"),
-        RowSpec("status", MarkdownUI(title="Status"), "**Idle**"),
+        RowSpec(
+            "enable_bounds",
+            CheckboxUI(title="Bounds enabled"),
+            value=True,
+            on_change=_on_toggle_bounds,
+            position="above",
+        ),
+        RowSpec("detect", ButtonUI(label="Detect rim"), on_click=_on_detect, position="above"),
+        RowSpec("status", MarkdownUI(), "**Idle**"),
     ],
 )
 
