@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.22.0 (2.23.0-rc1)] — 2026-10-21
+- ParamsView enhancements: nested dataclass groups, `extra_rows`, per-row `set_visible`/`set_enabled`/`set_title`/`set_options`, `set_state`/`add`/`remove`, type coercion + `Enum`/`Literal` inference, `(value, label)` dropdowns, `validate`, tooltips, `Visualizer(theme=…)`
+- Breaking: dropdown `options` serialize as `{"value","label"}` objects
+→ [Details](2026/10/21_55c921c5f.md)
+
 ## [Since 2.21.1 (2.22.0-rc2)] — 2026-10-21
 - Compact control theme (density variant) · ParamsView (dict/dataclass → two-column controls, `ControlUI` + `param_ui()` metadata) · fully themed controls with narrower min-widths
 - Breaking: control-view `min_width`/`min_height` floors moved to the theme (now `None` by default)
