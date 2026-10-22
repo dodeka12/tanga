@@ -2,7 +2,7 @@
 // instead of a sphere.  Phase 8b: extended style example.
 
 import * as THREE from 'three';
-import { makeMaterial, styleParam, parseColor, tagEntity } from './utils.js';
+import { makeMaterial, styleParam, parseColor, tagEntity, tagScreenSpaceMarker } from './utils.js';
 
 export function createCrossHairPoint(ent) {
     const color = parseColor(ent, '#ff4444');
@@ -38,8 +38,6 @@ export function createCrossHairPoint(ent) {
 
     group.position.set(pos[0], pos[1], pos[2]);
     tagEntity(group, ent);
-    if (styleParam(ent, 'screen_space', false)) {
-        group.userData.isScreenSpace = true;
-    }
+    tagScreenSpaceMarker(group, styleParam(ent, 'screen_space', false));
     return group;
 }

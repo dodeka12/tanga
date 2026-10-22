@@ -219,7 +219,7 @@ class _CalibratedLabeler:
         self._mode: str | None = None
         self.selected: Any = None
         self.shapes: list[tuple[Any, Any]] = []  # (act, body_style)
-        self.selected_color = "#ffff44"
+        self.selected_color = "#ffcc00"
         self._styles: dict[str, Any] = {}
         self._previews: dict[str, DragPreview] = {}
 
@@ -379,11 +379,16 @@ class _CalibratedLabeler:
         self.selected = None
 
     def _set_selected_style(self, act: Any, selected: bool) -> None:
-        """Recolor the body (yellow) on selection and restore it on deselect."""
+        """Recolor the body on selection and restore it on deselect.
+
+        The selected color is a solid, fully-opaque amber (distinct from the
+        default ``#ffff44`` hover glow) so a selected-but-not-hovered point
+        reads as a solid marker rather than a washed-out/translucent one.
+        """
         for shape_act, style in self.shapes:
             if shape_act is act:
                 color = self.selected_color if selected else (style.color or "#ffffff")
-                self._world.update(shape_act.entity_id, color=color)
+                self._world.update(shape_act.entity_id, color=color, opacity=1.0)
                 break
         self._world.flush()
 

@@ -2,7 +2,7 @@
 // Phase: interactive rectangles (square ActPoint handles).
 
 import * as THREE from 'three';
-import { makeMaterial, styleParam, parseColor, tagEntity } from './utils.js';
+import { makeMaterial, styleParam, parseColor, tagEntity, tagScreenSpaceMarker } from './utils.js';
 
 export function createSquarePoint(ent) {
     const color = parseColor(ent, '#ffffff');
@@ -18,8 +18,6 @@ export function createSquarePoint(ent) {
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
     mesh.position.set(pos[0], pos[1], pos[2]);
     tagEntity(mesh, ent);
-    if (styleParam(ent, 'screen_space', false)) {
-        mesh.userData.isScreenSpace = true;
-    }
+    tagScreenSpaceMarker(mesh, styleParam(ent, 'screen_space', false));
     return mesh;
 }
