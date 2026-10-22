@@ -440,7 +440,8 @@ Three orthogonal concerns:
   all interaction on the pane (surface **and** `Act*` object editing) while
   leaving navigation (orbit/pan/zoom) working.
 - **surface** — the `InteractionSurface`: a `CoordinateMapper` (which defines
-  the plane via `plane()` and the pixel↔world mapping) plus pane-level
+  the plane via `plane()`, its in-plane pixel basis via `pixel_axes()`, and the
+  pixel↔world mapping) plus pane-level
   `on_drag_start`/`on_drag`/`on_drag_end`/`on_click` handlers and the same
   `DragBinding`/`ClickBinding` + cursor + enable/disable API as an
   `ActSceneObject`.

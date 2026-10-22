@@ -114,6 +114,8 @@ class TestRefineConic:
             assert abs(d.x) == pytest.approx(1.0 / np.sqrt(2.0), abs=1e-6)
             assert abs(d.y) == pytest.approx(1.0 / np.sqrt(2.0), abs=1e-6)
             assert d.z == pytest.approx(0.0)
+        # The conic path leaves the scalar angle at 0 (basis == semi-axes).
+        assert e.angle == 0.0
 
     def test_hyperbola(self):  # noqa: ANN201
         matrix = np.diag([1.0, -1.0, -1.0])

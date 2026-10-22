@@ -28,8 +28,11 @@ class Rectangle2D:
 
     The rectangle lies in the plane perpendicular to ``normal`` (default ``+z``,
     the natural choice for 2D use cases and the xy-plane in 3D), centered on
-    ``center``.  ``size`` is the full width (x) and height (y).  ``angle`` is an
-    in-plane rotation in radians (default ``0.0`` = axis-aligned).
+    ``center``.  ``size`` is the full width (x) and height (y).  ``dir_u`` and
+    ``dir_v`` optionally give the (orthonormal) in-plane basis; ``angle`` is an
+    in-plane rotation (radians, default ``0.0``) from ``dir_u`` toward ``dir_v``,
+    i.e. the width axis is ``R(normal, angle)·dir_u``.  When ``dir_u``/``dir_v``
+    are ``None`` the basis is derived from ``normal`` (world x/y for ``+z``).
 
     Parameters
     ----------
@@ -40,13 +43,21 @@ class Rectangle2D:
     normal:
         Normal direction of the rectangle plane (default ``+z``).
     angle:
-        In-plane rotation of the rectangle in radians (default ``0.0``).
+        In-plane rotation from ``dir_u`` in radians (default ``0.0``).
+    dir_u:
+        Optional first in-plane basis direction (default ``None`` = derived
+        from ``normal``).
+    dir_v:
+        Optional second in-plane basis direction (default ``None`` = derived
+        from ``normal``).
     """
 
     center: Point
     size: tuple[float, float]
     normal: Direction = field(default_factory=lambda: Direction(0.0, 0.0, 1.0))
     angle: float = 0.0
+    dir_u: Direction | None = None
+    dir_v: Direction | None = None
 
     def __init__(
         self,
@@ -54,6 +65,8 @@ class Rectangle2D:
         size: "tuple[float, float] | list[float] | None" = None,
         normal: "Direction | MV | None" = None,
         angle: "float | MV | None" = None,
+        dir_u: "Direction | MV | None" = None,
+        dir_v: "Direction | MV | None" = None,
     ) -> None:
         center = Point(0.0, 0.0, 0.0) if center is None else to_point(center)
         if size is None:
@@ -66,11 +79,15 @@ class Rectangle2D:
             size = (to_float(size[0]), to_float(size[1]))
         normal = Direction(0.0, 0.0, 1.0) if normal is None else to_direction(normal)
         angle = 0.0 if angle is None else to_float(angle)
+        dir_u = None if dir_u is None else to_direction(dir_u)
+        dir_v = None if dir_v is None else to_direction(dir_v)
 
         object.__setattr__(self, "center", center)
         object.__setattr__(self, "size", size)
         object.__setattr__(self, "normal", normal)
         object.__setattr__(self, "angle", angle)
+        object.__setattr__(self, "dir_u", dir_u)
+        object.__setattr__(self, "dir_v", dir_v)
 
     def __repr__(self) -> str:
         return (

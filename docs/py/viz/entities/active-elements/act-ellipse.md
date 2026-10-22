@@ -9,11 +9,12 @@ interaction happens through the handles; the body itself is visual-only.
 
 `Ellipse` is a viz-only geometry data class (no multivector representation). It
 lies in the plane perpendicular to `normal` (default `+z`), centred on `center`,
-with semi-axis radii `radius_u` / `radius_v`. Rotation is encoded in the
-orthogonal in-plane directions `dir_u` / `dir_v`; when unset the ellipse is
-axis-aligned. `ActEllipse` keeps an internal `angle` (radians) measured within
-the plane perpendicular to `normal` (default `+z`), and derives the orthogonal
-in-plane `dir_u` / `dir_v` from it.
+with semi-axis radii `radius_u` / `radius_v`. `dir_u` / `dir_v` optionally give
+the (orthonormal) in-plane basis, and `angle` (radians, default `0.0`) rotates
+the semi-axes within the plane from `dir_u` toward `dir_v`; when `dir_u`/`dir_v`
+are unset the basis is derived from `normal`. `ActEllipse` keeps an internal
+`angle` (radians) measured within the plane perpendicular to `normal` (default
+`+z`), and derives the in-plane `dir_u` / `dir_v` basis from `normal`.
 
 ```python
 from pytanga.geometry import Ellipse, Point

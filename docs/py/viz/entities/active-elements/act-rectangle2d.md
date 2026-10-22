@@ -10,7 +10,8 @@ through the handles; the body itself is visual-only.
 `Rectangle2D` is a viz-only geometry data class (no multivector representation,
 like `Box`/`RegularPolygon`). It lies in the plane perpendicular to `normal`
 (default `+z`), centred on `center`, with full width/height `size` and an
-in-plane `angle` (radians, default `0.0` = axis-aligned).
+in-plane `angle` (radians, default `0.0`) measured from the optional in-plane
+basis `dir_u` / `dir_v` (derived from `normal` when unset).
 
 ```python
 from pytanga.geometry import Rectangle2D, Point

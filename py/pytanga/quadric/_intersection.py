@@ -51,6 +51,17 @@ if TYPE_CHECKING:
         Point: type[Point]
 
 
+def _ellipse_axes_2d(entity: "Ellipse") -> tuple[tuple[float, float], tuple[float, float]]:
+    """The angle-rotated semi-axis directions of a 2D ellipse (XY plane)."""
+    ux, uy = (entity.dir_u.x, entity.dir_u.y) if entity.dir_u is not None else (1.0, 0.0)
+    vx, vy = (entity.dir_v.x, entity.dir_v.y) if entity.dir_v is not None else (0.0, 1.0)
+    c, s = float(np.cos(entity.angle)), float(np.sin(entity.angle))
+    return (
+        (c * ux + s * vx, c * uy + s * vy),
+        (-s * ux + c * vx, -s * uy + c * vy),
+    )
+
+
 _TOL = 1e-9
 
 _entities_module = None
@@ -397,12 +408,7 @@ def _sample_conic_2d(
         ]
     if isinstance(entity, E.Ellipse):
         c, ru, rv = entity.center, entity.radius_u, entity.radius_v
-        ux, uy = (
-            (entity.dir_u.x, entity.dir_u.y) if entity.dir_u is not None else (1.0, 0.0)
-        )
-        vx, vy = (
-            (entity.dir_v.x, entity.dir_v.y) if entity.dir_v is not None else (0.0, 1.0)
-        )
+        (ux, uy), (vx, vy) = _ellipse_axes_2d(entity)
         return [
             [
                 (
@@ -593,12 +599,7 @@ def _sample_curve_from_cone(
     if isinstance(entity, E.Ellipse):
         cx, cy = entity.center.x, entity.center.y
         ru, rv = entity.radius_u, entity.radius_v
-        ux, uy = (
-            (entity.dir_u.x, entity.dir_u.y) if entity.dir_u is not None else (1.0, 0.0)
-        )
-        vx, vy = (
-            (entity.dir_v.x, entity.dir_v.y) if entity.dir_v is not None else (0.0, 1.0)
-        )
+        (ux, uy), (vx, vy) = _ellipse_axes_2d(entity)
         thetas = list(np.linspace(0.0, 2.0 * np.pi, n, endpoint=False))
         thetas.extend(
             _tentacle_thetas(C, Q, axis, u, w, cx, cy, ru, rv, ux, uy, vx, vy)

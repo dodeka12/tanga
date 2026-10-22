@@ -496,7 +496,7 @@ class _CalibratedLabeler:
         if isinstance(entity, Ellipse):
             u0, v0 = _plane_basis(entity.normal)
             du = entity.dir_u if entity.dir_u is not None else u0
-            angle = math.atan2(du.dot(v0), du.dot(u0))
+            angle = math.atan2(du.dot(v0), du.dot(u0)) + entity.angle
             return ActEllipse(
                 center=entity.center,
                 radius_u=entity.radius_u,

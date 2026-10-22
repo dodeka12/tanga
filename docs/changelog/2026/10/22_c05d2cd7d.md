@@ -1,0 +1,26 @@
+# Changes since version 2.23.1
+
+## New Features
+
+- **Plane basis + scalar angle for 2D shapes** — `Rectangle2D` gains optional
+  `dir_u`/`dir_v` (in-plane basis) and `Ellipse` gains an `angle` scalar; both
+  now place their body in the same deterministic frame as their handles on any
+  plane.  `CoordinateMapper` gains `pixel_axes()` to expose the annotation
+  plane's pixel basis.
+
+- **Canonical scalar ellipse labelme storage** — the pytanga `ellipse` labelme
+  extension is written as a center point plus `radius_u`/`radius_v`/`angle`
+  scalar keys (instead of `[center, rim_u, rim_v]` rim points); the legacy rim
+  form is still accepted on load.
+
+## Bug Fixes
+
+- **`Rectangle2D` body and handles use one in-plane frame** — the body is placed
+  with a deterministic in-plane basis instead of the shortest-arc `+z → normal`
+  rotation (arbitrary near `-z`), so a rectangle on a tilted calibrated plane no
+  longer renders rotated relative to its corner/rotate handles.
+
+- **LabelMe rectangles/circles round-trip on a tilted calibrated plane** —
+  `LabelMeStore` builds/exports rectangles in the mapper's pixel basis, computes
+  circle radii in full 3D, and places the circle rim on the plane, so pixel
+  shapes survive load + save on any 3D plane.

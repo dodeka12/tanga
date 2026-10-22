@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from pytanga.geometry import Point, Rectangle2D
+from pytanga.geometry import Direction, Point, Rectangle2D
 from pytanga.viz import Rectangle2DStyle
 from pytanga.viz.serializer import serialize_entity
 
@@ -72,3 +72,14 @@ def test_rectangle2d_between() -> None:
     assert rect.size == (8.0, 12.0)
     # Corner order does not matter.
     assert Rectangle2D.between(b, a) == rect
+
+
+def test_rectangle2d_dir_defaults_none() -> None:
+    assert Rectangle2D().dir_u is None
+    assert Rectangle2D().dir_v is None
+
+
+def test_rectangle2d_dir_coerces_tuples() -> None:
+    rect = Rectangle2D(dir_u=Direction(0.0, 0.0, 1.0), dir_v=Direction(0.0, 1.0, 0.0))
+    assert (rect.dir_u.x, rect.dir_u.y, rect.dir_u.z) == (0.0, 0.0, 1.0)
+    assert (rect.dir_v.x, rect.dir_v.y, rect.dir_v.z) == (0.0, 1.0, 0.0)

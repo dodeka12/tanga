@@ -607,6 +607,9 @@ pane through a clean three-layer model — camera data → camera view → pane:
   world size of one image pixel at the plane (`1.0` for `PlanarMapper`,
   `depth / fx` for `CalibratedPlaneMapper`), used for scale-dependent distances
   (min radius/size, auto-close tolerance, rotate-handle offset).
+  `pixel_axes()` returns the unit world directions of image pixel `+u`/`+v` on
+  the annotation plane, so `LabelMeStore` can build/export oriented shapes
+  (rectangle/ellipse) in the mapper's plane basis.
   `LabelMeStore(mapper=…)` threads it through every pixel↔world call site so the
   labelme loader/saver is coordinate-system-agnostic — the default `PlanarMapper`
   preserves the historical "pixel == world XY" behavior, while

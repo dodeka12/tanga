@@ -8,12 +8,16 @@ import pytest
 
 from pytanga.geometry import (
     Curve,
+    Direction,
+    Ellipse,
     PlaneConicPair,
+    Point,
     PointSet,
     analyze_entity,
 )
 from pytanga.quadric import BasisQ2, BasisQ3
 from pytanga.quadric._embedding import _embed_point
+from pytanga.quadric._intersection import _ellipse_axes_2d
 from pytanga.quadric._pointset import _two_conic_intersection
 
 _SQRT3_2 = np.sqrt(3.0) / 2.0
@@ -176,3 +180,28 @@ class TestQ3PointTuples:
         ps = analyze_entity(net)
         assert len(ps) == 8
         _assert_recovers(ps, _Q3_PTS[:7])
+
+
+def test_ellipse_axes_2d_applies_angle() -> None:
+    e = Ellipse(
+        Point(0, 0, 0),
+        radius_u=2.0,
+        radius_v=1.0,
+        dir_u=Direction(1, 0, 0),
+        dir_v=Direction(0, 1, 0),
+    )
+    (ux, uy), (vx, vy) = _ellipse_axes_2d(e)
+    assert (ux, uy) == pytest.approx((1.0, 0.0))
+    assert (vx, vy) == pytest.approx((0.0, 1.0))
+
+    e2 = Ellipse(
+        Point(0, 0, 0),
+        radius_u=2.0,
+        radius_v=1.0,
+        dir_u=Direction(1, 0, 0),
+        dir_v=Direction(0, 1, 0),
+        angle=np.pi / 2,
+    )
+    (ux2, uy2), (vx2, vy2) = _ellipse_axes_2d(e2)
+    assert (ux2, uy2) == pytest.approx((0.0, 1.0), abs=1e-9)
+    assert (vx2, vy2) == pytest.approx((-1.0, 0.0), abs=1e-9)

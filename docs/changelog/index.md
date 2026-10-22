@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.23.1] — 2026-10-22
+- Rectangle2D body/handles share a deterministic in-plane frame on tilted planes · labelme 2D shapes round-trip on any plane (plane-basis rectangles/circles + scalar ellipse storage)
+→ [Details](2026/10/22_c05d2cd7d.md)
+
 ## [Since 2.22.0 (2.23.0-rc3)] — 2026-10-22
 - Screen-space markers stay concentric at pixel zoom (depth-bias layering) · hover scaling no longer compounds (leaf-owned scale + hover multiplier)
 → [Details](2026/10/22_aff7a90bb.md)

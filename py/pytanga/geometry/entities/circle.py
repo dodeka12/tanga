@@ -29,6 +29,10 @@ class Circle:
     z-axis), which is the natural choice for 2D use cases where the
     circle lies in the xy-plane.
 
+    Unlike ``Rectangle2D`` and ``Ellipse``, a circle is rotationally symmetric in
+    its plane, so it has no in-plane basis or ``angle`` — only the plane
+    ``normal``.
+
     Can also be constructed from a single multivector (converted via
     :func:`~pytanga.geometry.analysis.analyze_circle`).
     """

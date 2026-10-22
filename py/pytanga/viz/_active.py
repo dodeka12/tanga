@@ -1196,7 +1196,12 @@ class ActRectangle2D(ActiveObject):
         )
         self._u0, self._v0 = _plane_basis(self._normal)
         self._rect = Rectangle2D(
-            center=center, size=size, normal=self._normal, angle=angle
+            center=center,
+            size=size,
+            normal=self._normal,
+            angle=angle,
+            dir_u=self._u0,
+            dir_v=self._v0,
         )
         self._angle = float(angle)
         self._min_size = min_size
@@ -1418,6 +1423,8 @@ class ActRectangle2D(ActiveObject):
             size=(2.0 * hw, 2.0 * hh),
             normal=self._normal,
             angle=self._angle,
+            dir_u=self._u0,
+            dir_v=self._v0,
         )
         self._commit()
 
@@ -1433,7 +1440,12 @@ class ActRectangle2D(ActiveObject):
             self._rect.center.z + delta.z,
         )
         self._rect = Rectangle2D(
-            center=center, size=self._rect.size, normal=self._normal, angle=self._angle
+            center=center,
+            size=self._rect.size,
+            normal=self._normal,
+            angle=self._angle,
+            dir_u=self._u0,
+            dir_v=self._v0,
         )
         self._commit()
 
@@ -1451,6 +1463,8 @@ class ActRectangle2D(ActiveObject):
             size=self._rect.size,
             normal=self._normal,
             angle=self._angle,
+            dir_u=self._u0,
+            dir_v=self._v0,
         )
         self._commit()
 
@@ -1658,8 +1672,9 @@ class ActEllipse(ActiveObject):
             radius_u=self._radius_u,
             radius_v=self._radius_v,
             normal=self._normal,
-            dir_u=self._dir_u(),
-            dir_v=self._dir_v(),
+            dir_u=self._u0,
+            dir_v=self._v0,
+            angle=self._angle,
         )
 
     def _radius_handle_position(self, index: int) -> Point:

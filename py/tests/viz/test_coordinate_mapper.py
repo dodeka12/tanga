@@ -69,3 +69,23 @@ def test_calibrated_mapper_plane() -> None:
     # The normal points from the camera center toward the plane point.
     assert float(np.dot(vec, n)) == pytest.approx(0.5)
 
+
+def test_planar_mapper_pixel_axes() -> None:
+    du, dv = PlanarMapper().pixel_axes()
+    assert (du.x, du.y, du.z) == (1.0, 0.0, 0.0)
+    assert (dv.x, dv.y, dv.z) == (0.0, 1.0, 0.0)
+
+
+def test_calibrated_mapper_pixel_axes() -> None:
+    mapper = CalibratedPlaneMapper(_calibration(), depth=1.0)
+    du, dv = mapper.pixel_axes()
+    assert du.mag() == pytest.approx(1.0)
+    assert dv.mag() == pytest.approx(1.0)
+    assert du.dot(dv) == pytest.approx(0.0, abs=1e-9)
+    _, n = mapper.plane()
+    assert du.dot(n) == pytest.approx(0.0, abs=1e-9)
+    assert dv.dot(n) == pytest.approx(0.0, abs=1e-9)
+    # Identity-pose OpenCV camera: +u = world +x, +v = world -y (image y down).
+    assert (du.x, du.y, du.z) == pytest.approx((1.0, 0.0, 0.0), abs=1e-9)
+    assert (dv.x, dv.y, dv.z) == pytest.approx((0.0, -1.0, 0.0), abs=1e-9)
+
