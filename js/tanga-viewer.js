@@ -279,6 +279,34 @@ function tagEntity(mesh, ent) {
 }
 
 /**
+ * Mark a screen-space marker and (for flat overlay markers) apply its layering.
+ *
+ * Screen-space point markers keep the entity's exact world position (no z-lift)
+ * and are resized every frame by `_updateScreenSpaceMarkers`, which owns their
+ * `scale`.  Flat markers (`circle`/`icon`) that sit over coplanar bodies or over
+ * a standard point additionally get `renderOrder` + `polygonOffset` so they draw
+ * above without a world-space offset (which would introduce zoom-dependent
+ * parallax under a perspective camera).  3D markers (`square`/`crosshair`) keep
+ * the defaults.
+ *
+ * @param {import('three').Object3D} mesh
+ * @param {boolean} screenSpace
+ * @param {{ layered?: boolean }} [opts]
+ */
+function tagScreenSpaceMarker(mesh, screenSpace, { layered = false } = {}) {
+    if (!screenSpace) return;
+    mesh.userData.isScreenSpace = true;
+    if (layered) {
+        mesh.renderOrder = 1;
+        if (mesh.material) {
+            mesh.material.polygonOffset = true;
+            mesh.material.polygonOffsetFactor = -1;
+            mesh.material.polygonOffsetUnits = -1;
+        }
+    }
+}
+
+/**
  * Parse a color from an entity dict, using the style object if available.
  * Falls back to flat ent.color, then the provided fallback.
  */
@@ -849,9 +877,7 @@ function createCrossHairPoint(ent) {
 
     group.position.set(pos[0], pos[1], pos[2]);
     tagEntity(group, ent);
-    if (styleParam(ent, 'screen_space', false)) {
-        group.userData.isScreenSpace = true;
-    }
+    tagScreenSpaceMarker(group, styleParam(ent, 'screen_space', false));
     return group;
 }
 
@@ -872,9 +898,7 @@ function createSquarePoint(ent) {
     const mesh = new THREE.Mesh(geometry, makeMaterial(color, opacity));
     mesh.position.set(pos[0], pos[1], pos[2]);
     tagEntity(mesh, ent);
-    if (styleParam(ent, 'screen_space', false)) {
-        mesh.userData.isScreenSpace = true;
-    }
+    tagScreenSpaceMarker(mesh, styleParam(ent, 'screen_space', false));
     return mesh;
 }
 
@@ -914,14 +938,14 @@ function createCirclePoint(ent) {
     // raycasts above coplanar bodies at z = 0 (e.g. an image or a rectangle
     // fill) instead of z-fighting with them.  `size` is in world units for
     // world-space markers, but in screen PIXELS for screen-space markers
-    // (rescaled later by `_updateScreenSpaceMarkers`), so the lift must use a
-    // tiny world-unit offset in that case rather than `size * 0.1`.
-    const lift = screenSpace ? 1e-3 : size * 0.1;
+    // (rescaled later by `_updateScreenSpaceMarkers`).  Screen-space markers
+    // must keep the entity's exact z so a perspective camera introduces no
+    // zoom-dependent parallax; they are layered above coplanar bodies via
+    // `polygonOffset` + `renderOrder` instead of a world-space lift.
+    const lift = screenSpace ? 0 : size * 0.1;
     mesh.position.set(pos[0], pos[1], pos[2] + lift);
     tagEntity(mesh, ent);
-    if (screenSpace) {
-        mesh.userData.isScreenSpace = true;
-    }
+    tagScreenSpaceMarker(mesh, screenSpace, { layered: true });
     return mesh;
 }
 
@@ -1014,14 +1038,14 @@ function createIconPoint(ent) {
     // raycasts above coplanar bodies at z = 0 (e.g. a rectangle fill)
     // instead of being occluded by them.  `size` is in world units for
     // world-space markers, but in screen PIXELS for screen-space markers
-    // (rescaled later by `_updateScreenSpaceMarkers`), so the lift must use a
-    // tiny world-unit offset in that case rather than `size * 0.1`.
-    const lift = screenSpace ? 1e-3 : size * 0.1;
+    // (rescaled later by `_updateScreenSpaceMarkers`).  Screen-space markers
+    // must keep the entity's exact z so a perspective camera introduces no
+    // zoom-dependent parallax; they are layered above coplanar bodies via
+    // `polygonOffset` + `renderOrder` instead of a world-space lift.
+    const lift = screenSpace ? 0 : size * 0.1;
     mesh.position.set(pos[0], pos[1], pos[2] + lift);
     tagEntity(mesh, ent);
-    if (screenSpace) {
-        mesh.userData.isScreenSpace = true;
-    }
+    tagScreenSpaceMarker(mesh, screenSpace, { layered: true });
     return mesh;
 }
 

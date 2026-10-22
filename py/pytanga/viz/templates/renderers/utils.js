@@ -238,6 +238,34 @@ export function tagEntity(mesh, ent) {
 }
 
 /**
+ * Mark a screen-space marker and (for flat overlay markers) apply its layering.
+ *
+ * Screen-space point markers keep the entity's exact world position (no z-lift)
+ * and are resized every frame by `_updateScreenSpaceMarkers`, which owns their
+ * `scale`.  Flat markers (`circle`/`icon`) that sit over coplanar bodies or over
+ * a standard point additionally get `renderOrder` + `polygonOffset` so they draw
+ * above without a world-space offset (which would introduce zoom-dependent
+ * parallax under a perspective camera).  3D markers (`square`/`crosshair`) keep
+ * the defaults.
+ *
+ * @param {import('three').Object3D} mesh
+ * @param {boolean} screenSpace
+ * @param {{ layered?: boolean }} [opts]
+ */
+export function tagScreenSpaceMarker(mesh, screenSpace, { layered = false } = {}) {
+    if (!screenSpace) return;
+    mesh.userData.isScreenSpace = true;
+    if (layered) {
+        mesh.renderOrder = 1;
+        if (mesh.material) {
+            mesh.material.polygonOffset = true;
+            mesh.material.polygonOffsetFactor = -1;
+            mesh.material.polygonOffsetUnits = -1;
+        }
+    }
+}
+
+/**
  * Parse a color from an entity dict, using the style object if available.
  * Falls back to flat ent.color, then the provided fallback.
  */

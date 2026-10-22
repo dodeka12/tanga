@@ -2,7 +2,7 @@
 // Symbols ligature or a unicode symbol) instead of a sphere.
 
 import * as THREE from 'three';
-import { makeMaterial, styleParam, parseColor, tagEntity } from './utils.js';
+import { makeMaterial, styleParam, parseColor, tagEntity, tagScreenSpaceMarker } from './utils.js';
 
 function _iconParts(icon) {
     const i = icon.indexOf(':');
@@ -90,13 +90,13 @@ export function createIconPoint(ent) {
     // raycasts above coplanar bodies at z = 0 (e.g. a rectangle fill)
     // instead of being occluded by them.  `size` is in world units for
     // world-space markers, but in screen PIXELS for screen-space markers
-    // (rescaled later by `_updateScreenSpaceMarkers`), so the lift must use a
-    // tiny world-unit offset in that case rather than `size * 0.1`.
-    const lift = screenSpace ? 1e-3 : size * 0.1;
+    // (rescaled later by `_updateScreenSpaceMarkers`).  Screen-space markers
+    // must keep the entity's exact z so a perspective camera introduces no
+    // zoom-dependent parallax; they are layered above coplanar bodies via
+    // `polygonOffset` + `renderOrder` instead of a world-space lift.
+    const lift = screenSpace ? 0 : size * 0.1;
     mesh.position.set(pos[0], pos[1], pos[2] + lift);
     tagEntity(mesh, ent);
-    if (screenSpace) {
-        mesh.userData.isScreenSpace = true;
-    }
+    tagScreenSpaceMarker(mesh, screenSpace, { layered: true });
     return mesh;
 }

@@ -618,6 +618,18 @@ pane through a clean three-layer model — camera data → camera view → pane:
   via their own `_act_from_entity`.  The single fixed `depth` is a
   display/editing approximation, not a true reprojection of arbitrary 3D
   geometry.
+- **Screen-space markers** — point markers tagged `userData.isScreenSpace`
+  (see `renderers/utils.js::tagScreenSpaceMarker`) keep the entity's exact
+  world position and are resized once per frame by
+  `ThreeJsView._updateScreenSpaceMarkers` (`screenWorldScale` × an optional
+  `userData._hoverScale` multiplier).  The marker **leaf** owns `scale` and
+  `_hoverScale`; the wrapper `Group` carries only the entity transform, and
+  interaction hover (`interaction.js::_screenSpaceLeaf`) only sets/clears
+  `_hoverScale` — it never mutates `scale`.  Flat overlay markers
+  (circle/icon) layer above coplanar bodies or a standard point with
+  `renderOrder = 1` + `polygonOffset` (factor/units −1), never a world-space
+  `z` lift (which would introduce zoom-dependent parallax under a pinhole
+  camera).
 
 ### Test commands
 

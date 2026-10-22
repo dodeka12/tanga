@@ -592,7 +592,10 @@ export class ThreeJsView extends View {
             const mesh = entry && entry.mesh;
             if (!mesh || !mesh.userData || !mesh.userData.isScreenSpace) continue;
             mesh.getWorldPosition(worldPos);
-            mesh.scale.setScalar(screenWorldScale(this.camera, viewportPx, worldPos, forward));
+            const hoverScale = mesh.userData._hoverScale || 1;
+            mesh.scale.setScalar(
+                screenWorldScale(this.camera, viewportPx, worldPos, forward) * hoverScale
+            );
             // Flat square/circle/icon billboards face the camera in perspective;
             // the crosshair is a 3D Group and keeps its world orientation.
             if (billboard && mesh.isMesh) {

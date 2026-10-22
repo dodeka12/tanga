@@ -119,6 +119,13 @@ export class InteractionController {
     }
 
     unregisterInteractive(objectId) {
+        if (this._hoveredObjectId === objectId) {
+            // Reset hover before dropping the object so a leaked hover does not
+            // leave scaled state stored (and later captured as the "original").
+            const obj = this.interactiveObjects.get(objectId);
+            if (obj && obj.mesh) this._resetHover(obj.mesh);
+            this._hoveredObjectId = null;
+        }
         this.interactiveObjects.delete(objectId);
         for (const key of this._throttles.keys()) {
             if (key.startsWith(objectId + ':')) {
@@ -129,17 +136,20 @@ export class InteractionController {
         }
         this._clickState.delete(objectId);
         if (this._activeDrag && this._activeDrag.objectId === objectId) this._cancelDrag();
-        if (this._hoveredObjectId === objectId) this._hoveredObjectId = null;
     }
 
     clearAllInteractive() {
+        if (this._hoveredObjectId) {
+            const obj = this.interactiveObjects.get(this._hoveredObjectId);
+            if (obj && obj.mesh) this._resetHover(obj.mesh);
+            this._hoveredObjectId = null;
+        }
         this.interactiveObjects.clear();
         for (const entry of this._throttles.values()) {
             if (entry.pendingTimer) clearTimeout(entry.pendingTimer);
         }
         this._throttles.clear();
         this._clickState.clear();
-        this._hoveredObjectId = null;
         this._cancelDrag();
     }
 
@@ -225,6 +235,20 @@ export class InteractionController {
         return state;
     }
 
+    // Resolve the screen-space leaf (self or a descendant tagged
+    // `userData.isScreenSpace`).  Interaction registers the transform wrapper
+    // (a Group), but the per-frame screen-space scale is applied to the leaf
+    // marker, so hover must target the leaf to share a single scale owner.
+    _screenSpaceLeaf(mesh) {
+        if (!mesh) return null;
+        let found = null;
+        mesh.traverse((child) => {
+            if (found) return;
+            if (child.userData && child.userData.isScreenSpace) found = child;
+        });
+        return found;
+    }
+
     _applyHover(mesh, config) {
         const emissiveColor = config.hover_emissive;
         const scale = config.hover_scale;
@@ -267,7 +291,17 @@ export class InteractionController {
         // (unlike emissive/opacity, which needed explicit `uHover`/`uOpacity`
         // handling because a `ShaderMaterial` has no `.emissive`/`.opacity`).
         if (scale) {
-            mesh.scale.multiplyScalar(scale);
+            const leaf = this._screenSpaceLeaf(mesh);
+            if (leaf) {
+                // Screen-space markers have their scale rewritten every frame by
+                // `_updateScreenSpaceMarkers`, so a direct `multiplyScalar` here
+                // is clobbered on the next frame and the clone/restore pair can
+                // compound across re-hovers.  Store the factor on the leaf's
+                // userData and let the per-frame pass fold it in.
+                leaf.userData._hoverScale = scale;
+            } else {
+                mesh.scale.multiplyScalar(scale);
+            }
         }
 
         if (config.hover_cursor) {
@@ -298,8 +332,14 @@ export class InteractionController {
             }
         }
 
-        // Restore scale
-        mesh.scale.copy(state._originalScale);
+        // Restore scale.  Screen-space markers keep their per-frame scale and
+        // instead drop the hover multiplier stored on the leaf's userData.
+        const leaf = this._screenSpaceLeaf(mesh);
+        if (leaf) {
+            delete leaf.userData._hoverScale;
+        } else {
+            mesh.scale.copy(state._originalScale);
+        }
 
         this._hoverState.delete(mesh.uuid);
         this.rendererDomElement.style.cursor = this._sceneCursor || '';
