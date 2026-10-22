@@ -13,13 +13,18 @@ from pytanga.geometry.entities import (
     Circle,
     Cylinder,
     Direction,
+    Disk,
+    Ellipse,
     Line,
     Plane,
     Point,
+    Rectangle2D,
+    RegularPolygon,
     Space,
     Sphere,
 )
-from pytanga.viz._decompose import _entity_decompose, is_placement_entity
+from pytanga.viz._active import _plane_basis
+from pytanga.viz._decompose import _entity_decompose, _plane_basis_u0, is_placement_entity
 from pytanga.viz._nodes import VizSceneObject
 
 
@@ -32,6 +37,11 @@ class TestEntityDecompose:
 
     def test_circle_normal_rotation(self) -> None:
         t, _ = _entity_decompose(Circle(Point(0, 0, 0), 1.0, normal=Direction(1, 0, 0)))
+        d = t @ Direction(0, 0, 1)
+        assert (d.x, d.y, d.z) == pytest.approx((1.0, 0.0, 0.0))
+
+    def test_disk_normal_rotation(self) -> None:
+        t, _ = _entity_decompose(Disk(Point(0, 0, 0), 1.0, normal=Direction(1, 0, 0)))
         d = t @ Direction(0, 0, 1)
         assert (d.x, d.y, d.z) == pytest.approx((1.0, 0.0, 0.0))
 
@@ -88,6 +98,52 @@ class TestEntityDecompose:
         assert is_placement_entity(Circle(Point(0, 0, 0), 1.0))
         assert is_placement_entity(Point(0, 0, 0))
         assert not is_placement_entity(Space(scale=1.0))
+
+    def test_rectangle2d_tilted_normal_uses_plane_basis(self) -> None:
+        normal = Direction(-0.009, -0.009, -1.0)
+        t, _ = _entity_decompose(Rectangle2D(Point(0, 0, 0), (4.0, 2.0), normal=normal))
+        u0, _ = _plane_basis(normal)
+        x = t @ Direction(1, 0, 0)
+        assert (x.x, x.y, x.z) == pytest.approx((u0.x, u0.y, u0.z), abs=1e-9)
+
+    def test_rectangle2d_dir_u_override(self) -> None:
+        t, _ = _entity_decompose(
+            Rectangle2D(
+                Point(0, 0, 0),
+                (2.0, 4.0),
+                normal=Direction(0, 0, 1),
+                dir_u=Direction(0, 1, 0),
+            )
+        )
+        x = t @ Direction(1, 0, 0)
+        assert (x.x, x.y, x.z) == pytest.approx((0.0, 1.0, 0.0), abs=1e-9)
+
+    def test_ellipse_angle_in_shape(self) -> None:
+        t, shape = _entity_decompose(
+            Ellipse(Point(0, 0, 0), radius_u=2.0, radius_v=1.0, angle=0.5)
+        )
+        assert shape["angle"] == 0.5
+        assert t.position == (0.0, 0.0, 0.0)
+
+    def test_plane_basis_u0_matches_active(self) -> None:
+        for n in (
+            Direction(0, 0, 1),
+            Direction(0, 0, -1),
+            Direction(-0.009, -0.009, -1.0),
+            Direction(0, 1, 0),
+        ):
+            u0, _ = _plane_basis(n)
+            got = _plane_basis_u0((n.x, n.y, n.z))
+            assert tuple(got) == pytest.approx((u0.x, u0.y, u0.z), abs=1e-9)
+
+    def test_regular_polygon_tilted_normal_uses_plane_basis(self) -> None:
+        normal = Direction(-0.009, -0.009, -1.0)
+        t, _ = _entity_decompose(
+            RegularPolygon(Point(0, 0, 0), radius=1.0, sides=6, normal=normal)
+        )
+        u0, _ = _plane_basis(normal)
+        x = t @ Direction(1, 0, 0)
+        assert (x.x, x.y, x.z) == pytest.approx((u0.x, u0.y, u0.z), abs=1e-9)
 
 
 class TestSetEntityDiff:

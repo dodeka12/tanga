@@ -104,7 +104,10 @@ class TestExtensions:
         ellipse = Ellipse(center=Point(0, 0, 0), radius_u=3.0, radius_v=2.0)
         shapes = store.shapes_from_objects([(ellipse, "x")])
         assert shapes[0].shape_type == "ellipse"
-        assert len(shapes[0].points) == 3
+        assert len(shapes[0].points) == 1
+        assert shapes[0].radius_u == 3.0
+        assert shapes[0].radius_v == 2.0
+        assert shapes[0].angle == 0.0
 
     def test_ellipse_extension_off_sampled_polygon(self) -> None:
         store = LabelMeStore(allow_extensions=False)
@@ -201,6 +204,89 @@ def test_calibrated_mapper_round_trip_point_shapes() -> None:
         for (u0, v0), (u1, v1) in zip(orig.points, back.points):
             assert u0 == pytest.approx(u1, abs=1e-6)
             assert v0 == pytest.approx(v1, abs=1e-6)
+
+
+def test_calibrated_mapper_round_trip_size_shapes() -> None:
+    # A tilted camera: size-based shapes (rectangle/circle/ellipse) must round
+    # trip through the mapper's plane basis.
+    ax = np.radians(3.0)
+    rx = np.array(
+        [[1.0, 0.0, 0.0], [0.0, np.cos(ax), -np.sin(ax)], [0.0, np.sin(ax), np.cos(ax)]]
+    )
+    calib = CameraCalibration(
+        K=Matrix([[500.0, 0.0, 320.0], [0.0, 500.0, 240.0], [0.0, 0.0, 1.0]]),
+        R=Matrix(rx),
+        t=[0.0, 0.0, 0.0],
+        image_size=(640, 480),
+        frame=OpenCVFrame(),
+        units=1.0,
+    )
+    store = LabelMeStore(mapper=CalibratedPlaneMapper(calib, depth=1.0))
+    doc = LabelMeDocument(
+        shapes=[
+            LabelShape(label="r", points=[(120, 150), (180, 230)], shape_type="rectangle"),
+            LabelShape(label="c", points=[(320, 240), (380, 240)], shape_type="circle"),
+            LabelShape(
+                label="e",
+                points=[(320, 240)],
+                shape_type="ellipse",
+                radius_u=40.0,
+                radius_v=20.0,
+                angle=0.5,
+            ),
+        ]
+    )
+    rebuilt = store.shapes_from_objects(store.iter_objects(doc)[0])
+    assert [s.shape_type for s in rebuilt] == ["rectangle", "circle", "ellipse"]
+    assert rebuilt[0].points[0] == pytest.approx((120.0, 150.0), abs=1e-6)
+    assert rebuilt[0].points[1] == pytest.approx((180.0, 230.0), abs=1e-6)
+    assert rebuilt[1].points[0] == pytest.approx((320.0, 240.0), abs=1e-6)
+    assert rebuilt[1].points[1] == pytest.approx((380.0, 240.0), abs=1e-6)
+    assert rebuilt[2].points[0] == pytest.approx((320.0, 240.0), abs=1e-6)
+    assert rebuilt[2].radius_u == pytest.approx(40.0, abs=1e-6)
+    assert rebuilt[2].radius_v == pytest.approx(20.0, abs=1e-6)
+    assert rebuilt[2].angle == pytest.approx(0.5, abs=1e-6)
+
+
+def test_legacy_ellipse_rim_form_loads() -> None:
+    store = LabelMeStore()
+    doc = LabelMeDocument(
+        shapes=[
+            LabelShape(
+                label="e",
+                points=[(0.0, 0.0), (3.0, 0.0), (0.0, 2.0)],
+                shape_type="ellipse",
+            )
+        ]
+    )
+    objs, errors = store.iter_objects(doc)
+    assert errors == []
+    e = objs[0][0]
+    assert isinstance(e, Ellipse)
+    assert e.radius_u == pytest.approx(3.0)
+    assert e.radius_v == pytest.approx(2.0)
+
+
+def test_dumps_emits_new_ellipse_form() -> None:
+    store = LabelMeStore()
+    doc = LabelMeDocument(
+        shapes=[
+            LabelShape(
+                label="e",
+                points=[(10.0, 20.0)],
+                shape_type="ellipse",
+                radius_u=3.0,
+                radius_v=2.0,
+                angle=0.5,
+            )
+        ]
+    )
+    data = json.loads(store.dumps(doc))
+    shape = data["shapes"][0]
+    assert shape["points"] == [[10.0, 20.0]]
+    assert shape["radius_u"] == 3.0
+    assert shape["radius_v"] == 2.0
+    assert shape["angle"] == 0.5
 
 
 def test_load_skips_single_point_rectangle() -> None:

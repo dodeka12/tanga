@@ -33,7 +33,6 @@ _ELLIPSE = "ellipse"
 _POINT_COUNTS: dict[str, tuple[int, int | None]] = {
     "rectangle": (2, None),
     "circle": (2, None),
-    _ELLIPSE: (3, 3),
     "polygon": (3, None),
     "linestrip": (2, None),
     "line": (2, None),
@@ -46,8 +45,10 @@ class LabelShape:
     """One annotated shape (labelme ``shapes[]`` entry).
 
     ``mask`` / ``description`` are round-tripped verbatim from labelme JSON.
-    ``style`` / ``act`` are in-memory back-references used by an editor (e.g.
-    ``ImageLabeler``) and are never (de)serialized — labelme has no such concept.
+    ``radius_u`` / ``radius_v`` / ``angle`` carry the scalar ellipse parameters
+    (new canonical form; ``None`` for legacy shapes).  ``style`` / ``act`` are
+    in-memory back-references used by an editor (e.g. ``ImageLabeler``) and are
+    never (de)serialized — labelme has no such concept.
     """
 
     label: str
@@ -57,6 +58,9 @@ class LabelShape:
     description: str | None = None
     flags: dict[str, Any] = field(default_factory=dict)
     mask: str | None = None
+    radius_u: float | None = None
+    radius_v: float | None = None
+    angle: float | None = None
     style: ObjVizStyle | None = None
     act: Any = field(default=None, repr=False, compare=False)
 
@@ -121,6 +125,9 @@ class LabelMeStore:
                 description=s.get("description"),
                 flags=dict(s.get("flags", {})),
                 mask=s.get("mask"),
+                radius_u=s.get("radius_u"),
+                radius_v=s.get("radius_v"),
+                angle=s.get("angle"),
             )
             err = self._validate_points(shape)
             if err is not None:
@@ -168,6 +175,9 @@ class LabelMeStore:
                     "flags": s.flags,
                     **({"description": s.description} if s.description is not None else {}),
                     **({"mask": s.mask} if s.mask is not None else {}),
+                    **({"radius_u": _round(s.radius_u)} if s.radius_u is not None else {}),
+                    **({"radius_v": _round(s.radius_v)} if s.radius_v is not None else {}),
+                    **({"angle": _round(s.angle)} if s.angle is not None else {}),
                 }
                 for s in doc.shapes
             ],
@@ -235,6 +245,24 @@ class LabelMeStore:
     @staticmethod
     def _validate_points(shape: LabelShape) -> str | None:
         """Return an error message if *shape* has an invalid point count."""
+        if shape.shape_type == _ELLIPSE:
+            has_ru = shape.radius_u is not None
+            has_rv = shape.radius_v is not None
+            if has_ru != has_rv:
+                return "ellipse needs both radius_u and radius_v (or neither, for the legacy rim form)"
+            if has_ru:
+                if len(shape.points) != 1:
+                    return (
+                        f"ellipse (params form) needs exactly 1 point, got "
+                        f"{len(shape.points)}"
+                    )
+                return None
+            if len(shape.points) != 3:
+                return (
+                    f"ellipse (legacy rim form) needs exactly 3 points, got "
+                    f"{len(shape.points)}"
+                )
+            return None
         expected_min, expected_exact = _POINT_COUNTS.get(shape.shape_type, (0, None))
         got = len(shape.points)
         if expected_exact is not None:
@@ -257,13 +285,20 @@ class LabelMeStore:
         pts = [self._mapper.to_world(x, y) for x, y in shape.points]
         st = shape.shape_type
         if st == "rectangle":
-            return Rectangle2D.between(pts[0], pts[1])
+            return self._rectangle_entity(pts[0], pts[1])
         if st == "circle":
             center, rim = pts[0], pts[1]
             return Circle(
-                center=center, radius=math.hypot(rim.x - center.x, rim.y - center.y)
+                center=center,
+                radius=math.sqrt(
+                    (rim.x - center.x) ** 2
+                    + (rim.y - center.y) ** 2
+                    + (rim.z - center.z) ** 2
+                ),
             )
         if st == _ELLIPSE:
+            if shape.radius_u is not None:
+                return self._ellipse_from_params(shape, pts[0])
             return self._ellipse_entity(pts[0], pts[1], pts[2])
         if st == "polygon":
             return _path(pts, closed=True)
@@ -274,6 +309,33 @@ class LabelMeStore:
         if st == "point":
             return pts[0]
         raise ValueError(f"Unknown labelme shape_type: {st!r}")
+
+    def _rectangle_entity(self, a: Point, b: Point) -> Rectangle2D:
+        du, dv = self._mapper.pixel_axes()
+        dx = Direction(b.x - a.x, b.y - a.y, b.z - a.z)
+        return Rectangle2D(
+            center=Point(
+                (a.x + b.x) / 2.0, (a.y + b.y) / 2.0, (a.z + b.z) / 2.0
+            ),
+            size=(abs(dx.dot(du)), abs(dx.dot(dv))),
+            normal=du.cross(dv).normalized(),
+            angle=0.0,
+            dir_u=du,
+            dir_v=dv,
+        )
+
+    def _ellipse_from_params(self, shape: LabelShape, center: Point) -> Ellipse:
+        du, dv = self._mapper.pixel_axes()
+        scale = self._mapper.world_units_per_pixel()
+        return Ellipse(
+            center=center,
+            radius_u=float(shape.radius_u or 0.0) * scale,
+            radius_v=float(shape.radius_v or 0.0) * scale,
+            normal=du.cross(dv).normalized(),
+            dir_u=du,
+            dir_v=dv,
+            angle=0.0 if shape.angle is None else float(shape.angle),
+        )
 
     @staticmethod
     def _ellipse_entity(center: Point, rim_u: Point, rim_v: Point) -> Ellipse:
@@ -293,41 +355,19 @@ class LabelMeStore:
         from ._point_path import PointPath
 
         if isinstance(obj, Rectangle2D):
-            rect = obj
-            if abs(rect.angle) < 1e-9:
-                hw, hh = rect.size[0] / 2.0, rect.size[1] / 2.0
-                return LabelShape(
-                    label=label,
-                    points=[
-                        self._mapper.to_pixel(
-                            Point(
-                                rect.center.x - hw,
-                                rect.center.y - hh,
-                                rect.center.z,
-                            )
-                        ),
-                        self._mapper.to_pixel(
-                            Point(
-                                rect.center.x + hw,
-                                rect.center.y + hh,
-                                rect.center.z,
-                            )
-                        ),
-                    ],
-                    shape_type="rectangle",
-                )
-            return self._polygon_from_corners(rect, label)
+            return self._shape_from_rectangle(obj, label)
         if isinstance(obj, Circle):
             circle = obj
+            du, _ = self._mapper.pixel_axes()
             return LabelShape(
                 label=label,
                 points=[
                     self._mapper.to_pixel(circle.center),
                     self._mapper.to_pixel(
                         Point(
-                            circle.center.x + circle.radius,
-                            circle.center.y,
-                            circle.center.z,
+                            circle.center.x + circle.radius * du.x,
+                            circle.center.y + circle.radius * du.y,
+                            circle.center.z + circle.radius * du.z,
                         )
                     ),
                 ],
@@ -366,18 +406,19 @@ class LabelMeStore:
 
     def _shape_from_ellipse(self, obj: Any, label: str) -> LabelShape | None:
         ellipse = obj
-        du, dv = _ellipse_axes(ellipse)
+        scale = self._mapper.world_units_per_pixel()
         if not self._allow_extensions:
             if abs(ellipse.radius_u - ellipse.radius_v) < 1e-6:
+                du, _ = self._mapper.pixel_axes()
                 return LabelShape(
                     label=label,
                     points=[
                         self._mapper.to_pixel(ellipse.center),
                         self._mapper.to_pixel(
                             Point(
-                                ellipse.center.x + ellipse.radius_u,
-                                ellipse.center.y,
-                                ellipse.center.z,
+                                ellipse.center.x + ellipse.radius_u * du.x,
+                                ellipse.center.y + ellipse.radius_u * du.y,
+                                ellipse.center.z + ellipse.radius_u * du.z,
                             )
                         ),
                     ],
@@ -386,47 +427,69 @@ class LabelMeStore:
             return self._polygon_from_ellipse(ellipse, label)
         return LabelShape(
             label=label,
-            points=[
-                self._mapper.to_pixel(ellipse.center),
-                self._mapper.to_pixel(
-                    Point(
-                        ellipse.center.x + du.x * ellipse.radius_u,
-                        ellipse.center.y + du.y * ellipse.radius_u,
-                        ellipse.center.z + du.z * ellipse.radius_u,
-                    )
-                ),
-                self._mapper.to_pixel(
-                    Point(
-                        ellipse.center.x + dv.x * ellipse.radius_v,
-                        ellipse.center.y + dv.y * ellipse.radius_v,
-                        ellipse.center.z + dv.z * ellipse.radius_v,
-                    )
-                ),
-            ],
+            points=[self._mapper.to_pixel(ellipse.center)],
+            radius_u=ellipse.radius_u / scale,
+            radius_v=ellipse.radius_v / scale,
+            angle=ellipse.angle,
             shape_type=_ELLIPSE,
         )
 
-    def _polygon_from_corners(self, rect: Rectangle2D, label: str) -> LabelShape:
-        cx, cy, cz = rect.center.x, rect.center.y, rect.center.z
+    def _shape_from_rectangle(self, rect: Rectangle2D, label: str) -> LabelShape:
+        du, dv = self._rect_axes(rect)
         hw, hh = rect.size[0] / 2.0, rect.size[1] / 2.0
-        cos_a, sin_a = math.cos(rect.angle), math.sin(rect.angle)
-        ux, uy = cos_a, sin_a
-        vx, vy = -sin_a, cos_a
+        cx, cy, cz = rect.center.x, rect.center.y, rect.center.z
         corners = [
             self._mapper.to_pixel(
-                Point(cx - hw * ux - hh * vx, cy - hw * uy - hh * vy, cz)
+                Point(
+                    cx - hw * du.x - hh * dv.x,
+                    cy - hw * du.y - hh * dv.y,
+                    cz - hw * du.z - hh * dv.z,
+                )
             ),
             self._mapper.to_pixel(
-                Point(cx + hw * ux - hh * vx, cy + hw * uy - hh * vy, cz)
+                Point(
+                    cx + hw * du.x - hh * dv.x,
+                    cy + hw * du.y - hh * dv.y,
+                    cz + hw * du.z - hh * dv.z,
+                )
             ),
             self._mapper.to_pixel(
-                Point(cx + hw * ux + hh * vx, cy + hw * uy + hh * vy, cz)
+                Point(
+                    cx + hw * du.x + hh * dv.x,
+                    cy + hw * du.y + hh * dv.y,
+                    cz + hw * du.z + hh * dv.z,
+                )
             ),
             self._mapper.to_pixel(
-                Point(cx - hw * ux + hh * vx, cy - hw * uy + hh * vy, cz)
+                Point(
+                    cx - hw * du.x + hh * dv.x,
+                    cy - hw * du.y + hh * dv.y,
+                    cz - hw * du.z + hh * dv.z,
+                )
             ),
         ]
+        if _is_axis_aligned(corners):
+            xs = [c[0] for c in corners]
+            ys = [c[1] for c in corners]
+            return LabelShape(
+                label=label,
+                points=[(min(xs), min(ys)), (max(xs), max(ys))],
+                shape_type="rectangle",
+            )
         return LabelShape(label=label, points=corners, shape_type="polygon")
+
+    def _rect_axes(self, rect: Rectangle2D) -> tuple[Direction, Direction]:
+        du, dv = self._basis(rect.normal, rect.dir_u, rect.dir_v)
+        return _rotated_axes(du, dv, rect.angle)
+
+    def _basis(
+        self, normal: Direction, dir_u: Direction | None, dir_v: Direction | None
+    ) -> tuple[Direction, Direction]:
+        if dir_u is not None and dir_v is not None:
+            return dir_u.normalized(), dir_v.normalized()
+        from ._active import _plane_basis
+
+        return _plane_basis(normal)
 
     def _polygon_from_ellipse(self, ellipse: Ellipse, label: str) -> LabelShape:
         n = 32
@@ -458,11 +521,34 @@ def _path(pts: list[Point], *, closed: bool) -> object:
     return path
 
 
+def _rotated_axes(
+    du: Direction, dv: Direction, angle: float
+) -> tuple[Direction, Direction]:
+    """Rotate an orthonormal in-plane basis ``(du, dv)`` by ``angle`` about its normal."""
+    c, s = math.cos(angle), math.sin(angle)
+    return (
+        Direction(c * du.x + s * dv.x, c * du.y + s * dv.y, c * du.z + s * dv.z),
+        Direction(-s * du.x + c * dv.x, -s * du.y + c * dv.y, -s * du.z + c * dv.z),
+    )
+
+
+def _is_axis_aligned(corners: list[tuple[float, float]]) -> bool:
+    """Return whether four ordered corners form an axis-aligned pixel rectangle."""
+    (x0, y0), (x1, y1), (x2, y2), (x3, y3) = corners
+    tol = 1e-6
+    return (
+        abs(x0 - x3) < tol
+        and abs(x1 - x2) < tol
+        and abs(y0 - y1) < tol
+        and abs(y2 - y3) < tol
+    )
+
+
 def _ellipse_axes(ellipse: Ellipse) -> tuple[Direction, Direction]:
-    """The (possibly axis-aligned) semi-axis directions of an ellipse."""
-    if ellipse.dir_u is None or ellipse.dir_v is None:
-        return Direction(1.0, 0.0, 0.0), Direction(0.0, 1.0, 0.0)
-    return ellipse.dir_u, ellipse.dir_v
+    """The actual (angle-rotated) semi-axis directions of an ellipse."""
+    du = ellipse.dir_u if ellipse.dir_u is not None else Direction(1.0, 0.0, 0.0)
+    dv = ellipse.dir_v if ellipse.dir_v is not None else Direction(0.0, 1.0, 0.0)
+    return _rotated_axes(du.normalized(), dv.normalized(), ellipse.angle)
 
 
 def _default_style_for(shape_type: str) -> ObjVizStyle:

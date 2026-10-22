@@ -15,6 +15,9 @@ class LabelShape:
     group_id: int | None = None
     description: str = ""
     flags: dict[str, Any] = field(default_factory=dict)
+    radius_u: float | None = None       # ellipse scalar params (new form)
+    radius_v: float | None = None
+    angle: float | None = None
 
 @dataclass
 class LabelMeDocument:
@@ -47,7 +50,7 @@ shapes = store.shapes_from_objects([(act, "car"), ...])  # inverse (save directi
 |---|---|---|---|
 | `rectangle` | `Rectangle2D` | `ActRectangle2D` | 2 opposite corners |
 | `circle` | `Circle` | `ActCircle` | `[center, rim]` |
-| `ellipse` *(ext.)* | `Ellipse` | `ActEllipse` | `[center, rim_u, rim_v]` |
+| `ellipse` *(ext.)* | `Ellipse` | `ActEllipse` | `[center]` + `radius_u`/`radius_v`/`angle` |
 | `polygon` | `PointPath` (closed) | `ActPolygon` (closed) | vertex list |
 | `linestrip` | `PointPath` (open) | `ActPolygon` (open) | vertex list |
 | `line` | `Line` | `ActLine` | 2 points |
@@ -57,6 +60,11 @@ labelme `polygon` is closed by definition; open polylines map to `linestrip`
 (and two-point open paths to `line`). `allow_extensions=False` maps an ellipse
 back to `circle` (equal radii) or a sampled 32-point `polygon`, and never emits
 `ellipse`.
+
+An `ellipse` is stored in pytanga's canonical scalar form — `points=[center]`
+plus the top-level `radius_u`, `radius_v`, and `angle` (radians, from image
+horizontal) keys.  The legacy `[center, rim_u, rim_v]` form is still accepted on
+load for backward compatibility, but only the scalar form is written.
 
 See the [`image_labeling_app.py`](../../examples/apps/image_labeling_app.md)
 example for an end-to-end labeling app that uses the store.

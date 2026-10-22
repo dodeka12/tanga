@@ -652,6 +652,9 @@ class CoordinateMapper(Protocol):
     def plane(self) -> tuple[Point, Direction]:
         """Return ``(point_on_plane, unit_normal)`` in world coordinates."""
 
+    def pixel_axes(self) -> tuple[Direction, Direction]:
+        """Return the unit world directions of image pixel ``+u`` and ``+v``."""
+
     def world_units_per_pixel(self) -> float:
         """Return the world size of one image pixel at the annotation plane."""
 
@@ -671,6 +674,9 @@ class PlanarMapper:
 
     def plane(self) -> tuple[Point, Direction]:
         return Point(0.0, 0.0, 0.0), Direction(0.0, 0.0, 1.0)
+
+    def pixel_axes(self) -> tuple[Direction, Direction]:
+        return Direction(1.0, 0.0, 0.0), Direction(0.0, 1.0, 0.0)
 
     def world_units_per_pixel(self) -> float:
         return 1.0
@@ -727,6 +733,22 @@ class CalibratedPlaneMapper:
             point.z - center[2],
         ).normalized()
         return point, normal
+
+    def pixel_axes(self) -> tuple[Direction, Direction]:
+        """The unit world directions of image pixel ``+u`` and ``+v``.
+
+        These are the world images of the camera's ``+x``/``+y`` axes (the
+        directions ``to_world`` moves under increasing ``u``/``v``), with the
+        ``OpenCVFrame`` already applied by ``camera_to_world()``.
+        """
+        u = self._c2w @ np.array([1.0, 0.0, 0.0, 0.0])
+        v = self._c2w @ np.array([0.0, 1.0, 0.0, 0.0])
+        nu = float(np.linalg.norm(u[:3]))
+        nv = float(np.linalg.norm(v[:3]))
+        return (
+            Direction(u[0] / nu, u[1] / nu, u[2] / nu),
+            Direction(v[0] / nv, v[1] / nv, v[2] / nv),
+        )
 
     def world_units_per_pixel(self) -> float:
         """The world size of one image pixel at the plane (≈ ``depth / fx``)."""

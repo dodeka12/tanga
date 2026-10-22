@@ -88,15 +88,15 @@ class TestModel:
         assert ellipse.entity.radius_u == 10.0
         assert ellipse.entity.radius_v == 4.0
 
-    def test_dirs_encode_angle(self) -> None:
+    def test_angle_is_scalar(self) -> None:
         ellipse = ActEllipse(
             center=Point(0.0, 0.0, 0.0), radius_u=2.0, radius_v=1.0, angle=math.pi / 2
         )
         e = ellipse.entity
-        assert abs(e.dir_u.x) < 1e-9
-        assert abs(e.dir_u.y - 1.0) < 1e-9
-        assert abs(e.dir_v.x + 1.0) < 1e-9
-        assert abs(e.dir_v.y) < 1e-9
+        assert e.angle == pytest.approx(math.pi / 2)
+        # The body carries the plane basis (world x/y for +z), not the baked axes.
+        assert (e.dir_u.x, e.dir_u.y) == (1.0, 0.0)
+        assert (e.dir_v.x, e.dir_v.y) == (0.0, 1.0)
 
     def test_interaction_config_disabled(self) -> None:
         ellipse, _ = _ellipse()

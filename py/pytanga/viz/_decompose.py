@@ -72,6 +72,18 @@ def _unit(v: Any) -> np.ndarray:
     return a / n
 
 
+def _plane_basis_u0(normal: Any) -> np.ndarray:
+    """Return a deterministic unit in-plane x-axis for *normal*.
+
+    Mirrors ``pytanga.viz._active._plane_basis`` (reference ``(0, 1, 0)``,
+    falling back to ``(1, 0, 0)`` near ``±y``), so a frame built from it agrees
+    with the ``Act*`` handle frame.  ``u0 = normalize(ref × n)``.
+    """
+    n = _unit(normal)
+    ref = np.array([0.0, 1.0, 0.0]) if abs(float(n[1])) <= 0.999 else np.array([1.0, 0.0, 0.0])
+    return _unit(np.cross(ref, n))
+
+
 def _frame_quaternion(
     x_world: Any, z_world: Any
 ) -> tuple[float, float, float, float]:
@@ -179,7 +191,8 @@ def _entity_decompose(entity: Any) -> tuple[Transform, dict[str, Any]]:
         }
 
     if isinstance(entity, Circle):
-        q = quat_from_vectors(_CANONICAL_Z, _dir(entity.normal))
+        n = _dir(entity.normal)
+        q = _frame_quaternion(_plane_basis_u0(n), n)
         return Transform(position=_pos(entity.center), rotation=q), {
             "radius": float(entity.radius),
             "isImaginary": bool(entity.is_imaginary),
@@ -203,7 +216,8 @@ def _entity_decompose(entity: Any) -> tuple[Transform, dict[str, Any]]:
         }
 
     if isinstance(entity, Disk):
-        q = quat_from_vectors(_CANONICAL_Z, _dir(entity.normal))
+        n = _dir(entity.normal)
+        q = _frame_quaternion(_plane_basis_u0(n), n)
         return Transform(position=_pos(entity.center), rotation=q), {
             "radius": float(entity.radius),
         }
@@ -216,17 +230,18 @@ def _entity_decompose(entity: Any) -> tuple[Transform, dict[str, Any]]:
         }
 
     if isinstance(entity, Ellipse):
-        if entity.dir_u is not None:
-            q = _frame_quaternion(entity.dir_u, entity.normal)
-        else:
-            q = quat_from_vectors(_CANONICAL_Z, _dir(entity.normal))
+        n = _dir(entity.normal)
+        base = _dir(entity.dir_u) if entity.dir_u is not None else _plane_basis_u0(n)
+        q = _frame_quaternion(base, n)
         return Transform(position=_pos(entity.center), rotation=q), {
             "radiusU": float(entity.radius_u),
             "radiusV": float(entity.radius_v),
+            "angle": float(entity.angle),
         }
 
     if isinstance(entity, RegularPolygon):
-        q = quat_from_vectors(_CANONICAL_Z, _dir(entity.normal))
+        n = _dir(entity.normal)
+        q = _frame_quaternion(_plane_basis_u0(n), n)
         return Transform(position=_pos(entity.center), rotation=q), {
             "radius": float(entity.radius),
             "sides": int(entity.sides),
@@ -234,7 +249,9 @@ def _entity_decompose(entity: Any) -> tuple[Transform, dict[str, Any]]:
         }
 
     if isinstance(entity, Rectangle2D):
-        q = quat_from_vectors(_CANONICAL_Z, _dir(entity.normal))
+        n = _dir(entity.normal)
+        base = _dir(entity.dir_u) if entity.dir_u is not None else _plane_basis_u0(n)
+        q = _frame_quaternion(base, n)
         return Transform(position=_pos(entity.center), rotation=q), {
             "size": (float(entity.size[0]), float(entity.size[1])),
             "angle": float(entity.angle),

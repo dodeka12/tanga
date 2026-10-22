@@ -75,8 +75,11 @@ class Ellipse:
     ``center``, with semi-axis radii ``radius_u`` / ``radius_v``.  ``normal``
     defaults to ``Direction(0, 0, 1)`` (the positive z-axis), the natural choice
     for 2D use cases where the ellipse lies in the xy-plane.  ``dir_u`` and
-    ``dir_v`` optionally give the (orthogonal) in-plane semi-axis directions;
-    when ``None`` the ellipse is axis-aligned within its plane.
+    ``dir_v`` optionally give the (orthonormal) in-plane basis; ``angle`` is an
+    in-plane rotation (radians) from ``dir_u`` toward ``dir_v``, so the semi-axes
+    are ``R(normal, angle)·dir_u`` / ``·dir_v``.  When ``angle == 0`` the basis is
+    the semi-axis (backward compatible); when ``dir_u``/``dir_v`` are ``None`` the
+    basis is derived from ``normal`` (world x/y for ``+z``).
 
     Parameters
     ----------
@@ -89,9 +92,13 @@ class Ellipse:
     normal:
         Normal direction of the ellipse plane (default ``+z``).
     dir_u:
-        Optional first semi-axis direction (default ``None`` = axis-aligned).
+        Optional first in-plane basis direction (default ``None`` = derived from
+        ``normal``).
     dir_v:
-        Optional second semi-axis direction (default ``None`` = axis-aligned).
+        Optional second in-plane basis direction (default ``None`` = derived from
+        ``normal``).
+    angle:
+        In-plane rotation from ``dir_u`` in radians (default ``0.0``).
     """
 
     center: Point
@@ -100,6 +107,7 @@ class Ellipse:
     normal: Direction = field(default_factory=lambda: Direction(0.0, 0.0, 1.0))
     dir_u: Direction | None = None
     dir_v: Direction | None = None
+    angle: float = 0.0
 
     def __init__(
         self,
@@ -109,6 +117,7 @@ class Ellipse:
         normal: "Direction | MV | None" = None,
         dir_u: "Direction | MV | None" = None,
         dir_v: "Direction | MV | None" = None,
+        angle: "float | MV | None" = None,
     ) -> None:
         center = Point(0.0, 0.0, 0.0) if center is None else to_point(center)
         radius_u = 1.0 if radius_u is None else to_float(radius_u)
@@ -116,6 +125,7 @@ class Ellipse:
         normal = Direction(0.0, 0.0, 1.0) if normal is None else to_direction(normal)
         dir_u = None if dir_u is None else to_direction(dir_u)
         dir_v = None if dir_v is None else to_direction(dir_v)
+        angle = 0.0 if angle is None else to_float(angle)
 
         object.__setattr__(self, "center", center)
         object.__setattr__(self, "radius_u", radius_u)
@@ -123,9 +133,10 @@ class Ellipse:
         object.__setattr__(self, "normal", normal)
         object.__setattr__(self, "dir_u", dir_u)
         object.__setattr__(self, "dir_v", dir_v)
+        object.__setattr__(self, "angle", angle)
 
     def __repr__(self) -> str:
         return (
             f"Ellipse(c={self.center}, ru={self.radius_u:.2f}, "
-            f"rv={self.radius_v:.2f}, n={self.normal})"
+            f"rv={self.radius_v:.2f}, n={self.normal}, angle={self.angle:.3f})"
         )

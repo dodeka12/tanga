@@ -419,6 +419,21 @@ class TestTiltedPlane:
         assert e.normal.y == pytest.approx(self._NORMAL.y)
         assert e.normal.z == pytest.approx(self._NORMAL.z)
 
+    def test_entity_carries_plane_basis(self) -> None:
+        handle = _FakeHandle(space_dim=3)
+        rect = ActRectangle2D(
+            center=Point(1.0, 2.0, 3.0), size=(4.0, 2.0), normal=self._NORMAL
+        )
+        rect._init(handle, "r1")
+        e = rect.entity
+        assert e.dir_u is not None and e.dir_v is not None
+        assert (e.dir_u.x, e.dir_u.y, e.dir_u.z) == pytest.approx(
+            (rect._u0.x, rect._u0.y, rect._u0.z)
+        )
+        assert (e.dir_v.x, e.dir_v.y, e.dir_v.z) == pytest.approx(
+            (rect._v0.x, rect._v0.y, rect._v0.z)
+        )
+
     def test_corners_lie_in_plane(self) -> None:
         handle = _FakeHandle(space_dim=3)
         rect = ActRectangle2D(
