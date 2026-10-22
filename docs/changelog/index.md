@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.22.0 (2.23.0-rc3)] — 2026-10-22
+- Screen-space markers stay concentric at pixel zoom (depth-bias layering) · hover scaling no longer compounds (leaf-owned scale + hover multiplier)
+→ [Details](2026/10/22_aff7a90bb.md)
+
 ## [Since 2.22.0 (2.23.0-rc2)] — 2026-10-21
 - ParamsView follow-up: full-width rows (`ControlUI.full_width`) + `ButtonUI.label`, nested-group `on_change` with dotted `event.key`, dotted row API + recursive `set_state`, `GroupView` `set_visible`/`set_enabled`/`set_title`, `GroupUI.extra_rows`
 → [Details](2026/10/21_e1b7f575b.md)
