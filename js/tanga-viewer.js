@@ -1639,6 +1639,7 @@ function createEllipse(ent) {
     const thickness = styleParam(ent, 'thickness', 1.0);
     const radiusU = Math.max(ent.radiusU ?? 1.0, 0.001);
     const radiusV = Math.max(ent.radiusV ?? 0.5, 0.001);
+    const angle = ent.angle || 0.0;
 
     const group = new THREE.Group();
 
@@ -1665,12 +1666,19 @@ function createEllipse(ent) {
     }
 
     group.add(makeFatLine(points, color, opacity, thickness));
+
+    // In-plane rotation about the plane normal (canonical +Z), applied on top of
+    // the node transform that places dir_u/dir_v + normal.
+    if (angle) {
+        group.rotateZ(angle);
+    }
+
     tagEntity(group, ent);
     return group;
 }
 
 function updateEllipse(mesh, ent, prev) {
-    if (contentChanged(ent, prev, ['radiusU', 'radiusV'])) return false;
+    if (contentChanged(ent, prev, ['radiusU', 'radiusV', 'angle'])) return false;
     if (styleNeedsRebuild(ent, prev)) return false;
     applyStyleUpdate(mesh, ent);
     return true;

@@ -68,7 +68,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/ellipse.js",
-      "sha256": "956c377c34a8745cd8ae98ffa2b5b543f741b9cb0c314acfdee5300a1d1b22b5"
+      "sha256": "a4ef0d028fdefcae984277cb8ff7774220f96d67823c641011acb0cf373da79f"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/ellipsoid.js",
@@ -303,6 +303,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "67f7091af662d8e77a4e13244d3f5540cfe98429f384299b4280ea6ff9bb83f0",
-  "bundle_sha256": "9c89989197261e4d0a1382a0ac32dcc48eb1098a8285e85a2ee22736bdecd13d"
+  "fingerprint_sha256": "e3fbb936c1f31909fdfbcbc2db5b96eadadd5e581c6ebd01a8fd14648b8415cb",
+  "bundle_sha256": "08bee405686fc34f92bce1ef43baf2003b87bd8dc23f093e599e749e4fcf5fc4"
 }
