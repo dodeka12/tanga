@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.24.1] — 2026-10-23
+- Image load events (`on_image_loaded` / `on_image_tile_load` / `on_image_tile_loaded`) with typed `ImageStatusHandler`/`ImageStatusRecord` · Bug fixes: tiled-pyramid LOD no longer toggles at zoom boundaries
+→ [Details](2026/10/23_559d10941.md)
+
 ## [Since 2.23.2 (2.24.0-rc2)] — 2026-10-23
 - `Ellipse.angle` is serialized to the frontend (non-zero-angle ellipses draw rotated)
 → [Details](2026/10/23_3d3e9a548.md)
