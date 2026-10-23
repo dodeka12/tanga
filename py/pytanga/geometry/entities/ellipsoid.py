@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import math
+
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -139,4 +141,19 @@ class Ellipse:
         return (
             f"Ellipse(c={self.center}, ru={self.radius_u:.2f}, "
             f"rv={self.radius_v:.2f}, n={self.normal}, angle={self.angle:.3f})"
+        )
+
+    def axis_directions(self) -> tuple[Direction, Direction] | None:
+        """The effective semi-axis directions: ``dir_u``/``dir_v`` rotated by ``angle``.
+
+        Returns ``None`` when ``dir_u``/``dir_v`` are unset (axis-aligned; the
+        visualizer derives a basis from ``normal``).
+        """
+        if self.dir_u is None or self.dir_v is None:
+            return None
+        du, dv = self.dir_u.normalized(), self.dir_v.normalized()
+        c, s = math.cos(self.angle), math.sin(self.angle)
+        return (
+            Direction(c * du.x + s * dv.x, c * du.y + s * dv.y, c * du.z + s * dv.z),
+            Direction(-s * du.x + c * dv.x, -s * du.y + c * dv.y, -s * du.z + c * dv.z),
         )

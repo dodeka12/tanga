@@ -53,13 +53,10 @@ if TYPE_CHECKING:
 
 def _ellipse_axes_2d(entity: "Ellipse") -> tuple[tuple[float, float], tuple[float, float]]:
     """The angle-rotated semi-axis directions of a 2D ellipse (XY plane)."""
-    ux, uy = (entity.dir_u.x, entity.dir_u.y) if entity.dir_u is not None else (1.0, 0.0)
-    vx, vy = (entity.dir_v.x, entity.dir_v.y) if entity.dir_v is not None else (0.0, 1.0)
-    c, s = float(np.cos(entity.angle)), float(np.sin(entity.angle))
-    return (
-        (c * ux + s * vx, c * uy + s * vy),
-        (-s * ux + c * vx, -s * uy + c * vy),
-    )
+    axes = entity.axis_directions()
+    if axes is not None:
+        return (axes[0].x, axes[0].y), (axes[1].x, axes[1].y)
+    return (1.0, 0.0), (0.0, 1.0)
 
 
 _TOL = 1e-9

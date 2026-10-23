@@ -379,3 +379,51 @@ class TestHandleDragMode:
             assert drag[0].drag_mode == DragMode.VIEW_PLANE
             assert drag[0].modifiers == frozenset()
 
+
+
+def test_explicit_basis_overrides_normal() -> None:
+    ellipse = ActEllipse(
+        center=Point(0, 0, 0),
+        radius_u=2.0,
+        radius_v=1.0,
+        dir_u=Direction(0, 1, 0),
+        dir_v=Direction(0, 0, 1),
+    )
+    e = ellipse.entity
+    assert (e.dir_u.x, e.dir_u.y, e.dir_u.z) == (0.0, 1.0, 0.0)
+    assert (e.dir_v.x, e.dir_v.y, e.dir_v.z) == (0.0, 0.0, 1.0)
+    assert (e.normal.x, e.normal.y, e.normal.z) == (1.0, 0.0, 0.0)
+
+
+def test_half_basis_raises() -> None:
+    with pytest.raises(ValueError):
+        ActEllipse(center=Point(0, 0, 0), dir_u=Direction(0, 1, 0))
+
+
+def test_non_orthonormal_basis_raises() -> None:
+    with pytest.raises(ValueError):
+        ActEllipse(
+            center=Point(0, 0, 0),
+            dir_u=Direction(1, 0, 0),
+            dir_v=Direction(1, 1, 0),  # not orthogonal
+        )
+
+
+def test_from_entity_round_trip() -> None:
+    ellipse = Ellipse(
+        center=Point(0, 0, 0),
+        radius_u=2.0,
+        radius_v=1.0,
+        angle=0.5,
+        normal=Direction(1, 0, 0),
+        dir_u=Direction(0, 1, 0),
+        dir_v=Direction(0, 0, 1),
+    )
+    act = ActEllipse.from_entity(ellipse)
+    e = act.entity
+    assert e.center == ellipse.center
+    assert e.radius_u == ellipse.radius_u
+    assert e.radius_v == ellipse.radius_v
+    assert e.angle == ellipse.angle
+    assert (e.dir_u.x, e.dir_u.y, e.dir_u.z) == (0.0, 1.0, 0.0)
+    assert (e.normal.x, e.normal.y, e.normal.z) == (1.0, 0.0, 0.0)

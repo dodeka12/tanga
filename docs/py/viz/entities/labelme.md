@@ -66,5 +66,8 @@ plus the top-level `radius_u`, `radius_v`, and `angle` (radians, from image
 horizontal) keys.  The legacy `[center, rim_u, rim_v]` form is still accepted on
 load for backward compatibility, but only the scalar form is written.
 
+Shapes loaded through a mapper round-trip to the same pixels when saved through
+the same mapper — including through an interactive act (`LabelMeStore.to_act`).
+
 See the [`image_labeling_app.py`](../../examples/apps/image_labeling_app.md)
 example for an end-to-end labeling app that uses the store.

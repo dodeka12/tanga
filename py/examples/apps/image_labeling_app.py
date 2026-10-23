@@ -65,7 +65,6 @@ from pytanga.viz import (
     ToolbarView,
     VisualizerApp,
 )
-from pytanga.viz._active import _plane_basis
 
 _W, _H = 320, 200
 _FILL = "#ff4444"
@@ -387,35 +386,11 @@ class ImageLabeler:
         """Wrap a plain labelme entity in an interactive act (click-to-select)."""
         select = self._make_select_handler()
         if isinstance(entity, Rectangle2D):
-            return ActRectangle2D(
-                center=entity.center,
-                size=entity.size,
-                angle=entity.angle,
-                normal=entity.normal,
-                on_click=select,
-                handle_style=self._handle_style,
-            )
+            return ActRectangle2D.from_entity(entity, on_click=select, handle_style=self._handle_style)
         if isinstance(entity, Ellipse):
-            u0, v0 = _plane_basis(entity.normal)
-            du = entity.dir_u if entity.dir_u is not None else u0
-            angle = math.atan2(du.dot(v0), du.dot(u0)) + entity.angle
-            return ActEllipse(
-                center=entity.center,
-                radius_u=entity.radius_u,
-                radius_v=entity.radius_v,
-                angle=angle,
-                normal=entity.normal,
-                on_click=select,
-                handle_style=self._handle_style,
-            )
+            return ActEllipse.from_entity(entity, on_click=select, handle_style=self._handle_style)
         if isinstance(entity, Circle):
-            return ActCircle(
-                center=entity.center,
-                radius=entity.radius,
-                normal=entity.normal,
-                on_click=select,
-                handle_style=self._handle_style,
-            )
+            return ActCircle.from_entity(entity, on_click=select, handle_style=self._handle_style)
         if isinstance(entity, Line):
             return ActLine(
                 start=entity.start,

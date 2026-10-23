@@ -75,6 +75,8 @@ ActEllipse(
 | `radius_v` | `float` | `0.5` | Semi-axis radius along `dir_v` |
 | `angle` | `float` | `0.0` | In-plane rotation in radians, measured in the plane ⟂ `normal` |
 | `normal` | `Direction \| None` | `+z` | Plane normal direction (the ellipse lies ⟂ this normal) |
+| `dir_u` | `Direction \| None` | `None` | First in-plane basis direction (derived from `normal` when unset) |
+| `dir_v` | `Direction \| None` | `None` | Second in-plane basis direction (derived from `normal` when unset) |
 | `show_translate_handle` | `bool` | `True` | Add the centre translation handle |
 | `show_rotate_handle` | `bool` | `True` | Add the rim rotation handle |
 | `handle_style` | `SquarePointStyle \| None` | square marker | Visual style of the handles |
