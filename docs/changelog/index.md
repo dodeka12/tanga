@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.23.2 (2.24.0-rc1)] — 2026-10-23
+- Legacy 3-point ellipses wrap in an act again (orthonormal basis + consistent plane normal)
+→ [Details](2026/10/23_af2a0cdab.md)
+
 ## [Since 2.23.2] — 2026-10-23
 - Interactive shapes use the plane's pixel basis (`dir_u`/`dir_v`, `from_entity`, `axis_directions()`) · labelme ellipse `angle` is in the pixel frame
 → [Details](2026/10/23_1a612aa0f.md)
