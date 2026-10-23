@@ -488,3 +488,49 @@ class TestHandleDragMode:
             assert drag[0].drag_mode == DragMode.VIEW_PLANE
             assert drag[0].modifiers == frozenset()
 
+
+
+def test_explicit_basis_overrides_normal() -> None:
+    rect = ActRectangle2D(
+        center=Point(0, 0, 0),
+        size=(4, 2),
+        dir_u=Direction(0, 1, 0),
+        dir_v=Direction(0, 0, 1),
+    )
+    e = rect.entity
+    assert (e.dir_u.x, e.dir_u.y, e.dir_u.z) == (0.0, 1.0, 0.0)
+    assert (e.dir_v.x, e.dir_v.y, e.dir_v.z) == (0.0, 0.0, 1.0)
+    assert (e.normal.x, e.normal.y, e.normal.z) == (1.0, 0.0, 0.0)
+
+
+def test_half_basis_raises() -> None:
+    with pytest.raises(ValueError):
+        ActRectangle2D(center=Point(0, 0, 0), dir_u=Direction(0, 1, 0))
+
+
+def test_non_orthonormal_basis_raises() -> None:
+    with pytest.raises(ValueError):
+        ActRectangle2D(
+            center=Point(0, 0, 0),
+            dir_u=Direction(1, 0, 0),
+            dir_v=Direction(1, 1, 0),  # not orthogonal
+        )
+
+
+def test_from_entity_round_trip() -> None:
+    rect = Rectangle2D(
+        center=Point(1, 2, 3),
+        size=(4, 2),
+        angle=0.3,
+        normal=Direction(1, 0, 0),
+        dir_u=Direction(0, 1, 0),
+        dir_v=Direction(0, 0, 1),
+    )
+    act = ActRectangle2D.from_entity(rect)
+    e = act.entity
+    assert e.center == rect.center
+    assert e.size == rect.size
+    assert e.angle == rect.angle
+    assert (e.dir_u.x, e.dir_u.y, e.dir_u.z) == (0.0, 1.0, 0.0)
+    assert (e.dir_v.x, e.dir_v.y, e.dir_v.z) == (0.0, 0.0, 1.0)
+    assert (e.normal.x, e.normal.y, e.normal.z) == (1.0, 0.0, 0.0)

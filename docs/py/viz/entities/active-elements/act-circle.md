@@ -35,6 +35,8 @@ ActCircle(
     radius: float = 1.0,
     *,
     normal: Direction | None = None,
+    dir_u: Direction | None = None,
+    dir_v: Direction | None = None,
     min_radius: float | None = None,
     show_translate_handle: bool = True,
     handle_style: PointStyle | None = None,
@@ -50,6 +52,9 @@ ActCircle(
 - `entity` / `circle` return the current `Circle`.
 - `center` / `radius` expose the current geometry.
 - `normal` (constructor kwarg) sets the circle's plane (default `+z`).
+- `dir_u`/`dir_v` (constructor kwargs) optionally give the in-plane basis that
+  orients the radius handle (default derived from `normal`).
+- `ActCircle.from_entity(circle, **kwargs)` wraps a `Circle`, copying its plane.
 - `create_from_points(center, rim)` builds a circle from a centre and rim point
   (radius = distance), implementing the `ShapeFromPoints` protocol.
 

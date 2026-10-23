@@ -425,12 +425,17 @@ class LabelMeStore:
                     shape_type="circle",
                 )
             return self._polygon_from_ellipse(ellipse, label)
+        pixel_u, _ = self._mapper.pixel_axes()
+        du, dv = self._basis(ellipse.normal, ellipse.dir_u, ellipse.dir_v)
+        angle_px = ellipse.angle + _signed_angle(
+            pixel_u, du, du.cross(dv).normalized()
+        )
         return LabelShape(
             label=label,
             points=[self._mapper.to_pixel(ellipse.center)],
             radius_u=ellipse.radius_u / scale,
             radius_v=ellipse.radius_v / scale,
-            angle=ellipse.angle,
+            angle=angle_px,
             shape_type=_ELLIPSE,
         )
 
@@ -491,6 +496,22 @@ class LabelMeStore:
 
         return _plane_basis(normal)
 
+    def to_act(self, entity: Any, **kwargs: Any) -> Any:
+        """Wrap a plain geometry entity in its interactive act (lazy import).
+
+        Convenience wrapper over the ``Act*.from_entity`` classmethods; the
+        store's load/save API remains data-only.
+        """
+        from ._active import ActCircle, ActEllipse, ActRectangle2D
+
+        if isinstance(entity, Rectangle2D):
+            return ActRectangle2D.from_entity(entity, **kwargs)
+        if isinstance(entity, Ellipse):
+            return ActEllipse.from_entity(entity, **kwargs)
+        if isinstance(entity, Circle):
+            return ActCircle.from_entity(entity, **kwargs)
+        raise TypeError(f"unsupported entity for to_act: {type(entity).__name__}")
+
     def _polygon_from_ellipse(self, ellipse: Ellipse, label: str) -> LabelShape:
         n = 32
         du, dv = _ellipse_axes(ellipse)
@@ -532,6 +553,11 @@ def _rotated_axes(
     )
 
 
+def _signed_angle(u: Direction, v: Direction, normal: Direction) -> float:
+    """Signed angle from *u* to *v* about *normal* (right-hand rule), radians."""
+    return math.atan2(normal.dot(u.cross(v)), u.dot(v))
+
+
 def _is_axis_aligned(corners: list[tuple[float, float]]) -> bool:
     """Return whether four ordered corners form an axis-aligned pixel rectangle."""
     (x0, y0), (x1, y1), (x2, y2), (x3, y3) = corners
@@ -546,9 +572,13 @@ def _is_axis_aligned(corners: list[tuple[float, float]]) -> bool:
 
 def _ellipse_axes(ellipse: Ellipse) -> tuple[Direction, Direction]:
     """The actual (angle-rotated) semi-axis directions of an ellipse."""
-    du = ellipse.dir_u if ellipse.dir_u is not None else Direction(1.0, 0.0, 0.0)
-    dv = ellipse.dir_v if ellipse.dir_v is not None else Direction(0.0, 1.0, 0.0)
-    return _rotated_axes(du.normalized(), dv.normalized(), ellipse.angle)
+    axes = ellipse.axis_directions()
+    if axes is not None:
+        return axes
+    from ._active import _plane_basis
+
+    du, dv = _plane_basis(ellipse.normal)
+    return _rotated_axes(du, dv, ellipse.angle)
 
 
 def _default_style_for(shape_type: str) -> ObjVizStyle:

@@ -74,6 +74,8 @@ ActRectangle2D(
 | `size` | `(float, float) \| None` | `(1, 1)` | Full `(width, height)` |
 | `angle` | `float` | `0.0` | In-plane rotation in radians, measured in the plane ⟂ `normal` |
 | `normal` | `Direction \| None` | `+z` | Plane normal direction (the rectangle lies ⟂ this normal) |
+| `dir_u` | `Direction \| None` | `None` | First in-plane basis direction (derived from `normal` when unset) |
+| `dir_v` | `Direction \| None` | `None` | Second in-plane basis direction (derived from `normal` when unset) |
 | `show_translate_handle` | `bool` | `True` | Add the centre translation handle |
 | `handle_style` | `SquarePointStyle \| None` | square marker | Visual style of the handles |
 | `act_style` | `ActPointStyle \| None` | `None` | Hover highlighting of the handles |

@@ -206,6 +206,42 @@ def _plane_basis(normal: Direction) -> tuple[Direction, Direction]:
     return u0, v0
 
 
+_ORTHO_TOL = 1e-6
+
+
+def _resolve_basis(
+    normal: Direction | None,
+    dir_u: Direction | None,
+    dir_v: Direction | None,
+) -> tuple[Direction, Direction, Direction]:
+    """Resolve ``(normal, u0, v0)`` from an explicit basis or a normal.
+
+    When ``dir_u``/``dir_v`` are both given they define the plane basis and the
+    normal is derived as ``u0 × v0`` (validated orthonormal + right-handed).
+    Otherwise the basis is :func:`_plane_basis` of ``normal`` (default ``+z``).
+    A half-specified or invalid basis raises ``ValueError``.
+    """
+    if dir_u is not None and dir_v is not None:
+        u0 = dir_u.normalized()
+        v0 = dir_v.normalized()
+        if abs(u0.dot(v0)) > _ORTHO_TOL:
+            raise ValueError("dir_u and dir_v must be orthogonal")
+        n = u0.cross(v0)
+        if n.mag() < _ORTHO_TOL:
+            raise ValueError("dir_u and dir_v must be linearly independent")
+        n = n.normalized()
+        if normal is not None:
+            given = normal.normalized()
+            if abs(1.0 - given.dot(n)) > _ORTHO_TOL:
+                raise ValueError("normal must equal dir_u × dir_v")
+        return n, u0, v0
+    if dir_u is not None or dir_v is not None:
+        raise ValueError("dir_u and dir_v must be given together")
+    n = Direction(0.0, 0.0, 1.0) if normal is None else normal.normalized()
+    u0, v0 = _plane_basis(n)
+    return n, u0, v0
+
+
 # ── ActSceneObject ─────────────────────────────────────────────
 
 
@@ -1129,9 +1165,13 @@ class ActRectangle2D(ActiveObject):
         center: Center of the rectangle (default ``(0, 0, 0)``).
         size: Full ``(width, height)`` (default ``(1, 1)``).
         angle: In-plane rotation in radians (default ``0.0`` = axis-aligned),
-            measured in the plane perpendicular to ``normal``.
+            measured from ``dir_u`` toward ``dir_v``.
         normal: Plane normal direction (default ``+z``).  The rectangle lies in
             the plane perpendicular to this normal.
+        dir_u: Optional first in-plane basis direction (default ``None`` =
+            derived from ``normal``).  Must be given together with ``dir_v``.
+        dir_v: Optional second in-plane basis direction (default ``None`` =
+            derived from ``normal``).  Must be given together with ``dir_u``.
         min_size: Minimum width/height during corner resize (default ``None`` =
             floating-point precision).  Pass an explicit world-unit value to clamp.
         max_size: Maximum width/height during corner resize (default ``None`` =
@@ -1165,6 +1205,8 @@ class ActRectangle2D(ActiveObject):
         *,
         angle: float = 0.0,
         normal: Direction | None = None,
+        dir_u: Direction | None = None,
+        dir_v: Direction | None = None,
         min_size: float | None = None,
         max_size: float | None = None,
         show_translate_handle: bool = True,
@@ -1191,10 +1233,7 @@ class ActRectangle2D(ActiveObject):
             act_style=act_style,
             style=style,
         )
-        self._normal = (
-            Direction(0.0, 0.0, 1.0) if normal is None else normal.normalized()
-        )
-        self._u0, self._v0 = _plane_basis(self._normal)
+        self._normal, self._u0, self._v0 = _resolve_basis(normal, dir_u, dir_v)
         self._rect = Rectangle2D(
             center=center,
             size=size,
@@ -1233,6 +1272,29 @@ class ActRectangle2D(ActiveObject):
     def entity(self) -> Rectangle2D:
         """The rendered body entity (a ``Rectangle2D``)."""
         return self._rect
+
+    @classmethod
+    def from_entity(cls, entity: Rectangle2D, **kwargs: Any) -> "ActRectangle2D":
+        """Build an act from a :class:`~pytanga.geometry.Rectangle2D`, copying its frame."""
+        return cls(
+            center=entity.center,
+            size=entity.size,
+            angle=entity.angle,
+            normal=entity.normal,
+            dir_u=entity.dir_u,
+            dir_v=entity.dir_v,
+            **kwargs,
+        )
+
+    @property
+    def dir_u(self) -> Direction:
+        """The first in-plane basis direction (normalized)."""
+        return self._u0
+
+    @property
+    def dir_v(self) -> Direction:
+        """The second in-plane basis direction (normalized)."""
+        return self._v0
 
     @property
     def angle(self) -> float:
@@ -1525,16 +1587,21 @@ class ActEllipse(ActiveObject):
     The body is a visual-only :class:`~pytanga.geometry.Ellipse`; all
     interaction happens through child :class:`ActPoint` handles — two radius
     handles, a centre translate handle, and a rim rotate handle.  Rotation is
-    encoded in ``Ellipse.dir_u`` / ``Ellipse.dir_v``.
+    the scalar ``Ellipse.angle``, measured from the in-plane basis ``dir_u`` /
+    ``dir_v``.
 
     Args:
         center: Center of the ellipse (default ``(0, 0, 0)``).
         radius_u: Semi-axis radius along ``dir_u`` (default ``1.0``).
         radius_v: Semi-axis radius along ``dir_v`` (default ``0.5``).
-        angle: In-plane rotation in radians (default ``0.0``), measured in the
-            plane perpendicular to ``normal``.
+        angle: In-plane rotation in radians (default ``0.0``), measured from
+            ``dir_u`` toward ``dir_v``.
         normal: Plane normal direction (default ``+z``).  The ellipse lies in
             the plane perpendicular to this normal.
+        dir_u: Optional first in-plane basis direction (default ``None`` =
+            derived from ``normal``).  Must be given together with ``dir_v``.
+        dir_v: Optional second in-plane basis direction (default ``None`` =
+            derived from ``normal``).  Must be given together with ``dir_u``.
         show_translate_handle: Add a centre translation handle (default ``True``).
         show_rotate_handle: Add a rim rotation handle (default ``True``).
         handle_style: Marker style for the radius handles (default a circle marker).
@@ -1560,6 +1627,8 @@ class ActEllipse(ActiveObject):
         *,
         angle: float = 0.0,
         normal: Direction | None = None,
+        dir_u: Direction | None = None,
+        dir_v: Direction | None = None,
         show_translate_handle: bool = True,
         show_rotate_handle: bool = True,
         handle_style: PointStyle | None = None,
@@ -1589,10 +1658,7 @@ class ActEllipse(ActiveObject):
         self._radius_u = float(radius_u)
         self._radius_v = float(radius_v)
         self._angle = float(angle)
-        self._normal = (
-            Direction(0.0, 0.0, 1.0) if normal is None else normal.normalized()
-        )
-        self._u0, self._v0 = _plane_basis(self._normal)
+        self._normal, self._u0, self._v0 = _resolve_basis(normal, dir_u, dir_v)
         self._min_radius = min_radius
         self._max_radius = max_radius
         self._show_translate_handle = show_translate_handle
@@ -1622,6 +1688,30 @@ class ActEllipse(ActiveObject):
     def entity(self) -> Ellipse:
         """The rendered body entity (an ``Ellipse``)."""
         return self._build_ellipse()
+
+    @classmethod
+    def from_entity(cls, entity: Ellipse, **kwargs: Any) -> "ActEllipse":
+        """Build an act from an :class:`~pytanga.geometry.Ellipse`, copying its frame."""
+        return cls(
+            center=entity.center,
+            radius_u=entity.radius_u,
+            radius_v=entity.radius_v,
+            angle=entity.angle,
+            normal=entity.normal,
+            dir_u=entity.dir_u,
+            dir_v=entity.dir_v,
+            **kwargs,
+        )
+
+    @property
+    def dir_u(self) -> Direction:
+        """The first in-plane basis direction (normalized)."""
+        return self._u0
+
+    @property
+    def dir_v(self) -> Direction:
+        """The second in-plane basis direction (normalized)."""
+        return self._v0
 
     @property
     def center(self) -> Point:
@@ -1880,6 +1970,10 @@ class ActCircle(ActiveObject):
         radius: Circle radius (default ``1.0``).
         normal: Plane normal direction (default ``+z``).  The circle lies in
             the plane perpendicular to this normal.
+        dir_u: Optional first in-plane basis direction (default ``None`` =
+            derived from ``normal``).  Must be given together with ``dir_v``.
+        dir_v: Optional second in-plane basis direction (default ``None`` =
+            derived from ``normal``).  Must be given together with ``dir_u``.
         min_radius: Minimum radius during resize (default ``None`` =
             floating-point precision).  Pass an explicit world-unit value to clamp.
         max_radius: Maximum radius during resize (default ``None`` = unbounded).
@@ -1906,6 +2000,8 @@ class ActCircle(ActiveObject):
         radius: float = 1.0,
         *,
         normal: Direction | None = None,
+        dir_u: Direction | None = None,
+        dir_v: Direction | None = None,
         min_radius: float | None = None,
         max_radius: float | None = None,
         show_translate_handle: bool = True,
@@ -1928,10 +2024,7 @@ class ActCircle(ActiveObject):
         )
         self._center = Point(0.0, 0.0, 0.0) if center is None else center
         self._radius = float(radius)
-        self._normal = (
-            Direction(0.0, 0.0, 1.0) if normal is None else normal.normalized()
-        )
-        self._u0, self._v0 = _plane_basis(self._normal)
+        self._normal, self._u0, self._v0 = _resolve_basis(normal, dir_u, dir_v)
         self._min_radius = min_radius
         self._max_radius = max_radius
         self._show_translate_handle = show_translate_handle
@@ -1958,6 +2051,26 @@ class ActCircle(ActiveObject):
     def entity(self) -> Circle:
         """The rendered body entity (a ``Circle``)."""
         return self._build_circle()
+
+    @classmethod
+    def from_entity(cls, entity: Circle, **kwargs: Any) -> "ActCircle":
+        """Build an act from a :class:`~pytanga.geometry.Circle`, copying its plane."""
+        return cls(
+            center=entity.center,
+            radius=entity.radius,
+            normal=entity.normal,
+            **kwargs,
+        )
+
+    @property
+    def dir_u(self) -> Direction:
+        """The first in-plane basis direction (normalized)."""
+        return self._u0
+
+    @property
+    def dir_v(self) -> Direction:
+        """The second in-plane basis direction (normalized)."""
+        return self._v0
 
     @property
     def center(self) -> Point:

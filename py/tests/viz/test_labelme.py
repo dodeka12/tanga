@@ -12,7 +12,16 @@ from typing import Any
 import numpy as np
 import pytest
 
-from pytanga.geometry import Circle, Ellipse, Line, Matrix, OpenCVFrame, Point, Rectangle2D
+from pytanga.geometry import (
+    Circle,
+    Direction,
+    Ellipse,
+    Line,
+    Matrix,
+    OpenCVFrame,
+    Point,
+    Rectangle2D,
+)
 from pytanga.viz import (
     ActSceneObject,
     CalibratedPlaneMapper,
@@ -351,3 +360,89 @@ def test_real_file_round_trip_full_precision() -> None:
     doc2 = store.loads(store.dumps(result.document)).document
     assert doc2 == result.document
 
+
+
+def test_ellipse_angle_is_pixel_frame() -> None:
+    # PlanarMapper: pixel_u = world +x.  An ellipse whose basis is rotated +90°
+    # from pixel_u, with angle=0, must export angle = 0 + pi/2 (pixel frame).
+    store = LabelMeStore()
+    ellipse = Ellipse(
+        center=Point(0, 0, 0),
+        radius_u=3.0,
+        radius_v=2.0,
+        dir_u=Direction(0, 1, 0),
+        dir_v=Direction(-1, 0, 0),
+        angle=0.0,
+    )
+    shape = store.shapes_from_objects([(ellipse, "e")])[0]
+    assert shape.angle == pytest.approx(np.pi / 2, abs=1e-9)
+
+
+def _roll_tilt_calibration() -> CameraCalibration:
+    ax = np.radians(3.0)
+    az = np.radians(5.0)
+    rx = np.array(
+        [[1.0, 0.0, 0.0], [0.0, np.cos(ax), -np.sin(ax)], [0.0, np.sin(ax), np.cos(ax)]]
+    )
+    rz = np.array(
+        [[np.cos(az), -np.sin(az), 0.0], [np.sin(az), np.cos(az), 0.0], [0.0, 0.0, 1.0]]
+    )
+    return CameraCalibration(
+        K=Matrix([[500.0, 0.0, 320.0], [0.0, 500.0, 240.0], [0.0, 0.0, 1.0]]),
+        R=Matrix(rz @ rx),
+        t=[0.0, 0.0, 0.0],
+        image_size=(640, 480),
+        frame=OpenCVFrame(),
+        units=1.0,
+    )
+
+
+def test_roll_tilt_rectangle_act_round_trip() -> None:
+    store = LabelMeStore(mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0))
+    doc = LabelMeDocument(
+        shapes=[LabelShape(label="r", points=[(120, 150), (180, 230)], shape_type="rectangle")]
+    )
+    objs, _ = store.iter_objects(doc)
+    rect = objs[0][0]
+    act = store.to_act(rect)
+    rebuilt = store.shapes_from_objects([(act.entity, "r")])[0]
+    assert rebuilt.shape_type == "rectangle"
+    assert rebuilt.points[0] == pytest.approx((120.0, 150.0), abs=1e-6)
+    assert rebuilt.points[1] == pytest.approx((180.0, 230.0), abs=1e-6)
+
+
+def test_roll_tilt_ellipse_act_round_trip() -> None:
+    store = LabelMeStore(mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0))
+    theta = 0.7
+    doc = LabelMeDocument(
+        shapes=[
+            LabelShape(
+                label="e",
+                points=[(320, 240)],
+                shape_type="ellipse",
+                radius_u=40.0,
+                radius_v=20.0,
+                angle=theta,
+            )
+        ]
+    )
+    objs, _ = store.iter_objects(doc)
+    ellipse = objs[0][0]
+    act = store.to_act(ellipse)
+    rebuilt = store.shapes_from_objects([(act.entity, "e")])[0]
+    assert rebuilt.radius_u == pytest.approx(40.0, abs=1e-6)
+    assert rebuilt.radius_v == pytest.approx(20.0, abs=1e-6)
+    assert rebuilt.angle == pytest.approx(theta, abs=1e-6)
+
+
+def test_roll_tilt_circle_unchanged() -> None:
+    store = LabelMeStore(mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0))
+    doc = LabelMeDocument(
+        shapes=[LabelShape(label="c", points=[(320, 240), (380, 240)], shape_type="circle")]
+    )
+    objs, _ = store.iter_objects(doc)
+    circle = objs[0][0]
+    rebuilt = store.shapes_from_objects([(circle, "c")])[0]
+    assert rebuilt.shape_type == "circle"
+    assert rebuilt.points[0] == pytest.approx((320.0, 240.0), abs=1e-6)
+    assert rebuilt.points[1] == pytest.approx((380.0, 240.0), abs=1e-6)

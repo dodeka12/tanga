@@ -133,7 +133,6 @@ from pytanga.viz import (
     ViewportConfig,
     Visualizer,
 )
-from pytanga.viz._active import _plane_basis
 from pytanga.viz.image import pil_to_numpy
 
 _DATA_DIR = Path(__file__).resolve().parent.parent / "viz" / "camera" / "data" / "tless"
@@ -479,32 +478,11 @@ class _CalibratedLabeler:
         if isinstance(entity, Line):
             return ActLine(start=entity.start, end=entity.end, on_click=select)
         if isinstance(entity, Circle):
-            return ActCircle(
-                center=entity.center,
-                radius=entity.radius,
-                normal=entity.normal,
-                on_click=select,
-            )
+            return ActCircle.from_entity(entity, on_click=select)
         if isinstance(entity, Rectangle2D):
-            return ActRectangle2D(
-                center=entity.center,
-                size=entity.size,
-                angle=entity.angle,
-                normal=entity.normal,
-                on_click=select,
-            )
+            return ActRectangle2D.from_entity(entity, on_click=select)
         if isinstance(entity, Ellipse):
-            u0, v0 = _plane_basis(entity.normal)
-            du = entity.dir_u if entity.dir_u is not None else u0
-            angle = math.atan2(du.dot(v0), du.dot(u0)) + entity.angle
-            return ActEllipse(
-                center=entity.center,
-                radius_u=entity.radius_u,
-                radius_v=entity.radius_v,
-                angle=angle,
-                normal=entity.normal,
-                on_click=select,
-            )
+            return ActEllipse.from_entity(entity, on_click=select)
         if isinstance(entity, PointPath):
             pts = [Point(x, y, z) for x, y, z in entity.points]
             closed = len(pts) > 1 and pts[0] == pts[-1]

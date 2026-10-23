@@ -266,3 +266,36 @@ class TestHandleDragMode:
             assert drag[0].drag_mode == DragMode.VIEW_PLANE
             assert drag[0].modifiers == frozenset()
 
+
+
+def test_explicit_basis_overrides_normal() -> None:
+    circle = ActCircle(
+        center=Point(0, 0, 0), dir_u=Direction(0, 1, 0), dir_v=Direction(0, 0, 1)
+    )
+    assert circle.dir_u == Direction(0, 1, 0)
+    assert circle.dir_v == Direction(0, 0, 1)
+    n = circle.entity.normal
+    assert (n.x, n.y, n.z) == (1.0, 0.0, 0.0)
+
+
+def test_circle_half_basis_raises() -> None:
+    with pytest.raises(ValueError):
+        ActCircle(center=Point(0, 0, 0), dir_u=Direction(0, 1, 0))
+
+
+def test_circle_non_orthonormal_basis_raises() -> None:
+    with pytest.raises(ValueError):
+        ActCircle(
+            center=Point(0, 0, 0),
+            dir_u=Direction(1, 0, 0),
+            dir_v=Direction(1, 1, 0),  # not orthogonal
+        )
+
+
+def test_from_entity_round_trip() -> None:
+    circle = Circle(center=Point(1, 2, 3), radius=2.5, normal=Direction(1, 0, 0))
+    act = ActCircle.from_entity(circle)
+    e = act.entity
+    assert e.center == circle.center
+    assert e.radius == circle.radius
+    assert (e.normal.x, e.normal.y, e.normal.z) == (1.0, 0.0, 0.0)
