@@ -446,3 +446,104 @@ def test_roll_tilt_circle_unchanged() -> None:
     assert rebuilt.shape_type == "circle"
     assert rebuilt.points[0] == pytest.approx((320.0, 240.0), abs=1e-6)
     assert rebuilt.points[1] == pytest.approx((380.0, 240.0), abs=1e-6)
+
+
+def _level_calibration() -> CameraCalibration:
+    return CameraCalibration(
+        K=Matrix([[500.0, 0.0, 320.0], [0.0, 500.0, 240.0], [0.0, 0.0, 1.0]]),
+        R=Matrix(np.eye(3)),
+        t=[0.0, 0.0, 0.0],
+        image_size=(640, 480),
+        frame=OpenCVFrame(),
+        units=1.0,
+    )
+
+
+def test_legacy_ellipse_to_act_level() -> None:
+    store = LabelMeStore(mapper=CalibratedPlaneMapper(_level_calibration(), depth=1.0))
+    doc = LabelMeDocument(
+        shapes=[
+            LabelShape(
+                label="e", points=[(320, 240), (360, 240), (320, 260)], shape_type="ellipse"
+            )
+        ]
+    )
+    objs, _ = store.iter_objects(doc)
+    act = store.to_act(objs[0][0])  # must not raise
+    rebuilt = store.shapes_from_objects([(act.entity, "e")])[0]
+    assert rebuilt.shape_type == "ellipse"
+    assert rebuilt.radius_u == pytest.approx(40.0, abs=1e-6)
+    assert rebuilt.radius_v == pytest.approx(20.0, abs=1e-6)
+
+
+def test_legacy_ellipse_to_act_roll_tilt() -> None:
+    store = LabelMeStore(mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0))
+    doc = LabelMeDocument(
+        shapes=[
+            LabelShape(
+                label="e", points=[(320, 240), (360, 240), (320, 260)], shape_type="ellipse"
+            )
+        ]
+    )
+    objs, _ = store.iter_objects(doc)
+    act = store.to_act(objs[0][0])  # must not raise
+    rebuilt = store.shapes_from_objects([(act.entity, "e")])[0]
+    assert rebuilt.radius_u == pytest.approx(40.0, abs=1e-6)
+    assert rebuilt.radius_v == pytest.approx(20.0, abs=1e-6)
+
+
+def test_legacy_ellipse_rotated_major_axis() -> None:
+    store = LabelMeStore(mapper=CalibratedPlaneMapper(_level_calibration(), depth=1.0))
+    theta = np.radians(30.0)
+    cx, cy = 320.0, 240.0
+    rim_u = (cx + 40.0 * np.cos(theta), cy + 40.0 * np.sin(theta))
+    rim_v = (cx - 20.0 * np.sin(theta), cy + 20.0 * np.cos(theta))
+    doc = LabelMeDocument(
+        shapes=[LabelShape(label="e", points=[(cx, cy), rim_u, rim_v], shape_type="ellipse")]
+    )
+    objs, _ = store.iter_objects(doc)
+    act = store.to_act(objs[0][0])
+    rebuilt = store.shapes_from_objects([(act.entity, "e")])[0]
+    assert rebuilt.angle == pytest.approx(theta, abs=1e-6)
+
+
+def test_legacy_ellipse_non_perpendicular_rim_v() -> None:
+    store = LabelMeStore(mapper=CalibratedPlaneMapper(_level_calibration(), depth=1.0))
+    # rim_v has a component along rim_u; only the perpendicular part is the radius.
+    doc = LabelMeDocument(
+        shapes=[
+            LabelShape(
+                label="e", points=[(320, 240), (360, 240), (330, 270)], shape_type="ellipse"
+            )
+        ]
+    )
+    objs, _ = store.iter_objects(doc)
+    act = store.to_act(objs[0][0])  # must not raise (was orthogonal failure)
+    rebuilt = store.shapes_from_objects([(act.entity, "e")])[0]
+    assert rebuilt.radius_u == pytest.approx(40.0, abs=1e-6)
+    assert rebuilt.radius_v == pytest.approx(30.0, abs=1e-6)
+
+
+def test_mixed_document_to_act() -> None:
+    store = LabelMeStore(mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0))
+    doc = LabelMeDocument(
+        shapes=[
+            LabelShape(
+                label="legacy", points=[(320, 240), (360, 240), (320, 260)], shape_type="ellipse"
+            ),
+            LabelShape(
+                label="new",
+                points=[(320, 240)],
+                shape_type="ellipse",
+                radius_u=40.0,
+                radius_v=20.0,
+                angle=0.5,
+            ),
+            LabelShape(label="rect", points=[(100, 100), (200, 180)], shape_type="rectangle"),
+            LabelShape(label="circ", points=[(400, 300), (450, 300)], shape_type="circle"),
+        ]
+    )
+    objs, errors = store.iter_objects(doc)
+    assert errors == []
+    for entity, _ in objs:
+        store.to_act(entity)  # must not raise
