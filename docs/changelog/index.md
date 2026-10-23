@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.23.2] — 2026-10-23
+- Interactive shapes use the plane's pixel basis (`dir_u`/`dir_v`, `from_entity`, `axis_directions()`) · labelme ellipse `angle` is in the pixel frame
+→ [Details](2026/10/23_1a612aa0f.md)
+
 ## [Since 2.23.1] — 2026-10-22
 - Rectangle2D body/handles share a deterministic in-plane frame on tilted planes · labelme 2D shapes round-trip on any plane (plane-basis rectangles/circles + scalar ellipse storage)
 → [Details](2026/10/22_c05d2cd7d.md)
