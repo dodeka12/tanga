@@ -1203,6 +1203,7 @@ def _serialize_ellipse(
     result = _apply_defaults(props, kind, {}, styles_map=styles_map) | {
         "radiusU": ent.radius_u,
         "radiusV": ent.radius_v,
+        "angle": ent.angle,
     }
     return result
 
