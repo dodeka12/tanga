@@ -55,6 +55,9 @@ _EVENT_MSG_MAP = {
     "group_toggle": "control:group_toggle",
     "close": "close",
     "log": "control:log",
+    "image_loaded": "control:image_loaded",
+    "image_tile_load": "control:image_tile_load",
+    "image_tile_loaded": "control:image_tile_loaded",
     "file_browser_navigate": "file_browser_navigate",
     "file_browser_select": "file_browser_select",
 }

@@ -282,7 +282,7 @@ def generate_library_js() -> str:
         js_runtime_imports(),
         _sdf_shader_injection(),
         _ray_shader_injection(),
-        "function sendLog() {}\nfunction sendEvent() {}",
+        "function sendLog() {}\nfunction sendEvent() {}\nconst IMAGE_STATUS_ID = 'image_status';\nfunction sendImageEvent() {}",
     ]
     for path in _RENDERER_FILES + _SHARED_JS_FILES:
         parts.append(_strip_imports(path.read_text(encoding="utf-8")))

@@ -409,6 +409,9 @@
             "Image Layers": "py/examples/viz/image/image_layers.md"
           },
           {
+            "Image Load Events": "py/examples/viz/image/image_load_events.md"
+          },
+          {
             "Load Image From Disk": "py/examples/viz/image/load_image_from_disk.md"
           },
           {

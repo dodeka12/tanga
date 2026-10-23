@@ -1,6 +1,6 @@
 # zoom/pan a large tiled pane background
 
-**Keywords:** image · background · pyramid · tiles · ImageView · CameraView · pinhole · navigation · zoom · pan · large image
+**Keywords:** image · background · pyramid · tiles · ImageView · CameraView · pinhole · navigation · zoom · pan · large image · split view · log view · events · on_image_loaded
 
 Shows the same large, noisy gradient as `huge_image.py`, but as a calibrated
 `~pytanga.viz.CameraView` `background_image` (`navigation="2d"`), so
@@ -14,6 +14,11 @@ A synthetic, distortion-free pinhole camera frames the image; a bound
 needs from `/image/{id}/{level}/{x}/{y}`.  Per-pixel luminance noise makes the
 pyramid resolution (and the on-demand loading of the higher-resolution tiles as
 you zoom in) immediately visible.
+
+The layout is a vertical `~pytanga.viz.SplitView`: the scene pane on top,
+and a live `~pytanga.viz.LogView` at the bottom that logs the frontend
+`image_loaded` / `image_tile_load` / `image_tile_loaded` lifecycle events
+as you zoom in and out (via `Visualizer.on_image_*`).
 
 ## Run
 
@@ -46,9 +51,14 @@ needs from ``/image/{id}/{level}/{x}/{y}``.  Per-pixel luminance noise makes the
 pyramid resolution (and the on-demand loading of the higher-resolution tiles as
 you zoom in) immediately visible.
 
+The layout is a vertical :class:`~pytanga.viz.SplitView`: the scene pane on top,
+and a live :class:`~pytanga.viz.LogView` at the bottom that logs the frontend
+``image_loaded`` / ``image_tile_load`` / ``image_tile_loaded`` lifecycle events
+as you zoom in and out (via ``Visualizer.on_image_*``).
+
 Run with:  uv run python py/examples/viz/image/huge_image_background.py
 
-Keywords: image, background, pyramid, tiles, ImageView, CameraView, pinhole, navigation, zoom, pan, large image
+Keywords: image, background, pyramid, tiles, ImageView, CameraView, pinhole, navigation, zoom, pan, large image, split view, log view, events, on_image_loaded
 """
 
 import numpy as np
@@ -57,9 +67,14 @@ from pytanga.geometry import Matrix, OpenCVFrame
 from pytanga.viz import (
     CameraCalibration,
     CameraView,
+    ControlEvent,
     ImageData,
+    ImageStatusRecord,
     ImageView,
+    LogView,
     SceneView,
+    Size,
+    SplitView,
     ViewportConfig,
     Visualizer,
 )
@@ -141,7 +156,41 @@ def main() -> None:
         ),
     )
 
-    viz.show(layout=pane)
+    # Bottom log pane: the frontend image lifecycle events are logged here as you
+    # zoom in and out (image_loaded / image_tile_load / image_tile_loaded).
+    log = LogView(id="log", max_history=200, show_date=True)
+    log.log("Ready — zoom in to fetch higher-resolution tiles.")
+
+    async def on_image_loaded(record: ImageStatusRecord, _event: ControlEvent) -> None:
+        log.log(
+            {
+                "message": f"image_loaded  {record.source} {record.width}×{record.height}",
+                "level": "info",
+            }
+        )
+
+    async def on_image_tile_load(record: ImageStatusRecord, _event: ControlEvent) -> None:
+        log.log(
+            {"message": f"image_tile_load  level {record.level}", "level": "warn"}
+        )
+
+    async def on_image_tile_loaded(
+        record: ImageStatusRecord, _event: ControlEvent
+    ) -> None:
+        log.log(
+            {"message": f"image_tile_loaded  level {record.level}", "level": "info"}
+        )
+
+    viz.on_image_loaded(on_image_loaded)
+    viz.on_image_tile_load(on_image_tile_load)
+    viz.on_image_tile_loaded(on_image_tile_loaded)
+
+    layout = SplitView(
+        orientation="vertical",
+        sizes=[Size.percent(70), Size.percent(30)],
+        children=[pane, log],
+    )
+    viz.show(layout=layout)
 
     # Swap in the full-resolution noisy gradient after the viewer is up.  ImageData
     # auto-tiles it (a pyramid), and the bound view's self-push registers that

@@ -20,6 +20,7 @@ import warnings
 from typing import TYPE_CHECKING, Any, Iterator, Sequence, cast, overload
 
 if TYPE_CHECKING:
+    from ._controls import ImageStatusHandler
     from ._interaction import (
         InteractionConfig,
         InteractionEventType,
@@ -213,7 +214,13 @@ class Visualizer(_JupyterDisplayMixin):
         self._global_styles = make_styles()
 
         # Control handler registry (shared across all scenes)
-        from ._controls import CLIENT_LOG_ID, ClientLog, ControlHandlerRegistry
+        from ._controls import (
+            CLIENT_LOG_ID,
+            IMAGE_STATUS_ID,
+            ClientLog,
+            ControlHandlerRegistry,
+            ImageStatus,
+        )
 
         self._handler_registry = ControlHandlerRegistry()
 
@@ -226,6 +233,11 @@ class Visualizer(_JupyterDisplayMixin):
         # Backend-only sink for browser log events (see `on_client_log`).
         self._client_log = ClientLog(CLIENT_LOG_ID)
         self._client_log.register_handlers(self._transport)
+
+        # Backend-only sink for image lifecycle events (see `on_image_loaded`,
+        # `on_image_tile_load`, `on_image_tile_loaded`).
+        self._image_status = ImageStatus(IMAGE_STATUS_ID)
+        self._image_status.register_handlers(self._transport)
 
         # ── Multi-scene storage ──
         # Key "" is the main scene (backward compatible).
@@ -242,6 +254,7 @@ class Visualizer(_JupyterDisplayMixin):
             scene_factory=self._create_scene,
             transport=self._transport,
             client_log=self._client_log,
+            image_status=self._image_status,
             register_pyramid=self._register_pyramid,
             unregister_pyramid=self._unregister_pyramid,
         )
@@ -353,6 +366,36 @@ class Visualizer(_JupyterDisplayMixin):
         """
         self._client_log.on_log = handler
         self._client_log.register_handlers(self._transport)
+
+    def on_image_loaded(self, handler: ImageStatusHandler) -> None:
+        """Register a handler for the frontend ``image_loaded`` event.
+
+        *handler* is an ``async def(record, event)`` receiving an
+        :class:`~pytanga.viz._controls.ImageStatusRecord`.  Fired once, when an
+        image's first texture becomes displayable in the browser.
+        """
+        self._image_status.on_image_loaded = handler
+        self._image_status.register_handlers(self._transport)
+
+    def on_image_tile_load(self, handler: ImageStatusHandler) -> None:
+        """Register a handler for the frontend ``image_tile_load`` event.
+
+        *handler* is an ``async def(record, event)`` receiving an
+        :class:`~pytanga.viz._controls.ImageStatusRecord` whose ``level`` is set.
+        Fired when the browser starts fetching a new tiled-pyramid level.
+        """
+        self._image_status.on_image_tile_load = handler
+        self._image_status.register_handlers(self._transport)
+
+    def on_image_tile_loaded(self, handler: ImageStatusHandler) -> None:
+        """Register a handler for the frontend ``image_tile_loaded`` event.
+
+        *handler* is an ``async def(record, event)`` receiving an
+        :class:`~pytanga.viz._controls.ImageStatusRecord` whose ``level`` is set.
+        Fired when a fetched tiled-pyramid level is swapped in.
+        """
+        self._image_status.on_image_tile_loaded = handler
+        self._image_status.register_handlers(self._transport)
 
     def on_shader_error(self, handler: Any) -> None:
         """Register a handler for shader compile errors reported by the frontend.

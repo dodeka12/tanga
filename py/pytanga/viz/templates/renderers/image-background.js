@@ -13,6 +13,7 @@ import { addCustomUniforms, applyImageUniforms, buildColorUniforms, buildLayerUn
 import { levelForScreen } from './image-tiles.js';
 import { buildImageLayerPipeline } from './image-shader.js';
 import { hasImageFrame, registerImageFrameConsumer, takeImageFrame } from '../image-frames.js';
+import { sendImageEvent } from '../events.js';
 
 const _BG_VERTEX = /* glsl */ `
 varying vec2 vNdc;
@@ -97,6 +98,9 @@ function _backgroundTexture(img) {
                 (tex) => {
                     tex.minFilter = THREE.NearestFilter;
                     tex.magFilter = THREE.NearestFilter;
+                    sendImageEvent('image_loaded', {
+                        image_id: img.id, source: 'url', width: img.width, height: img.height,
+                    });
                     resolve(tex);
                 },
                 undefined,
@@ -132,8 +136,19 @@ function _bindLayerTexture(material, img, i) {
     }
     if (img.source === 'tiled') {
         const level = levelForScreen(img, 2048);
+        sendImageEvent('image_tile_load', {
+            image_id: img.id, source: 'tiled', width: img.width, height: img.height,
+            level, tile_version: img.tile_version,
+        });
         buildTiledTextureAtLevel(img, level).then((tex) => {
             material.uniforms[key].value = tex;
+            sendImageEvent('image_tile_loaded', {
+                image_id: img.id, source: 'tiled', width: img.width, height: img.height,
+                level, tile_version: img.tile_version,
+            });
+            sendImageEvent('image_loaded', {
+                image_id: img.id, source: 'tiled', width: img.width, height: img.height,
+            });
         });
         material.userData._tiledLayers.push({ img, index: i, level });
         return;
@@ -141,10 +156,20 @@ function _bindLayerTexture(material, img, i) {
     _backgroundTexture(img).then((tex) => {
         if (tex) {
             material.uniforms[key].value = tex;
+            if (img.source !== 'url') {
+                sendImageEvent('image_loaded', {
+                    image_id: img.id, source: 'data', width: img.width, height: img.height,
+                });
+            }
         } else {
             registerImageFrameConsumer(img.id, (frame) => {
                 makeEncodedTexture(img, frame).then((t) => {
-                    if (t) material.uniforms[key].value = t;
+                    if (t) {
+                        material.uniforms[key].value = t;
+                        sendImageEvent('image_loaded', {
+                            image_id: img.id, source: 'data', width: img.width, height: img.height,
+                        });
+                    }
                 });
             });
         }

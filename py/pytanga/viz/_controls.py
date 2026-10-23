@@ -72,6 +72,10 @@ class ControlEvent:
 #: Reserved control id for the backend-only client → server log sink.
 CLIENT_LOG_ID = "client_log"
 
+#: Reserved control id for the backend-only image lifecycle sink (see
+#: :class:`ImageStatus`).  Never serialized, never placed in a layout.
+IMAGE_STATUS_ID = "image_status"
+
 
 @dataclass
 class ClientLogRecord:
@@ -86,6 +90,25 @@ class ClientLogRecord:
     message: str
     source: str | None = None
     data: dict[str, Any] | None = None
+    browser_id: str | None = None
+
+
+@dataclass
+class ImageStatusRecord:
+    """A normalized image lifecycle event received from the browser frontend.
+
+    ``image_id`` is the ``ImageData`` id; ``source`` is ``"data"`` / ``"url"``
+    / ``"tiled"``; ``width``/``height`` are the image dimensions; ``level`` and
+    ``tile_version`` are only present for tiled pyramid events; ``browser_id``
+    is the reporting client.
+    """
+
+    image_id: str
+    source: str | None = None
+    width: int | None = None
+    height: int | None = None
+    level: int | None = None
+    tile_version: int | None = None
     browser_id: str | None = None
 
 
@@ -223,6 +246,14 @@ ControlHandler = Callable[[Any, ControlEvent], Awaitable[None]]
 Takes a ``value`` argument (float for sliders, str for dropdowns / text /
 textarea / color pickers, bool for checkboxes, ``None`` for buttons / group
 toggles) and a :class:`ControlEvent`, and returns an awaitable.
+"""
+
+ImageStatusHandler = Callable[[ImageStatusRecord, ControlEvent], Awaitable[None]]
+"""Async callback type for image lifecycle handlers.
+
+Takes the :class:`ImageStatusRecord` (the normalized ``image_loaded`` /
+``image_tile_load`` / ``image_tile_loaded`` payload) and a
+:class:`ControlEvent`, and returns an awaitable.
 """
 
 
@@ -640,6 +671,44 @@ class ClientLog(Control):
             browser_id=payload.get("browser_id"),
         )
         return Dispatch("log", record)
+
+
+async def _default_image_status_sink(
+    _record: ImageStatusRecord, _event: ControlEvent
+) -> None:
+    """No-op default sink for image lifecycle events.
+
+    Image events are opt-in: apps register handlers via ``Visualizer.on_image_*``
+    (see ``visualizer.py``).  This placeholder keeps ``register_handlers``
+    registering a real ``(id, event)`` entry without logging by default.
+    """
+
+
+@dataclass
+class ImageStatus(Control):
+    """Backend-only sink for image lifecycle events (never serialized).
+
+    Receives ``image_loaded`` / ``image_tile_load`` / ``image_tile_loaded`` and
+    normalizes each into an :class:`ImageStatusRecord`; the matching ``on_*``
+    handler is fired through the ``(id, event)`` registry.
+    """
+
+    kind: str = "image_status"
+    on_image_loaded: ImageStatusHandler = _default_image_status_sink
+    on_image_tile_load: ImageStatusHandler = _default_image_status_sink
+    on_image_tile_loaded: ImageStatusHandler = _default_image_status_sink
+
+    def handle_event(self, event: str, payload: dict[str, Any]) -> Dispatch:
+        record = ImageStatusRecord(
+            image_id=str(payload.get("image_id", "")),
+            source=payload.get("source"),
+            width=payload.get("width"),
+            height=payload.get("height"),
+            level=payload.get("level"),
+            tile_version=payload.get("tile_version"),
+            browser_id=payload.get("browser_id"),
+        )
+        return Dispatch(event, record)
 
 
 def parse_table_event(event: str, payload: dict[str, Any]) -> Dispatch:

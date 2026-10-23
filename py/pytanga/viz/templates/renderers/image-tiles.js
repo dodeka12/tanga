@@ -18,6 +18,20 @@ export function pyramidGrid(pyramid, level) {
     };
 }
 
+// Relative dead-band around a level boundary: a level change is only reported
+// once the screen crosses the boundary by this margin, so per-frame jitter at
+// the boundary does not oscillate between two levels.
+const _HYSTERESIS = 0.02;
+
+// Long side (device pixels) of a pyramid level, matching the `max(nextW, nextH)`
+// bound `levelForScreen` compares against the on-screen resolution.
+function _levelResolution(pyramid, level) {
+    return Math.max(
+        Math.ceil(pyramid.width / (2 ** level)),
+        Math.ceil(pyramid.height / (2 ** level)),
+    );
+}
+
 // Pick the pyramid level whose long side best matches a target on-screen
 // resolution `screenLongSide` (device pixels on the image's long side, already
 // including the device-pixel ratio and the current zoom).  Returns the coarsest
@@ -25,17 +39,31 @@ export function pyramidGrid(pyramid, level) {
 // upscaled on screen.  Level 0 is full resolution; each level halves the
 // dimensions (ceil).  Falls back to level 0 when `screenLongSide` is not a
 // positive number, and clamps to [0, levels-1].
-export function levelForScreen(pyramid, screenLongSide) {
+//
+// When the optional integer `currentLevel` is given, the result is clamped by a
+// ±2% dead-band around the level boundary: a level change is only reported once
+// the screen clearly crosses the boundary, which keeps per-frame
+// re-resolution from oscillating between two levels at a power-of-two zoom
+// boundary (see `updateImageLod`).
+export function levelForScreen(pyramid, screenLongSide, currentLevel) {
     const levels = pyramid.levels || 1;
     if (!(Number.isFinite(screenLongSide) && screenLongSide > 0)) return 0;
-    let level = 0;
-    while (level + 1 < levels) {
-        const nextW = Math.ceil(pyramid.width / (2 ** (level + 1)));
-        const nextH = Math.ceil(pyramid.height / (2 ** (level + 1)));
-        if (Math.max(nextW, nextH) < screenLongSide) break;
-        level++;
+    // Ideal level (no hysteresis): coarsest level whose long side >= screen size.
+    let ideal = 0;
+    while (ideal + 1 < levels) {
+        if (_levelResolution(pyramid, ideal + 1) < screenLongSide) break;
+        ideal++;
     }
-    return level;
+    if (!Number.isInteger(currentLevel)) return ideal;
+    if (ideal === currentLevel) return ideal;
+    if (ideal < currentLevel) {
+        // Finer: only once the screen clearly exceeds the current level's resolution.
+        const bound = _levelResolution(pyramid, currentLevel) * (1 + _HYSTERESIS);
+        return screenLongSide > bound ? ideal : currentLevel;
+    }
+    // Coarser: only once the screen clearly falls below the new level's resolution.
+    const bound = _levelResolution(pyramid, ideal) * (1 - _HYSTERESIS);
+    return screenLongSide < bound ? ideal : currentLevel;
 }
 
 // Tiles of `level` intersecting a normalized viewport `{u0, v0, u1, v1}`

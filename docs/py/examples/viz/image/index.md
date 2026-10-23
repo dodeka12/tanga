@@ -5,9 +5,10 @@
 | [Custom Shader Rgb Rotate](custom_shader_rgb_rotate.md) | image, ImageCanvas, custom shader, uniform, GLSL, RGB, rotation, drag | Custom image shader that rotates RGB vectors |
 | [Depth Surface](depth_surface.md) | depth image, surface, segmentation, split view, controls, numpy | A 2.5D depth surface from phase-shifted 2D sines |
 | [Huge Image](huge_image.md) | image, pyramid, tiles, register_image_pyramid, large image | Display a large image as an on-demand tile pyramid |
-| [Huge Image Background](huge_image_background.md) | image, background, pyramid, tiles, ImageView, CameraView, pinhole, navigation, zoom, pan, large image | zoom/pan a large tiled pane background |
+| [Huge Image Background](huge_image_background.md) | image, background, pyramid, tiles, ImageView, CameraView, pinhole, navigation, zoom, pan, large image, split view, log view, events, on_image_loaded | zoom/pan a large tiled pane background |
 | [Image Canvas](image_canvas.md) | image, ImageCanvas, rectangle, Rectangle2D, shader, uniform, overlay, pixels | Display a numpy image and draw pixel-coordinate overlays |
 | [Image Layers](image_layers.md) | image, ImageCanvas, layers, blend, opacity, segmentation, depth, controls | Mix multiple image layers (image, depth, segmentation) |
+| [Image Load Events](image_load_events.md) | image, pyramid, tiles, loading, events, on_image_loaded, banner | Banner notifications for image loading |
 | [Load Image From Disk](load_image_from_disk.md) | image, ImageCanvas, menu, FileChooserDialog, split view, PIL, file open, contrast, EXR, HDR, pyramid, tiled, progress, progress bar, dialog | Open an image from disk via a File → Open… menu |
 | [Pinhole Depth](pinhole_depth.md) | depth image, pinhole, camera calibration, depth jump filter, grazing angle, slider, uniform, split view | a calibrated depth surface with a grazing-angle filter |
 | [Raw Image](raw_image.md) | image, ImageCanvas, ImageData, uint16, lossless, codec, zlib | Display a 16-bit image over the lossless (zlib) transport |
@@ -15,4 +16,4 @@
 
 ## Keywords
 
-CameraView · EXR · FileChooserDialog · GLSL · HDR · ImageCanvas · ImageData · ImageView · PIL · RGB · Rectangle2D · background · blend · camera calibration · codec · contrast · controls · custom shader · depth · depth image · depth jump filter · dialog · drag · file open · grazing angle · image · jpeg · large image · layers · lossless · menu · navigation · numpy · opacity · overlay · pan · pinhole · pixels · progress · progress bar · pyramid · rectangle · register_image_pyramid · rotation · segmentation · shader · slider · split view · surface · tiled · tiles · uint16 · uint8 · uniform · zlib · zoom
+CameraView · EXR · FileChooserDialog · GLSL · HDR · ImageCanvas · ImageData · ImageView · PIL · RGB · Rectangle2D · background · banner · blend · camera calibration · codec · contrast · controls · custom shader · depth · depth image · depth jump filter · dialog · drag · events · file open · grazing angle · image · jpeg · large image · layers · loading · log view · lossless · menu · navigation · numpy · on_image_loaded · opacity · overlay · pan · pinhole · pixels · progress · progress bar · pyramid · rectangle · register_image_pyramid · rotation · segmentation · shader · slider · split view · surface · tiled · tiles · uint16 · uint8 · uniform · zlib · zoom
