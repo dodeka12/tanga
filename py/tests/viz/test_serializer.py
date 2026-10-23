@@ -619,8 +619,24 @@ class TestStyleOverrides:
         assert d["radiusU"] == 2.0
         assert d["radiusV"] == 1.0
         assert "normal" not in d
+        assert d["angle"] == 0.0
         assert d["style"]["style_type"] == "EllipseStyle"
         assert d["style"]["thickness"] == 1.0
+
+    def test_ellipse_angle_serialized(self):  # noqa: ANN201
+        d = _serialize(
+            Ellipse(
+                radius_u=2.0,
+                radius_v=1.0,
+                normal=Direction(0, 0, 1),
+                dir_u=Direction(1, 0, 0),
+                dir_v=Direction(0, 1, 0),
+                angle=1.0,
+            )
+        )
+        assert d["radiusU"] == 2.0
+        assert d["radiusV"] == 1.0
+        assert d["angle"] == 1.0
 
     def test_regular_polygon(self):  # noqa: ANN201
         d = _serialize(RegularPolygon(radius=1.5, sides=6))

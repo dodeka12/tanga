@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.23.2 (2.24.0-rc2)] — 2026-10-23
+- `Ellipse.angle` is serialized to the frontend (non-zero-angle ellipses draw rotated)
+→ [Details](2026/10/23_3d3e9a548.md)
+
 ## [Since 2.23.2 (2.24.0-rc1)] — 2026-10-23
 - Legacy 3-point ellipses wrap in an act again (orthonormal basis + consistent plane normal)
 → [Details](2026/10/23_af2a0cdab.md)
