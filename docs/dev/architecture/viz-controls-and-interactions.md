@@ -283,6 +283,30 @@ envelope, targeting a backend-only `ClientLog` control (`_controls.py`, id
   forwards the frontend `_log(...)` init/WS lines at `info` level (default off —
   only `console.warn`/`console.error` are forwarded).
 
+## Image load events
+
+The image renderers (`renderers/image.js`, `renderers/image-background.js`)
+report lifecycle events over the **same** envelope, targeting a backend-only
+`ImageStatus` control (`_controls.py`, id `"image_status"`):
+
+- Frontend `sendImageEvent(event, data)` →
+  `sendEvent("image_status", event, data)` (`templates/events.js`).
+- `server.py::_EVENT_MSG_MAP` maps `image_loaded` → `control:image_loaded`,
+  `image_tile_load` → `control:image_tile_load`, and `image_tile_loaded` →
+  `control:image_tile_loaded`; `LayoutHost.dispatch_control_event` resolves the
+  reserved id to the `ImageStatus` control (a `LayoutHost` hook, mirroring
+  `client_log`).
+- `ImageStatus.handle_event(event, payload)` normalizes the payload into an
+  `ImageStatusRecord` (`image_id`, `source`, `width`, `height`, `level`,
+  `tile_version`, `browser_id`) and fires `("image_status", event)`.
+- `image_loaded` fires once when an image's first texture becomes displayable;
+  `image_tile_load` / `image_tile_loaded` fire around each tiled-pyramid level
+  fetch (start / swapped in).  Register handlers via
+  `viz.on_image_loaded(handler)` / `viz.on_image_tile_load(handler)` /
+  `viz.on_image_tile_loaded(handler)`, each `async def h(record, event)`.
+- `ImageStatus` is **backend-only**: never serialized, never placed in a layout,
+  with a silent default sink (opt-in via the `on_image_*` API).
+
 ## Adding a new control kind
 
 1. **Backend model** — add a `Control` dataclass in `py/pytanga/viz/_controls.py`

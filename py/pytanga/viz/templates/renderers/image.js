@@ -9,6 +9,7 @@ import { tagEntity } from './utils.js';
 import { buildImageFragment, buildImageVertex } from './image-shader.js';
 import { levelForScreen } from './image-tiles.js';
 import { hasImageFrame, registerImageFrameConsumer, resolveFrameFormat, takeImageFrame } from '../image-frames.js';
+import { sendImageEvent } from '../events.js';
 
 // dtype code → THREE texture type + element width (see py/pytanga/viz/image.py).
 const DTYPE_TYPES = {
@@ -373,7 +374,14 @@ export async function createImage(ent, opts) {
                 uniforms[key].value = await new Promise((resolve) => {
                     new THREE.TextureLoader().load(
                         img.url,
-                        (t) => { t.minFilter = THREE.NearestFilter; t.magFilter = THREE.NearestFilter; resolve(t); },
+                        (t) => {
+                            t.minFilter = THREE.NearestFilter;
+                            t.magFilter = THREE.NearestFilter;
+                            sendImageEvent('image_loaded', {
+                                image_id: img.id, source: 'url', width: img.width, height: img.height,
+                            });
+                            resolve(t);
+                        },
                         undefined,
                         () => resolve(null)
                     );
@@ -381,10 +389,24 @@ export async function createImage(ent, opts) {
             }
         } else if (img.source === 'tiled') {
             const level = levelForScreen(img, maxDim ?? 2048);
+            sendImageEvent('image_tile_load', {
+                image_id: img.id, source: 'tiled', width: img.width, height: img.height,
+                level, tile_version: img.tile_version,
+            });
             uniforms[key].value = await buildTiledTextureAtLevel(img, level);
             material.userData._tiledLayers.push({ img, index: i, level });
+            sendImageEvent('image_tile_loaded', {
+                image_id: img.id, source: 'tiled', width: img.width, height: img.height,
+                level, tile_version: img.tile_version,
+            });
+            sendImageEvent('image_loaded', {
+                image_id: img.id, source: 'tiled', width: img.width, height: img.height,
+            });
         } else if (hasImageFrame(img.id)) {
             uniforms[key].value = await makeEncodedTexture(img, takeImageFrame(img.id));
+            sendImageEvent('image_loaded', {
+                image_id: img.id, source: 'data', width: img.width, height: img.height,
+            });
         } else {
             // The pixel frame hasn't arrived yet (it races the entity JSON over
             // the wire); upload the texture once it lands instead of leaving
@@ -392,6 +414,9 @@ export async function createImage(ent, opts) {
             registerImageFrameConsumer(img.id, (frame) => {
                 makeEncodedTexture(img, frame).then((tex) => {
                     uniforms[key].value = tex;
+                    sendImageEvent('image_loaded', {
+                        image_id: img.id, source: 'data', width: img.width, height: img.height,
+                    });
                 });
             });
         }
@@ -411,18 +436,27 @@ export async function updateImageLod(mesh, maxDim) {
     if (!layers || layers.length === 0) return false;
     let changed = false;
     for (const layer of layers) {
-        const level = levelForScreen(layer.img, maxDim);
+        const level = levelForScreen(layer.img, maxDim, layer.level);
         if (level === layer.level) {
             // Already showing the right level; cancel any in-flight fetch for a
             // now-outdated level so it cannot overwrite the correct texture.
-            if (layer.pendingLevel != null) layer.pendingLevel = null;
+            if (layer.pendingLevel != null) {
+                layer.pendingLevel = null;
+                layer.generation = (layer.generation || 0) + 1;
+            }
             continue;
         }
         if (level === layer.pendingLevel) continue;
         layer.pendingLevel = level;
+        const generation = (layer.generation || 0) + 1;
+        layer.generation = generation;
+        sendImageEvent('image_tile_load', {
+            image_id: layer.img.id, source: 'tiled', width: layer.img.width, height: layer.img.height,
+            level, tile_version: layer.img.tile_version,
+        });
         const tex = await buildTiledTextureAtLevel(layer.img, level);
-        if (layer.pendingLevel !== level) {
-            // A newer zoom request superseded this fetch.
+        if (layer.generation !== generation) {
+            // A newer zoom request superseded (or cancelled) this fetch.
             if (tex.dispose) tex.dispose();
             continue;
         }
@@ -432,6 +466,10 @@ export async function updateImageLod(mesh, maxDim) {
         material.uniforms[key].value = tex;
         layer.level = level;
         if (old && old.dispose) old.dispose();
+        sendImageEvent('image_tile_loaded', {
+            image_id: layer.img.id, source: 'tiled', width: layer.img.width, height: layer.img.height,
+            level, tile_version: layer.img.tile_version,
+        });
         changed = true;
     }
     return changed;

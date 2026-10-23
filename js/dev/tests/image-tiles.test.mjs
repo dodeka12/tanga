@@ -27,6 +27,36 @@ test('levelForScreen falls back to full resolution for a non-positive screen', (
     assert.equal(levelForScreen(PYRAMID, undefined), 0);
 });
 
+test('levelForScreen hysteresis holds the coarser level at a boundary', () => {
+    const P = { width: 4096, height: 2048, levels: 13 };
+    // Boundary between level 0 (4096) and level 1 (2048): at 2050 the ideal is
+    // level 0, but 2050 < 2048 * 1.02, so the current level 1 is kept.
+    assert.equal(levelForScreen(P, 2050, 1), 1);
+    // Clearly past the margin → switch to the finer level 0.
+    assert.equal(levelForScreen(P, 2100, 1), 0);
+});
+
+test('levelForScreen hysteresis holds the finer level at a boundary', () => {
+    const P = { width: 4096, height: 2048, levels: 13 };
+    // At 2010 the ideal is level 1, but 2010 > 2048 * 0.98, so the current
+    // level 0 is kept.
+    assert.equal(levelForScreen(P, 2010, 0), 0);
+    // Clearly below the margin → switch to the coarser level 1.
+    assert.equal(levelForScreen(P, 1990, 0), 1);
+});
+
+test('levelForScreen without a current level returns the ideal level', () => {
+    const P = { width: 4096, height: 2048, levels: 13 };
+    assert.equal(levelForScreen(P, 2050), 0);
+    assert.equal(levelForScreen(P, 2010), 1);
+});
+
+test('levelForScreen hysteresis still allows a multi-level jump', () => {
+    const P = { width: 4096, height: 2048, levels: 13 };
+    // 800 is far below the level-1 boundary, so a jump from 0 to 2 is allowed.
+    assert.equal(levelForScreen(P, 800, 0), 2);
+});
+
 test('pyramidGrid computes level dimensions and tile grid', () => {
     assert.deepEqual(pyramidGrid(PYRAMID, 0), { cols: 4, rows: 2, width: 1000, height: 500 });
     assert.deepEqual(pyramidGrid(PYRAMID, 1), { cols: 2, rows: 1, width: 500, height: 250 });

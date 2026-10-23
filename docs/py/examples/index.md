@@ -84,7 +84,7 @@ uv run python py/examples/<path>.py
 
 - **background image** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md)
 
-- **banner** — [Capture a shader compile error and show it in a banner](viz/surface/shader_errors.md), [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md)
+- **banner** — [Banner notifications for image loading](viz/image/image_load_events.md), [Capture a shader compile error and show it in a banner](viz/surface/shader_errors.md), [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Banners scoped to a named scene via VizSceneHandle](viz/ui/banners/scene_banner.md)
 
 - **bar** — [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
@@ -314,6 +314,8 @@ uv run python py/examples/<path>.py
 
 - **Euclidean** — [Euclidean 3D geometric algebra  G(3, 0)](ga/basis/base_e3_demo.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md)
 
+- **events** — [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [Banner notifications for image loading](viz/image/image_load_events.md)
+
 - **explicit** — [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md)
 
 - **export** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md), [Export](viz/jupyter/export.md)
@@ -434,7 +436,7 @@ uv run python py/examples/<path>.py
 
 - **icon_only** — [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md)
 
-- **image** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
+- **image** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Custom image shader that rotates RGB vectors](viz/image/custom_shader_rgb_rotate.md), [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [Banner notifications for image loading](viz/image/image_load_events.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md), [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
 
 - **image background** — [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a custom GLSL shader on a calibrated image](viz/camera/pinhole_calibrated_custom_shader.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
 
@@ -526,11 +528,15 @@ uv run python py/examples/<path>.py
 
 - **live plot** — [a swinging pendulum with a live angle-vs-time plot](viz/plotting/pendulum_plot.md)
 
+- **loading** — [Banner notifications for image loading](viz/image/image_load_events.md)
+
 - **lock** — [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md)
 
 - **log** — [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
 - **log plot** — [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md)
+
+- **log view** — [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
 
 - **lossless** — [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md)
 
@@ -603,6 +609,8 @@ uv run python py/examples/<path>.py
 - **offline** — [Compare the three HTML delivery modes](viz/export/export_delivery.md)
 
 - **on_close** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md)
+
+- **on_image_loaded** — [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [Banner notifications for image loading](viz/image/image_load_events.md)
 
 - **on_release** — [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md)
 
@@ -716,7 +724,7 @@ uv run python py/examples/<path>.py
 
 - **projective geometric algebra** — [Projective GA  (PGA 3D)](ga/basis/base_pga3_demo.md)
 
-- **pyramid** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
+- **pyramid** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [Banner notifications for image loading](viz/image/image_load_events.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
 - **Q2** — [intersect two 2D conics (a point tuple)](ga/quadric/conic_intersection_demo.md)
 
@@ -856,7 +864,7 @@ uv run python py/examples/<path>.py
 
 - **spheres** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md)
 
-- **split view** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
+- **split view** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [a real calibrated image (BOP T-LESS) + 3D overview](viz/camera/pinhole_calibrated.md), [a live-updated camera view + pane swap](viz/camera/pinhole_calibrated_streaming.md), [a calibrated camera as a free orbit/pan/zoom view](viz/camera/pinhole_camera.md), [calibrated camera view (image) + default 3D overview](viz/camera/pinhole_overlay.md), [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md), [Three scenes side-by-side in one horizontal split](viz/ui/layout/multi_split.md), [A single page showing multiple scenes in split panes](viz/ui/layout/split_view.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A live, auto-scrolling two-column log in a split pane](viz/ui/static/log_view.md)
 
 - **stack view** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
@@ -912,7 +920,7 @@ uv run python py/examples/<path>.py
 
 - **tiled** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
-- **tiles** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
+- **tiles** — [Display a large image as an on-demand tile pyramid](viz/image/huge_image.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md), [Banner notifications for image loading](viz/image/image_load_events.md)
 
 - **tilted plane** — [a plot on a tilted background plane in 3D](viz/plotting/plot_3d.md)
 

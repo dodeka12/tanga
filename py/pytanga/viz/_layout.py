@@ -764,6 +764,7 @@ class LayoutHostImpl:
         scene_factory: Callable[[str, int | None], Scene],
         transport: Any = None,
         client_log: Any = None,
+        image_status: Any = None,
         register_pyramid: Any = None,
         unregister_pyramid: Any = None,
     ) -> None:
@@ -771,6 +772,7 @@ class LayoutHostImpl:
         self._scene_factory = scene_factory
         self._transport = transport
         self._client_log = client_log
+        self._image_status = image_status
         self._register_pyramid = register_pyramid
         self._unregister_pyramid = unregister_pyramid
         self._layout_control_ids: set[str] = set()
@@ -1097,6 +1099,8 @@ class LayoutHostImpl:
         ctrl = self.resolve_control(cid) if cid else None
         if ctrl is None and self._client_log is not None and cid == self._client_log.id:
             ctrl = self._client_log
+        if ctrl is None and self._image_status is not None and cid == self._image_status.id:
+            ctrl = self._image_status
 
         if ctrl is not None:
             d = await ctrl.handle_event_async(event_name, payload)

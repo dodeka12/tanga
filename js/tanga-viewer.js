@@ -13,6 +13,8 @@ window.__tanga_ray_shaders = {"intersect": "// Analytic ray-intersection entry p
 
 function sendLog() {}
 function sendEvent() {}
+const IMAGE_STATUS_ID = 'image_status';
+function sendImageEvent() {}
 
 // Tanga Viewer — Pure style-diff helper (no DOM, no THREE).
 // Decides whether a style change requires rebuilding an entity's mesh rather
@@ -3444,7 +3446,14 @@ async function createImage(ent, opts) {
                 uniforms[key].value = await new Promise((resolve) => {
                     new THREE.TextureLoader().load(
                         img.url,
-                        (t) => { t.minFilter = THREE.NearestFilter; t.magFilter = THREE.NearestFilter; resolve(t); },
+                        (t) => {
+                            t.minFilter = THREE.NearestFilter;
+                            t.magFilter = THREE.NearestFilter;
+                            sendImageEvent('image_loaded', {
+                                image_id: img.id, source: 'url', width: img.width, height: img.height,
+                            });
+                            resolve(t);
+                        },
                         undefined,
                         () => resolve(null)
                     );
@@ -3452,10 +3461,24 @@ async function createImage(ent, opts) {
             }
         } else if (img.source === 'tiled') {
             const level = levelForScreen(img, maxDim ?? 2048);
+            sendImageEvent('image_tile_load', {
+                image_id: img.id, source: 'tiled', width: img.width, height: img.height,
+                level, tile_version: img.tile_version,
+            });
             uniforms[key].value = await buildTiledTextureAtLevel(img, level);
             material.userData._tiledLayers.push({ img, index: i, level });
+            sendImageEvent('image_tile_loaded', {
+                image_id: img.id, source: 'tiled', width: img.width, height: img.height,
+                level, tile_version: img.tile_version,
+            });
+            sendImageEvent('image_loaded', {
+                image_id: img.id, source: 'tiled', width: img.width, height: img.height,
+            });
         } else if (hasImageFrame(img.id)) {
             uniforms[key].value = await makeEncodedTexture(img, takeImageFrame(img.id));
+            sendImageEvent('image_loaded', {
+                image_id: img.id, source: 'data', width: img.width, height: img.height,
+            });
         } else {
             // The pixel frame hasn't arrived yet (it races the entity JSON over
             // the wire); upload the texture once it lands instead of leaving
@@ -3463,6 +3486,9 @@ async function createImage(ent, opts) {
             registerImageFrameConsumer(img.id, (frame) => {
                 makeEncodedTexture(img, frame).then((tex) => {
                     uniforms[key].value = tex;
+                    sendImageEvent('image_loaded', {
+                        image_id: img.id, source: 'data', width: img.width, height: img.height,
+                    });
                 });
             });
         }
@@ -3482,18 +3508,27 @@ async function updateImageLod(mesh, maxDim) {
     if (!layers || layers.length === 0) return false;
     let changed = false;
     for (const layer of layers) {
-        const level = levelForScreen(layer.img, maxDim);
+        const level = levelForScreen(layer.img, maxDim, layer.level);
         if (level === layer.level) {
             // Already showing the right level; cancel any in-flight fetch for a
             // now-outdated level so it cannot overwrite the correct texture.
-            if (layer.pendingLevel != null) layer.pendingLevel = null;
+            if (layer.pendingLevel != null) {
+                layer.pendingLevel = null;
+                layer.generation = (layer.generation || 0) + 1;
+            }
             continue;
         }
         if (level === layer.pendingLevel) continue;
         layer.pendingLevel = level;
+        const generation = (layer.generation || 0) + 1;
+        layer.generation = generation;
+        sendImageEvent('image_tile_load', {
+            image_id: layer.img.id, source: 'tiled', width: layer.img.width, height: layer.img.height,
+            level, tile_version: layer.img.tile_version,
+        });
         const tex = await buildTiledTextureAtLevel(layer.img, level);
-        if (layer.pendingLevel !== level) {
-            // A newer zoom request superseded this fetch.
+        if (layer.generation !== generation) {
+            // A newer zoom request superseded (or cancelled) this fetch.
             if (tex.dispose) tex.dispose();
             continue;
         }
@@ -3503,6 +3538,10 @@ async function updateImageLod(mesh, maxDim) {
         material.uniforms[key].value = tex;
         layer.level = level;
         if (old && old.dispose) old.dispose();
+        sendImageEvent('image_tile_loaded', {
+            image_id: layer.img.id, source: 'tiled', width: layer.img.width, height: layer.img.height,
+            level, tile_version: layer.img.tile_version,
+        });
         changed = true;
     }
     return changed;
@@ -3635,6 +3674,9 @@ function _backgroundTexture(img) {
                 (tex) => {
                     tex.minFilter = THREE.NearestFilter;
                     tex.magFilter = THREE.NearestFilter;
+                    sendImageEvent('image_loaded', {
+                        image_id: img.id, source: 'url', width: img.width, height: img.height,
+                    });
                     resolve(tex);
                 },
                 undefined,
@@ -3670,8 +3712,19 @@ function _bindLayerTexture(material, img, i) {
     }
     if (img.source === 'tiled') {
         const level = levelForScreen(img, 2048);
+        sendImageEvent('image_tile_load', {
+            image_id: img.id, source: 'tiled', width: img.width, height: img.height,
+            level, tile_version: img.tile_version,
+        });
         buildTiledTextureAtLevel(img, level).then((tex) => {
             material.uniforms[key].value = tex;
+            sendImageEvent('image_tile_loaded', {
+                image_id: img.id, source: 'tiled', width: img.width, height: img.height,
+                level, tile_version: img.tile_version,
+            });
+            sendImageEvent('image_loaded', {
+                image_id: img.id, source: 'tiled', width: img.width, height: img.height,
+            });
         });
         material.userData._tiledLayers.push({ img, index: i, level });
         return;
@@ -3679,10 +3732,20 @@ function _bindLayerTexture(material, img, i) {
     _backgroundTexture(img).then((tex) => {
         if (tex) {
             material.uniforms[key].value = tex;
+            if (img.source !== 'url') {
+                sendImageEvent('image_loaded', {
+                    image_id: img.id, source: 'data', width: img.width, height: img.height,
+                });
+            }
         } else {
             registerImageFrameConsumer(img.id, (frame) => {
                 makeEncodedTexture(img, frame).then((t) => {
-                    if (t) material.uniforms[key].value = t;
+                    if (t) {
+                        material.uniforms[key].value = t;
+                        sendImageEvent('image_loaded', {
+                            image_id: img.id, source: 'data', width: img.width, height: img.height,
+                        });
+                    }
                 });
             });
         }
@@ -3848,6 +3911,20 @@ function pyramidGrid(pyramid, level) {
     };
 }
 
+// Relative dead-band around a level boundary: a level change is only reported
+// once the screen crosses the boundary by this margin, so per-frame jitter at
+// the boundary does not oscillate between two levels.
+const _HYSTERESIS = 0.02;
+
+// Long side (device pixels) of a pyramid level, matching the `max(nextW, nextH)`
+// bound `levelForScreen` compares against the on-screen resolution.
+function _levelResolution(pyramid, level) {
+    return Math.max(
+        Math.ceil(pyramid.width / (2 ** level)),
+        Math.ceil(pyramid.height / (2 ** level)),
+    );
+}
+
 // Pick the pyramid level whose long side best matches a target on-screen
 // resolution `screenLongSide` (device pixels on the image's long side, already
 // including the device-pixel ratio and the current zoom).  Returns the coarsest
@@ -3855,17 +3932,31 @@ function pyramidGrid(pyramid, level) {
 // upscaled on screen.  Level 0 is full resolution; each level halves the
 // dimensions (ceil).  Falls back to level 0 when `screenLongSide` is not a
 // positive number, and clamps to [0, levels-1].
-function levelForScreen(pyramid, screenLongSide) {
+//
+// When the optional integer `currentLevel` is given, the result is clamped by a
+// ±2% dead-band around the level boundary: a level change is only reported once
+// the screen clearly crosses the boundary, which keeps per-frame
+// re-resolution from oscillating between two levels at a power-of-two zoom
+// boundary (see `updateImageLod`).
+function levelForScreen(pyramid, screenLongSide, currentLevel) {
     const levels = pyramid.levels || 1;
     if (!(Number.isFinite(screenLongSide) && screenLongSide > 0)) return 0;
-    let level = 0;
-    while (level + 1 < levels) {
-        const nextW = Math.ceil(pyramid.width / (2 ** (level + 1)));
-        const nextH = Math.ceil(pyramid.height / (2 ** (level + 1)));
-        if (Math.max(nextW, nextH) < screenLongSide) break;
-        level++;
+    // Ideal level (no hysteresis): coarsest level whose long side >= screen size.
+    let ideal = 0;
+    while (ideal + 1 < levels) {
+        if (_levelResolution(pyramid, ideal + 1) < screenLongSide) break;
+        ideal++;
     }
-    return level;
+    if (!Number.isInteger(currentLevel)) return ideal;
+    if (ideal === currentLevel) return ideal;
+    if (ideal < currentLevel) {
+        // Finer: only once the screen clearly exceeds the current level's resolution.
+        const bound = _levelResolution(pyramid, currentLevel) * (1 + _HYSTERESIS);
+        return screenLongSide > bound ? ideal : currentLevel;
+    }
+    // Coarser: only once the screen clearly falls below the new level's resolution.
+    const bound = _levelResolution(pyramid, ideal) * (1 - _HYSTERESIS);
+    return screenLongSide < bound ? ideal : currentLevel;
 }
 
 // Tiles of `level` intersecting a normalized viewport `{u0, v0, u1, v1}`

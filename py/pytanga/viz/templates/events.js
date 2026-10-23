@@ -35,6 +35,14 @@ export function sendLog(level, message, { source = null, data = null } = {}) {
     sendEvent(CLIENT_LOG_ID, 'log', { level, message, source, data });
 }
 
+// Reserved backend control id that receives image lifecycle events
+// (`image_loaded`, `image_tile_load`, `image_tile_loaded`).
+export const IMAGE_STATUS_ID = 'image_status';
+
+export function sendImageEvent(event, data = {}) {
+    sendEvent(IMAGE_STATUS_ID, event, data);
+}
+
 // Opt-in trace forwarding: when enabled, the frontend `_log(...)` init/WS
 // trace lines are also sent to the backend log at `info` level (off by default).
 let _logForwarding = false;
