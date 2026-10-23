@@ -337,16 +337,22 @@ class LabelMeStore:
             angle=0.0 if shape.angle is None else float(shape.angle),
         )
 
-    @staticmethod
-    def _ellipse_entity(center: Point, rim_u: Point, rim_v: Point) -> Ellipse:
-        du = Direction(rim_u.x - center.x, rim_u.y - center.y, rim_u.z - center.z)
-        dv = Direction(rim_v.x - center.x, rim_v.y - center.y, rim_v.z - center.z)
+    def _ellipse_entity(self, center: Point, rim_u: Point, rim_v: Point) -> Ellipse:
+        n = self._mapper.pixel_axes()[0].cross(self._mapper.pixel_axes()[1]).normalized()
+        rim_u_off = Direction(rim_u.x - center.x, rim_u.y - center.y, rim_u.z - center.z)
+        rim_v_off = Direction(rim_v.x - center.x, rim_v.y - center.y, rim_v.z - center.z)
+        du_dir = rim_u_off.normalized()
+        dv_dir = n.cross(du_dir).normalized()
+        if dv_dir.dot(rim_v_off) < 0.0:
+            dv_dir = -dv_dir
         return Ellipse(
             center=center,
-            radius_u=du.mag(),
-            radius_v=dv.mag(),
-            dir_u=du.normalized(),
-            dir_v=dv.normalized(),
+            radius_u=rim_u_off.mag(),
+            radius_v=abs(rim_v_off.dot(dv_dir)),
+            normal=n,
+            dir_u=du_dir,
+            dir_v=dv_dir,
+            angle=0.0,
         )
 
     # ── Inverse (object → shape) ───────────────────────────

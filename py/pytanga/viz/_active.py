@@ -1276,11 +1276,12 @@ class ActRectangle2D(ActiveObject):
     @classmethod
     def from_entity(cls, entity: Rectangle2D, **kwargs: Any) -> "ActRectangle2D":
         """Build an act from a :class:`~pytanga.geometry.Rectangle2D`, copying its frame."""
+        has_basis = entity.dir_u is not None and entity.dir_v is not None
         return cls(
             center=entity.center,
             size=entity.size,
             angle=entity.angle,
-            normal=entity.normal,
+            normal=None if has_basis else entity.normal,
             dir_u=entity.dir_u,
             dir_v=entity.dir_v,
             **kwargs,
@@ -1692,12 +1693,13 @@ class ActEllipse(ActiveObject):
     @classmethod
     def from_entity(cls, entity: Ellipse, **kwargs: Any) -> "ActEllipse":
         """Build an act from an :class:`~pytanga.geometry.Ellipse`, copying its frame."""
+        has_basis = entity.dir_u is not None and entity.dir_v is not None
         return cls(
             center=entity.center,
             radius_u=entity.radius_u,
             radius_v=entity.radius_v,
             angle=entity.angle,
-            normal=entity.normal,
+            normal=None if has_basis else entity.normal,
             dir_u=entity.dir_u,
             dir_v=entity.dir_v,
             **kwargs,
