@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.25.0 (2.25.1-rc1)] — 2026-10-26
+- Tiled-pyramid no longer falls back to level 0 while the viewport is initializing
+→ [Details](2026/10/26_b5cc82d64.md)
+
 ## [Since 2.25.0] — 2026-10-26
 - Tiled-pyramid LOD no longer oscillates (debounced level re-resolution + wider hysteresis + level preserved on re-push) · full pyramid level is fetched in batches so large level-0 loads complete
 → [Details](2026/10/26_b27a88e13.md)
