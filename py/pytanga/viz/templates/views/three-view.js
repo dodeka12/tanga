@@ -578,6 +578,23 @@ export class ThreeJsView extends View {
         return Math.max(hx * width * dpr / du, hy * height * dpr / dv);
     }
 
+    // Displayed long side (device pixels) of a background image fitted into the
+    // pane, computed without the quad (used before the quad exists).  Mirrors
+    // the fit-letterbox branch of `_backgroundScreenLongSide` for a full crop.
+    _backgroundFitLongSide(imageMeta) {
+        const width = this.width || window.innerWidth;
+        const height = this.height || window.innerHeight;
+        if (!(width > 0 && height > 0)) return null;
+        const dpr = this.renderer && this.renderer.getPixelRatio() || 1;
+        const imgW = Number(imageMeta && imageMeta.width) || 1;
+        const imgH = Number(imageMeta && imageMeta.height) || 1;
+        const aspect = imgW / imgH;
+        const paneAspect = width / height;
+        const hx = Math.min(1, aspect / paneAspect);
+        const hy = Math.min(1, paneAspect / aspect);
+        return Math.max(hx * width * dpr, hy * height * dpr);
+    }
+
     // Keep screen-space point markers at a constant on-screen size.  Iterate the
     // view's entities, find marker meshes tagged `userData.isScreenSpace`, and
     // set their scale to world-units-per-CSS-pixel via the shared camera helper.
@@ -1034,6 +1051,14 @@ export class ThreeJsView extends View {
             return;
         }
 
+        // Level budget for the tiled layer's initial fetch: the on-screen long
+        // side of the image fitted to the pane.  Using the real fit size (rather
+        // than a hardcoded 2048) avoids selecting the full-resolution level for
+        // images whose long side is in 2048..4096.  A same-size swap still keeps
+        // its previous level via `updateImageBackground`, and the per-frame LOD
+        // re-resolution refines this after it settles.
+        const maxDim = this._backgroundFitLongSide(this._backgroundImage);
+
         // A fragment/vertex change cannot be applied to a live ShaderMaterial, so
         // rebuild the quad instead of reusing it.
         const nextShader = this._backgroundImage.shader || {};
@@ -1048,13 +1073,13 @@ export class ThreeJsView extends View {
             // Reuse the existing quad: the new texture replaces the old one
             // in place (after decoding), so there is no black gap between
             // frames and the current crop window is retained.
-            updateImageBackground(this._backgroundMesh, this._backgroundImage);
+            updateImageBackground(this._backgroundMesh, this._backgroundImage, maxDim);
         } else {
             if (this._backgroundMesh) {
                 this.scene.remove(this._backgroundMesh);
                 this._backgroundMesh = null;
             }
-            this._backgroundMesh = createImageBackground(this._backgroundImage);
+            this._backgroundMesh = createImageBackground(this._backgroundImage, maxDim);
             this.scene.add(this._backgroundMesh);
         }
 

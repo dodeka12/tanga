@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.25.0 (2.25.1-rc2)] — 2026-10-26
+- Background tiled-pyramid initial level is picked from the pane size instead of a hardcoded 2048 budget
+→ [Details](2026/10/26_67f12da72.md)
+
 ## [Since 2.25.0 (2.25.1-rc1)] — 2026-10-26
 - Tiled-pyramid no longer falls back to level 0 while the viewport is initializing
 → [Details](2026/10/26_b5cc82d64.md)
