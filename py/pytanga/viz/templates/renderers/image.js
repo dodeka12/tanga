@@ -397,7 +397,11 @@ export async function createImage(ent, opts) {
                 });
             }
         } else if (img.source === 'tiled') {
-            const level = levelForScreen(img, maxDim ?? 2048);
+            // `maxDim` can be non-finite while the ortho frustum is still being
+            // initialized; guard it so `levelForScreen` does not fall back to
+            // level 0 (full resolution) at startup.
+            const budget = Number.isFinite(maxDim) && maxDim > 0 ? maxDim : 2048;
+            const level = levelForScreen(img, budget);
             sendImageEvent('image_tile_load', {
                 image_id: img.id, source: 'tiled', width: img.width, height: img.height,
                 level, tile_version: img.tile_version,
@@ -459,6 +463,13 @@ export async function updateImageLod(mesh, maxDim) {
     const material = mesh && mesh.material;
     const layers = material && material.userData && material.userData._tiledLayers;
     if (!layers || layers.length === 0) return false;
+    // A non-finite/zero `maxDim` means the viewport/crop isn't ready yet (e.g.
+    // an ortho frustum or background crop that has not been initialized).  Skip
+    // instead of letting `levelForScreen` fall back to level 0 — that would
+    // fetch the full-resolution level at startup, and the settle tracking below
+    // would then latch onto the non-finite value (NaN comparisons are false) and
+    // stay stuck on level 0.
+    if (!(Number.isFinite(maxDim) && maxDim > 0)) return false;
     const now = _now();
     let changed = false;
     for (const layer of layers) {
