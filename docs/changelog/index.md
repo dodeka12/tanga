@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.25.0] — 2026-10-26
+- Tiled-pyramid LOD no longer oscillates (debounced level re-resolution + wider hysteresis + level preserved on re-push) · full pyramid level is fetched in batches so large level-0 loads complete
+→ [Details](2026/10/26_b27a88e13.md)
+
 ## [Since 2.24.1] — 2026-10-23
 - Image load events (`on_image_loaded` / `on_image_tile_load` / `on_image_tile_loaded`) with typed `ImageStatusHandler`/`ImageStatusRecord` · Bug fixes: tiled-pyramid LOD no longer toggles at zoom boundaries
 → [Details](2026/10/23_559d10941.md)

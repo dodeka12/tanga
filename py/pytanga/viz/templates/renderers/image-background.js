@@ -127,7 +127,7 @@ function _layersOf(imageMeta) {
 // Bind layer `i`'s texture to `uImage{i}`.  When the pixel frame has not arrived
 // yet (it races the metadata over the wire), register a consumer so the texture
 // is uploaded once the frame lands (mirrors renderers/image.js).
-function _bindLayerTexture(material, img, i) {
+function _bindLayerTexture(material, img, i, prev) {
     const key = `uImage${i}`;
     if (!img) {
         // A cleared (stable-index) layer slot: disable its sampler.
@@ -135,7 +135,11 @@ function _bindLayerTexture(material, img, i) {
         return;
     }
     if (img.source === 'tiled') {
-        const level = levelForScreen(img, 2048);
+        // Preserve the resolved level across a re-bind of the same-sized image
+        // so the pyramid does not reset to the 2048 fallback and bounce back to
+        // the correct level a frame later.
+        const sameSize = prev && prev.img && prev.img.width === img.width && prev.img.height === img.height;
+        const level = prev && prev.level != null && sameSize ? prev.level : levelForScreen(img, 2048);
         sendImageEvent('image_tile_load', {
             image_id: img.id, source: 'tiled', width: img.width, height: img.height,
             level, tile_version: img.tile_version,
@@ -150,7 +154,11 @@ function _bindLayerTexture(material, img, i) {
                 image_id: img.id, source: 'tiled', width: img.width, height: img.height,
             });
         });
-        material.userData._tiledLayers.push({ img, index: i, level });
+        material.userData._tiledLayers.push({
+            img, index: i, level,
+            stableMaxDim: prev ? prev.stableMaxDim : undefined,
+            stableSince: prev ? prev.stableSince : undefined,
+        });
         return;
     }
     _backgroundTexture(img).then((tex) => {
@@ -190,7 +198,7 @@ function _layerTag(img) {
 // already consumed, registering one-shot consumers bound to stale placeholder
 // metadata — which then decode a later, differently-sized frame with the wrong
 // dimensions (the layer-texture race).
-function _bindLayers(material, imageMeta) {
+function _bindLayers(material, imageMeta, prevLayers) {
     const img = imageMeta || {};
     const layers = _layersOf(img);
     const layerCount = Number(img.max_layers) || 8;
@@ -207,12 +215,18 @@ function _bindLayers(material, imageMeta) {
             continue;
         }
         const tag = _layerTag(layer);
-        // Tiled layers always re-bind (they rebuild `_tiledLayers`, have no
-        // pixel frame, and cannot race a stale consumer); data/url layers only
-        // re-bind when their content actually changed.
-        if (layer.source !== 'tiled' && bound.get(key) === tag) continue;
+        const prev = prevLayers && prevLayers.get(layer.id);
+        if (bound.get(key) === tag) {
+            // Unchanged tiled layer: keep its existing texture + resolved level
+            // instead of re-fetching, so a same-image `view_background_image`
+            // re-push does not reset the pyramid level or re-emit tile events.
+            if (layer.source === 'tiled' && prev) {
+                material.userData._tiledLayers.push(prev);
+            }
+            continue;
+        }
         bound.set(key, tag);
-        _bindLayerTexture(material, layer, i);
+        _bindLayerTexture(material, layer, i, prev);
     }
 }
 
@@ -261,10 +275,15 @@ export function updateImageBackground(mesh, imageMeta) {
     mat.uniforms.uImageAspect.value = width / height;
     // Re-apply color-processing + custom uniforms from the new metadata.
     applyImageUniforms(mesh, img.uniforms);
-    // Rebuild the tiled-layer LOD state from the new metadata, then re-bind
-    // only the layers whose content actually changed (see `_bindLayers`).
+    // Capture the previous per-layer LOD state so an unchanged tiled layer keeps
+    // its resolved level (and texture) across the re-bind, then re-bind only the
+    // layers whose content actually changed (see `_bindLayers`).
+    const prevLayers = new Map();
+    for (const layer of mat.userData._tiledLayers || []) {
+        prevLayers.set(layer.img.id, layer);
+    }
     mat.userData._tiledLayers = [];
-    _bindLayers(mat, img);
+    _bindLayers(mat, img, prevLayers);
 }
 
 /**

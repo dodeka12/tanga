@@ -131,6 +131,27 @@ export async function makeEncodedTexture(img, frame) {
     return makeDataTexture(img, bytes, frame);
 }
 
+// Bounded concurrency for tile fetches.  A huge image at level 0 has hundreds
+// of tiles; fetching them all at once floods the browser's connection pool and
+// the server, so requests get aborted (`status: 0`) and the level never loads.
+// Fetching in small batches keeps the in-flight count low enough to complete.
+const _TILE_FETCH_CONCURRENCY = 8;
+
+// Run `forTile(x, y)` for every tile of a `cols × rows` grid, with at most
+// `_TILE_FETCH_CONCURRENCY` tiles in flight at once.  Each tile's work is
+// disjoint (order-independent), so the batches only limit concurrency.
+async function _fetchTilesInBatches(cols, rows, forTile) {
+    const total = cols * rows;
+    for (let start = 0; start < total; start += _TILE_FETCH_CONCURRENCY) {
+        const end = Math.min(total, start + _TILE_FETCH_CONCURRENCY);
+        const batch = [];
+        for (let k = start; k < end; k++) {
+            batch.push(forTile(k % cols, Math.floor(k / cols)));
+        }
+        await Promise.all(batch);
+    }
+}
+
 // Compose a tiled float32/uint16 image at `level` into one float DataTexture by
 // fetching that level's tiles as zlib-compressed raw pixels, inflating them,
 // expanding to RGBA, and placing them edge-clipped into a single buffer.
@@ -145,28 +166,22 @@ async function makeTiledDataTexture(img, level) {
 
     const data = new Float32Array(levelW * levelH * 4);
 
-    const jobs = [];
-    for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-            jobs.push((async () => {
-                const resp = await fetch(`/image/${img.id}/${img.tile_version ?? 0}/${level}/${x}/${y}?format=zlib`);
-                if (!resp.ok) return;
-                const compressed = new Uint8Array(await resp.arrayBuffer());
-                const stream = new Blob([compressed]).stream()
-                    .pipeThrough(new DecompressionStream('deflate'));
-                const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
-                const rgba = toRgba(typedArrayFor(dtype, bytes), channels);
-                const tileW = Math.min(tileSize, levelW - x * tileSize);
-                const tileH = Math.min(tileSize, levelH - y * tileSize);
-                for (let ty = 0; ty < tileH; ty++) {
-                    const src = ty * tileW * 4;
-                    const dst = ((y * tileSize + ty) * levelW + x * tileSize) * 4;
-                    data.set(rgba.subarray(src, src + tileW * 4), dst);
-                }
-            })());
+    await _fetchTilesInBatches(cols, rows, (x, y) => (async () => {
+        const resp = await fetch(`/image/${img.id}/${img.tile_version ?? 0}/${level}/${x}/${y}?format=zlib`);
+        if (!resp.ok) return;
+        const compressed = new Uint8Array(await resp.arrayBuffer());
+        const stream = new Blob([compressed]).stream()
+            .pipeThrough(new DecompressionStream('deflate'));
+        const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+        const rgba = toRgba(typedArrayFor(dtype, bytes), channels);
+        const tileW = Math.min(tileSize, levelW - x * tileSize);
+        const tileH = Math.min(tileSize, levelH - y * tileSize);
+        for (let ty = 0; ty < tileH; ty++) {
+            const src = ty * tileW * 4;
+            const dst = ((y * tileSize + ty) * levelW + x * tileSize) * 4;
+            data.set(rgba.subarray(src, src + tileW * 4), dst);
         }
-    }
-    await Promise.all(jobs);
+    })());
 
     const texture = new THREE.DataTexture(data, levelW, levelH, THREE.RGBAFormat, THREE.FloatType);
     texture.magFilter = THREE.NearestFilter;
@@ -194,19 +209,13 @@ async function makeTiledCanvasTexture(img, level) {
     const ctx = canvas.getContext('2d');
     const format = (img.dtype === 0 && (img.channels === 1 || img.channels === 3)) ? 'jpeg' : 'png';
 
-    const jobs = [];
-    for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-            jobs.push((async () => {
-                const resp = await fetch(`/image/${img.id}/${img.tile_version ?? 0}/${level}/${x}/${y}?format=${format}`);
-                if (!resp.ok) return;
-                const bitmap = await createImageBitmap(await resp.blob());
-                ctx.drawImage(bitmap, x * tileSize, y * tileSize);
-                bitmap.close();
-            })());
-        }
-    }
-    await Promise.all(jobs);
+    await _fetchTilesInBatches(cols, rows, (x, y) => (async () => {
+        const resp = await fetch(`/image/${img.id}/${img.tile_version ?? 0}/${level}/${x}/${y}?format=${format}`);
+        if (!resp.ok) return;
+        const bitmap = await createImageBitmap(await resp.blob());
+        ctx.drawImage(bitmap, x * tileSize, y * tileSize);
+        bitmap.close();
+    })());
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.generateMipmaps = true;
@@ -426,17 +435,45 @@ export async function createImage(ent, opts) {
     return mesh;
 }
 
+// How long the on-screen resolution (`maxDim`) must stay (approximately) stable
+// before a pyramid level change is considered.  Debounces the per-frame
+// re-resolution so a viewport/zoom jitter — or a brief rebuild that resets the
+// layer state — cannot thrash between two levels.
+const _LOD_SETTLE_MS = 200;
+
+// Relative change that restarts the settle window.  Anything below this is
+// treated as numeric noise and keeps the current settle window.
+const _SETTLE_EPS = 1e-3;
+
+// Monotonic clock (milliseconds), guarded for the offline/export bundle where
+// `performance` may be absent.
+const _now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
 // Re-resolve tiled image layers for a new on-screen resolution `maxDim`
-// (device pixels on the image's long side).  When a layer's target level
-// changes, fetch that level's tiles and swap the texture in place (disposing
-// the previous one).  Returns true when at least one layer was swapped.
+// (device pixels on the image's long side).  Re-resolution is debounced: the
+// level is only re-derived once `maxDim` has been stable for `_LOD_SETTLE_MS`.
+// When a layer's target level changes, fetch that level's tiles and swap the
+// texture in place (disposing the previous one).  Returns true when at least
+// one layer was swapped.
 export async function updateImageLod(mesh, maxDim) {
     const material = mesh && mesh.material;
     const layers = material && material.userData && material.userData._tiledLayers;
     if (!layers || layers.length === 0) return false;
+    const now = _now();
     let changed = false;
     for (const layer of layers) {
-        const level = levelForScreen(layer.img, maxDim, layer.level);
+        // Debounce: restart the settle window when `maxDim` moves beyond the
+        // relative epsilon, and skip re-resolution until it has been stable.
+        if (
+            layer.stableMaxDim == null
+            || Math.abs(maxDim - layer.stableMaxDim) > Math.max(1e-6, layer.stableMaxDim * _SETTLE_EPS)
+        ) {
+            layer.stableMaxDim = maxDim;
+            layer.stableSince = now;
+        }
+        if (layer.stableSince == null || now - layer.stableSince < _LOD_SETTLE_MS) continue;
+
+        const level = levelForScreen(layer.img, layer.stableMaxDim, layer.level);
         if (level === layer.level) {
             // Already showing the right level; cancel any in-flight fetch for a
             // now-outdated level so it cannot overwrite the correct texture.
