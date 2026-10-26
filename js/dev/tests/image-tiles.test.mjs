@@ -30,19 +30,19 @@ test('levelForScreen falls back to full resolution for a non-positive screen', (
 test('levelForScreen hysteresis holds the coarser level at a boundary', () => {
     const P = { width: 4096, height: 2048, levels: 13 };
     // Boundary between level 0 (4096) and level 1 (2048): at 2050 the ideal is
-    // level 0, but 2050 < 2048 * 1.02, so the current level 1 is kept.
+    // level 0, but 2050 < 2048 * 1.05, so the current level 1 is kept.
     assert.equal(levelForScreen(P, 2050, 1), 1);
     // Clearly past the margin → switch to the finer level 0.
-    assert.equal(levelForScreen(P, 2100, 1), 0);
+    assert.equal(levelForScreen(P, 2200, 1), 0);
 });
 
 test('levelForScreen hysteresis holds the finer level at a boundary', () => {
     const P = { width: 4096, height: 2048, levels: 13 };
-    // At 2010 the ideal is level 1, but 2010 > 2048 * 0.98, so the current
+    // At 2010 the ideal is level 1, but 2010 > 2048 * 0.95, so the current
     // level 0 is kept.
     assert.equal(levelForScreen(P, 2010, 0), 0);
     // Clearly below the margin → switch to the coarser level 1.
-    assert.equal(levelForScreen(P, 1990, 0), 1);
+    assert.equal(levelForScreen(P, 1900, 0), 1);
 });
 
 test('levelForScreen without a current level returns the ideal level', () => {

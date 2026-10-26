@@ -21,7 +21,7 @@ export function pyramidGrid(pyramid, level) {
 // Relative dead-band around a level boundary: a level change is only reported
 // once the screen crosses the boundary by this margin, so per-frame jitter at
 // the boundary does not oscillate between two levels.
-const _HYSTERESIS = 0.02;
+const _HYSTERESIS = 0.05;
 
 // Long side (device pixels) of a pyramid level, matching the `max(nextW, nextH)`
 // bound `levelForScreen` compares against the on-screen resolution.
@@ -41,7 +41,7 @@ function _levelResolution(pyramid, level) {
 // positive number, and clamps to [0, levels-1].
 //
 // When the optional integer `currentLevel` is given, the result is clamped by a
-// ±2% dead-band around the level boundary: a level change is only reported once
+// ±5% dead-band around the level boundary: a level change is only reported once
 // the screen clearly crosses the boundary, which keeps per-frame
 // re-resolution from oscillating between two levels at a power-of-two zoom
 // boundary (see `updateImageLod`).
