@@ -127,7 +127,7 @@ function _layersOf(imageMeta) {
 // Bind layer `i`'s texture to `uImage{i}`.  When the pixel frame has not arrived
 // yet (it races the metadata over the wire), register a consumer so the texture
 // is uploaded once the frame lands (mirrors renderers/image.js).
-function _bindLayerTexture(material, img, i, prev) {
+function _bindLayerTexture(material, img, i, prev, maxDim) {
     const key = `uImage${i}`;
     if (!img) {
         // A cleared (stable-index) layer slot: disable its sampler.
@@ -136,10 +136,14 @@ function _bindLayerTexture(material, img, i, prev) {
     }
     if (img.source === 'tiled') {
         // Preserve the resolved level across a re-bind of the same-sized image
-        // so the pyramid does not reset to the 2048 fallback and bounce back to
-        // the correct level a frame later.
+        // so the pyramid does not reset and bounce back to the correct level a
+        // frame later.  For a fresh bind, pick the level from the live viewport
+        // (`maxDim`), not a hardcoded 2048 budget — a 2048 budget selects level 0
+        // (full resolution) for images whose long side is in 2048..4096, which is
+        // much finer than a fit-to-pane view actually needs.
         const sameSize = prev && prev.img && prev.img.width === img.width && prev.img.height === img.height;
-        const level = prev && prev.level != null && sameSize ? prev.level : levelForScreen(img, 2048);
+        const budget = Number.isFinite(maxDim) && maxDim > 0 ? maxDim : 2048;
+        const level = prev && prev.level != null && sameSize ? prev.level : levelForScreen(img, budget);
         sendImageEvent('image_tile_load', {
             image_id: img.id, source: 'tiled', width: img.width, height: img.height,
             level, tile_version: img.tile_version,
@@ -198,7 +202,7 @@ function _layerTag(img) {
 // already consumed, registering one-shot consumers bound to stale placeholder
 // metadata — which then decode a later, differently-sized frame with the wrong
 // dimensions (the layer-texture race).
-function _bindLayers(material, imageMeta, prevLayers) {
+function _bindLayers(material, imageMeta, prevLayers, maxDim) {
     const img = imageMeta || {};
     const layers = _layersOf(img);
     const layerCount = Number(img.max_layers) || 8;
@@ -226,7 +230,7 @@ function _bindLayers(material, imageMeta, prevLayers) {
             continue;
         }
         bound.set(key, tag);
-        _bindLayerTexture(material, layer, i, prev);
+        _bindLayerTexture(material, layer, i, prev, maxDim);
     }
 }
 
@@ -234,9 +238,10 @@ function _bindLayers(material, imageMeta, prevLayers) {
  * Build a screen-space image background quad.
  *
  * @param {object} imageMeta  the serialized `background_image` metadata dict
+ * @param {number} [maxDim]  on-screen long side in device pixels (level budget)
  * @returns {THREE.Mesh}
  */
-export function createImageBackground(imageMeta) {
+export function createImageBackground(imageMeta, maxDim) {
     const img = imageMeta || {};
     const geometry = new THREE.PlaneGeometry(2, 2);
     const material = _buildMaterial(img);
@@ -253,7 +258,7 @@ export function createImageBackground(imageMeta) {
         vertex: img.shader?.vertex ?? null,
     };
 
-    _bindLayers(material, img);
+    _bindLayers(material, img, undefined, maxDim);
 
     return mesh;
 }
@@ -265,8 +270,9 @@ export function createImageBackground(imageMeta) {
  *
  * @param {THREE.Mesh} mesh
  * @param {object} imageMeta  the serialized `background_image` metadata dict
+ * @param {number} [maxDim]  on-screen long side in device pixels (level budget)
  */
-export function updateImageBackground(mesh, imageMeta) {
+export function updateImageBackground(mesh, imageMeta, maxDim) {
     const mat = mesh && mesh.material;
     if (!mat || !mat.uniforms) return;
     const img = imageMeta || {};
@@ -283,7 +289,7 @@ export function updateImageBackground(mesh, imageMeta) {
         prevLayers.set(layer.img.id, layer);
     }
     mat.userData._tiledLayers = [];
-    _bindLayers(mat, img, prevLayers);
+    _bindLayers(mat, img, prevLayers, maxDim);
 }
 
 /**
