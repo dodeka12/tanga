@@ -81,8 +81,8 @@ pip install tanga-py
 ```
 
 No C++ compiler or build tools required. pytanga ships with precompiled
-bindings for nine common algebra configurations on Linux (x86_64) and
-Windows (win_amd64).
+bindings for nine common algebra configurations on Linux (x86_64),
+Windows (win_amd64), and macOS 14+ (arm64 / Apple Silicon).
 
 If you need a custom algebra not covered by the precompiled set, add the
 `compile` extra (`pip install "tanga-py[compile]"`) — see the

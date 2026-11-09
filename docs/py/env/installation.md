@@ -8,7 +8,8 @@ pytanga as a dependency in your own project.
 - **Python ≥ 3.12**
 - **uv** (Python package manager and virtual‑environment tool)
 - **C++ compiler** — **not needed for most users**. pip / uv install
-  precompiled wheels that work out of the box on Linux and Windows.
+  precompiled wheels that work out of the box on Linux, Windows and
+  macOS (Apple Silicon).
   A compiler is only required if you need an algebra configuration not
   covered by the precompiled set (e.g. a custom dimension or signature).
   See [Compiler Setup](#compiler-setup) for per-platform instructions.
@@ -212,10 +213,13 @@ pip install "tanga-py[compile]"
 This pulls in cmake, ninja, and pybind11 for on-the-fly compilation.
 You also need a C++ compiler — see [Compiler Setup](#compiler-setup).
 
-**Note:** precompiled wheels are available for Linux (x86_64) and Windows
-(win_amd64). If you are on one of these platforms and only need the
-standard algebra configurations listed above, you do **not** need the
-`compile` extra or a C++ compiler.
+**Note:** precompiled wheels are available for Linux (x86_64), Windows
+(win_amd64) and macOS 14 or newer on Apple Silicon (arm64). If you are on one
+of these platforms and only need the standard algebra configurations listed
+above, you do **not** need the `compile` extra or a C++ compiler. On other
+platforms (e.g. Intel Macs, or macOS below 14) pip installs the pure
+`py3-none-any` wheel, which compiles the bindings on first use and therefore
+requires the `compile` extra and a C++ compiler.
 
 For the example scripts and iterative solvers, add the `examples` extra as
 well:

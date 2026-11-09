@@ -16,10 +16,11 @@ on:
         description: 'macOS runner (only used when platform = macos)'
         type: choice
         required: true
-        default: 'macos-14'
+        default: 'macos-15'
         options:
-          - macos-13
-          - macos-14
+          - macos-15
+          - macos-15-intel
+          - macos-26
       python-version:
         description: 'Python version'
         type: choice
@@ -39,10 +40,15 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------------- macOS
+  #    Keep this in sync with publish.yml: MACOSX_DEPLOYMENT_TARGET fixes the
+  #    minimum macOS version and the resulting wheel tag, independent of the
+  #    runner image actually selected.
   build-macos:
     if: inputs.platform == 'macos'
     name: Build macOS wheel (${{ inputs.os }}, py${{ inputs.python-version }})
     runs-on: ${{ inputs.os }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
     steps:
       - uses: actions/checkout@v4
         with:

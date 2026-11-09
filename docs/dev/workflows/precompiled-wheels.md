@@ -57,9 +57,34 @@ hatchling produces `py3-none-any` because the extension files in `precompiled/`
 are not recognized as Python extension modules. `build-precompiled-wheel.sh`
 runs `fix-wheel-tag.py` automatically after the build.
 
+On macOS the tag is derived from `MACOSX_DEPLOYMENT_TARGET` when the variable is
+set. The release workflow builds on `macos-15` (arm64) with
+`MACOSX_DEPLOYMENT_TARGET=14.0`, which yields `macosx_14_0_arm64` — pinning the
+deployment target keeps the wheel installable on older macOS releases than the
+runner image itself. Without the variable the script falls back to the build
+host's own macOS version.
+
 For official manylinux compliance, use `auditwheel` in a manylinux Docker
 container instead. The fix-wheel-tag script is intended for local and
 ad-hoc builds.
+
+### CI build matrix (`publish.yml`, used by `cd.yml` and `promote.yml`)
+
+| Job | Runner | Wheel tag |
+|-----|--------|-----------|
+| `build-pure` | `ubuntu-24.04` | `py3-none-any` (no precompiled extensions) |
+| `build-linux` | `quay.io/pypa/manylinux_2_28_x86_64` container | `cpXY-cpXY-manylinux_2_27_x86_64.manylinux_2_28_x86_64` (auditwheel) |
+| `build-windows` | `windows-latest` | `cpXY-cpXY-win_amd64` |
+| `build-macos` | `macos-15` (arm64) + `MACOSX_DEPLOYMENT_TARGET=14.0` | `cpXY-cpXY-macosx_14_0_arm64` |
+
+GitHub retires runner images on a schedule — `macos-14` (arm64) was retired on
+2026-11-02, which surfaces as
+`The configuration 'macos-14-arm64-us-default' is not supported` and cancels the
+whole publish job. When that happens, move the job to the next supported label
+(see the [runner images README](https://github.com/actions/runner-images#available-images));
+the wheel tag stays stable as long as `MACOSX_DEPLOYMENT_TARGET` is pinned.
+`build-debug.yml` must be updated alongside `publish.yml` — it keeps the same
+deployment target and its own list of macOS runner labels.
 
 ### What `build-precompiled.py` Does
 
