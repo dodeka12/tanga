@@ -1,6 +1,10 @@
 # Changelog
 
 ## [Since 2.25.1] — 2026-11-09
+- macOS wheels build on `macos-15` again (macOS 14 runners were retired) · wheel tag pinned through `MACOSX_DEPLOYMENT_TARGET=14.0` · debug build workflow and installation docs updated
+→ [Details](2026/11/09_7bd13e117.md)
+
+## [Since 2.25.1] — 2026-11-09
 - Tooltips on controls, groups, and menus (`tooltip=`, `set_tooltip`, `set_control_tooltip`) · page-wide `Visualizer.set_tooltips_enabled` switch over a new `ui_options` message
 - Fix: value-edit steppers focus only on an explicit click (hover no longer steals scene shortcuts)
 → [Details](2026/11/09_e6c7c3cd7.md)
