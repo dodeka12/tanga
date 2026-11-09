@@ -1,6 +1,7 @@
 // Tanga Viewer — `EditorView`: a transient multi-line text editor overlay.
 
 import { View } from './view.js';
+import { applyTooltip } from '../controls-panel.js';
 
 export class EditorView extends View {
     constructor({ id, label = '', value = '', onClose = null } = {}) {
@@ -83,7 +84,7 @@ export class EditorView extends View {
     _makeButton(glyph, title, onClick) {
         const btn = document.createElement('button');
         btn.textContent = glyph;
-        btn.title = title;
+        applyTooltip(btn, title);
         Object.assign(btn.style, {
             background: 'rgba(255, 255, 255, 0.1)',
             border: '1px solid rgba(255, 255, 255, 0.2)',

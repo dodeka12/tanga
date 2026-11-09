@@ -113,6 +113,21 @@ class ControlView(View, Generic[C]):
         if self._push_state is not None:
             self._push_state(self.id, {"selected": self.control.selected})
 
+    def set_tooltip(self, tooltip: str) -> None:
+        """Set this control's tooltip text and push ``control_state``.
+
+        An empty string clears the tooltip.  The text is stored on the view
+        (``self.tooltip``, serialized into ``view_layout``) *and* on the wrapped
+        control (``self.control.tooltip``, which the concrete views set in sync
+        at construction); both copies are kept equal.  When mounted, the new
+        text is pushed through the injected ``_push_state`` callback, so no
+        layout re-push is needed.
+        """
+        self.tooltip = tooltip
+        self.control.tooltip = tooltip
+        if self._push_state is not None:
+            self._push_state(self.id, {"tooltip": self.tooltip})
+
     def enable(self) -> None:
         """Enable this control."""
         self.set_enabled(True)

@@ -783,7 +783,7 @@ export function createTable(ctrl) {
         btn.type = 'button';
         btn.className = 'tanga-action-button tanga-zoom-btn tanga-icon-button';
         btn.appendChild(createIconElement('material:' + icon));
-        btn.title = titleText;
+        applyTooltip(btn, titleText);
         btn.addEventListener('click', onClick);
         group.appendChild(btn);
     }
@@ -800,7 +800,7 @@ export function createTable(ctrl) {
     if (ctrl.onResize) {
         const corner = document.createElement('div');
         corner.className = 'tanga-table-resize';
-        corner.title = 'Resize';
+        applyTooltip(corner, 'Resize');
         corner.addEventListener('pointerdown', (e) => {
             if (e.button !== 0) return;
             e.preventDefault();

@@ -505,9 +505,7 @@ class Expression:
             if unknown:
                 raise ValueError(f"unknown variable(s): {sorted(unknown)}")
             expr = self._substitute(subs)
-            values = {
-                k: v for k, v in bindings.items() if not isinstance(v, Variable)
-            }
+            values = {k: v for k, v in bindings.items() if not isinstance(v, Variable)}
             if not values:
                 return expr
         else:
@@ -1153,8 +1151,7 @@ class AffineExpression:
                 outside = union[name].ids_outside(value)
                 if outside:
                     raise ValueError(
-                        f"binding for {name!r} has blades outside its mask: "
-                        f"{outside}"
+                        f"binding for {name!r} has blades outside its mask: {outside}"
                     )
                 coerced[name] = value
 
@@ -1192,9 +1189,7 @@ class AffineExpression:
             if unknown:
                 raise ValueError(f"unknown variable(s): {sorted(unknown)}")
             expr = self._substitute(subs)
-            values = {
-                k: v for k, v in bindings.items() if not isinstance(v, Variable)
-            }
+            values = {k: v for k, v in bindings.items() if not isinstance(v, Variable)}
             if not values:
                 return expr
         else:
@@ -1342,10 +1337,9 @@ class AffineExpression:
             raise ValueError(
                 f"cannot rename {name!r} to {new_name!r}: name already in use"
             )
-        return AffineExpression([
-            t.rename_var(old, new_name) if name in t.names else t
-            for t in self._terms
-        ])
+        return AffineExpression(
+            [t.rename_var(old, new_name) if name in t.names else t for t in self._terms]
+        )
 
     def project_onto(self, other: "MV | BladeMask") -> "AffineExpression":
         """Restrict every term to a blade set (see :meth:`Expression.project_onto`).
@@ -1479,7 +1473,9 @@ class AffineExpression:
                     f"in every term (got {k} and {occ})"
                 )
             if term._has_counting_axes():
-                raise ValueError("get_tensor() does not support counting axes on terms yet")
+                raise ValueError(
+                    "get_tensor() does not support counting axes on terms yet"
+                )
 
         assert k is not None
         var_union = self._union_masks()[var_name]
@@ -2390,12 +2386,16 @@ def sp(left: Any, right: Any) -> "float | int | ScalarExpression":
 
 def cp(left: Any, right: Any) -> "MV | Expression | AffineExpression":
     """Commutator: ``(left * right - right * left) / 2``."""
-    return cast("MV | Expression | AffineExpression", 0.5 * (left * right - right * left))
+    return cast(
+        "MV | Expression | AffineExpression", 0.5 * (left * right - right * left)
+    )
 
 
 def acp(left: Any, right: Any) -> "MV | Expression | AffineExpression":
     """Anti-commutator: ``(left * right + right * left) / 2``."""
-    return cast("MV | Expression | AffineExpression", 0.5 * (left * right + right * left))
+    return cast(
+        "MV | Expression | AffineExpression", 0.5 * (left * right + right * left)
+    )
 
 
 def rc(left: Any, right: Any) -> "MV | Expression | AffineExpression":

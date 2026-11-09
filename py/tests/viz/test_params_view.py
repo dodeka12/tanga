@@ -44,7 +44,9 @@ def test_dict_mode_serialize() -> None:
 class _Params:
     radius: float = param_ui(2.0, ui=SliderUI(title="Radius", min=0.1, max=5.0))
     wireframe: bool = param_ui(False, ui=CheckboxUI(title="Wireframe"))
-    mode: str = param_ui("solid", ui=DropdownUI(title="Mode", options=["solid", "wire"]))
+    mode: str = param_ui(
+        "solid", ui=DropdownUI(title="Mode", options=["solid", "wire"])
+    )
 
 
 def test_dataclass_mode_serialize_and_value() -> None:
@@ -303,6 +305,14 @@ def test_nested_group_ui_title_override() -> None:
     assert control["collapsed"] is True
 
 
+def test_nested_group_ui_tooltip() -> None:
+    pv = ParamsView(_Outer(), styles={"inner": GroupUI(tooltip="Inner settings")})
+    control = pv._serialize()["rows"][1]["control"]
+    assert control["type"] == "group"
+    assert control["tooltip"] == "Inner settings"
+    assert pv._control_views["inner"].tooltip == "Inner settings"
+
+
 def test_nested_controls_register() -> None:
     pv = ParamsView(_Outer())
     ids = [v.id for v in iter_control_views(pv)]
@@ -433,7 +443,9 @@ def test_add_remove_rows() -> None:
 def test_dropdown_value_label_options() -> None:
     pv = ParamsView(
         {"mode": "solid"},
-        styles={"mode": DropdownUI(options=[("solid", "Solid"), ("wire", "Wireframe")])},
+        styles={
+            "mode": DropdownUI(options=[("solid", "Solid"), ("wire", "Wireframe")])
+        },
     )
     control = pv._serialize()["rows"][0]["control"]
     assert control["options"] == [

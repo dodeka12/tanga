@@ -29,7 +29,9 @@ def _texture() -> SurfaceTexture:
 
 
 def test_surface_shader_to_dict_omits_vertex_when_none() -> None:
-    shader = SurfaceShader("s", "vec3 surfaceColor(vec3 b, vec3 n, vec3 p){ return b; }")
+    shader = SurfaceShader(
+        "s", "vec3 surfaceColor(vec3 b, vec3 n, vec3 p){ return b; }"
+    )
     payload = shader.to_dict()
     assert payload["name"] == "s"
     assert "vertex" not in payload

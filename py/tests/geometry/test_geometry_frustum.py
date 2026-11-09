@@ -43,7 +43,9 @@ def test_frustum_from_camera_axis_aligned():  # noqa: ANN201
     K[1, 2] = 240.0
     from pytanga.viz.camera import pinhole_camera
 
-    cam = pinhole_camera(K, np.eye(3), np.array([0.0, 0.0, -5.0]), image_size=(640, 480))
+    cam = pinhole_camera(
+        K, np.eye(3), np.array([0.0, 0.0, -5.0]), image_size=(640, 480)
+    )
     f = Frustum.from_camera(cam, near=0.5, far=2.0)
     assert f.apex is False
     # Camera at z=5 looks toward +z.
@@ -63,6 +65,8 @@ def test_frustum_from_camera_apex_when_near_nonpositive():  # noqa: ANN201
     K = np.diag([500.0, 500.0, 1.0])
     K[0, 2] = 320.0
     K[1, 2] = 240.0
-    cam = pinhole_camera(K, np.eye(3), np.array([0.0, 0.0, -5.0]), image_size=(640, 480))
+    cam = pinhole_camera(
+        K, np.eye(3), np.array([0.0, 0.0, -5.0]), image_size=(640, 480)
+    )
     f = Frustum.from_camera(cam, near=0.0, far=2.0)
     assert f.apex is True

@@ -110,9 +110,7 @@ class TestBehaviour:
         assert line.end == Point(3.0, 1.0, 0.0)
 
     def test_create_from_points(self) -> None:
-        line = ActLine.create_from_points(
-            Point(0.0, 0.0, 0.0), Point(4.0, 3.0, 0.0)
-        )
+        line = ActLine.create_from_points(Point(0.0, 0.0, 0.0), Point(4.0, 3.0, 0.0))
         assert line.start == Point(0.0, 0.0, 0.0)
         assert line.end == Point(4.0, 3.0, 0.0)
         assert line.entity.length == 5.0  # |(4, 3)| = 5
@@ -195,4 +193,3 @@ class TestTranslate3D:
         )
         assert line.start == Point(0.0, 0.0, 2.0)
         assert line.end == Point(2.0, 0.0, 2.0)
-

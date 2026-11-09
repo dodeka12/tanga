@@ -83,4 +83,6 @@ def test_pinhole_camera_is_camera_config():  # noqa: ANN201
 
     K, R, t = _identity_calibration()
     assert isinstance(pinhole_camera(K, R, t, image_size=(640, 480)), CameraConfig)
-    assert isinstance(PinholeCamera(fx=1, fy=1, cx=0, cy=0, width=10, height=10), CameraConfig)
+    assert isinstance(
+        PinholeCamera(fx=1, fy=1, cx=0, cy=0, width=10, height=10), CameraConfig
+    )

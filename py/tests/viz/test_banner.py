@@ -42,7 +42,10 @@ def test_serialize_banner_scoped():  # noqa: ANN201
 
 def test_serialize_banner_scrollable():  # noqa: ANN201
     assert serialize_banner(Banner(id="b", text="x"))["scrollable"] is False
-    assert serialize_banner(Banner(id="b", text="x", scrollable=True))["scrollable"] is True
+    assert (
+        serialize_banner(Banner(id="b", text="x", scrollable=True))["scrollable"]
+        is True
+    )
 
 
 def test_serialize_banner_controls_kind_specific():  # noqa: ANN201

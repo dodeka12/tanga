@@ -56,7 +56,10 @@ def _main() -> None:
 
     # Incidence via the scalar product: embed(p) · coeff(A) = ½ xᵀ A x.
     print("  apex incidence:", round(float(geo3(Point(1.0, -2.0, 3.0)).sp(cone)), 12))
-    print("  base point incidence:", round(float(geo3(Point(3.0, -2.0, 4.0)).sp(cone)), 12))
+    print(
+        "  base point incidence:",
+        round(float(geo3(Point(3.0, -2.0, 4.0)).sp(cone)), 12),
+    )
 
 
 if __name__ == "__main__":

@@ -213,9 +213,7 @@ def test_ipns_mode_round_trip():  # noqa: ANN201
 
 def test_expect_general_rotor_from_reflection_line():  # noqa: ANN201
     alg = BasisN3()
-    mv = create_operator(
-        alg, GeneralRotor(math.pi, Direction(0, 0, 1), Point(1, 0, 0))
-    )
+    mv = create_operator(alg, GeneralRotor(math.pi, Direction(0, 0, 1), Point(1, 0, 0)))
     assert isinstance(analysis.analyze_operator(mv), ReflectionLine)
     gr = analysis.analyze_operator(mv, expect=GeneralRotor)
     assert isinstance(gr, GeneralRotor)
@@ -225,9 +223,7 @@ def test_expect_general_rotor_from_reflection_line():  # noqa: ANN201
 
 def test_expect_rotor_skips_displaced_reflection_line():  # noqa: ANN201
     alg = BasisN3()
-    mv = create_operator(
-        alg, GeneralRotor(math.pi, Direction(0, 0, 1), Point(1, 0, 0))
-    )
+    mv = create_operator(alg, GeneralRotor(math.pi, Direction(0, 0, 1), Point(1, 0, 0)))
     r = analysis.analyze_operator(mv, expect=Rotor)
     assert isinstance(r, ReflectionLine)  # displaced line cannot be a Rotor
 
@@ -241,9 +237,7 @@ def test_coerce_origin_reflection_line_to_rotor():  # noqa: ANN201
 
 def test_expect_unrelated_type_returns_natural():  # noqa: ANN201
     alg = BasisN3()
-    mv = create_operator(
-        alg, GeneralRotor(math.pi, Direction(0, 0, 1), Point(1, 0, 0))
-    )
+    mv = create_operator(alg, GeneralRotor(math.pi, Direction(0, 0, 1), Point(1, 0, 0)))
     r = analysis.analyze_operator(mv, expect=Translator)
     assert isinstance(r, ReflectionLine)
 

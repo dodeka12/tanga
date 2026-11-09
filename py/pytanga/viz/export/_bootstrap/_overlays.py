@@ -240,4 +240,3 @@ function updateCoordinateOverlays() {{
     if (_axesOverlay) _axesOverlay.update(params, {width_expr}, {height_expr});
 }}
 """
-

@@ -4,7 +4,7 @@
 // parent panel.
 
 import { StackView } from './stack-view.js';
-import { createIconElement } from '../controls-panel.js';
+import { applyTooltip, createIconElement } from '../controls-panel.js';
 
 const MODES = ['dropdown', 'bar'];
 
@@ -15,6 +15,7 @@ export class MenuView extends StackView {
         mode = 'dropdown',
         direction = null,
         position = null,
+        tooltip = '',
         children = [],
     } = {}) {
         if (direction === null) {
@@ -30,6 +31,7 @@ export class MenuView extends StackView {
         this.label = label;
         this.mode = mode;
         this.position = position;
+        this.tooltip = tooltip;
         this._open = false;
         this._subMenus = [];
 
@@ -74,7 +76,7 @@ export class MenuView extends StackView {
         this._trigger = document.createElement('button');
         this._trigger.type = 'button';
         this._trigger.className = 'tanga-menu-trigger';
-        this._trigger.title = this.label || 'Menu';
+        applyTooltip(this._trigger, this.tooltip || this.label || 'Menu');
         if (this.trigger_icon) {
             this._trigger.appendChild(createIconElement(this.trigger_icon));
         }

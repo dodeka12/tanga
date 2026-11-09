@@ -106,6 +106,7 @@ def test_pinhole_framing_fit_tall_pane() -> None:
     assert f["hx"] == 1
     assert f["hy"] == pytest.approx(0.5 / (640 / 480))
 
+
 def test_pinhole_framing_crop_window() -> None:
     program = r"""
     import { pinholeFraming } from './py/pytanga/viz/templates/pinhole-framing.js';

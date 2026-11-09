@@ -246,6 +246,7 @@ class Visualizer(_JupyterDisplayMixin):
         from ._hosts import (
             InteractionHost,
             ThemeHost,
+            UIOptionsHost,
         )
         from ._layout import LayoutHostImpl
 
@@ -260,6 +261,7 @@ class Visualizer(_JupyterDisplayMixin):
         )
         self._layout.add_scene("")
         self._theme_host = ThemeHost(self._transport, self._layout, theme=theme)
+        self._ui_options_host = UIOptionsHost(self._transport, self._layout)
         self._interaction_host = InteractionHost(
             self._transport, self._layout, self._handler_registry
         )
@@ -337,9 +339,30 @@ class Visualizer(_JupyterDisplayMixin):
         """Enable or disable a mounted control by its id (greyed out when disabled)."""
         self._layout.set_control_enabled(control_id, enabled)
 
+    @property
+    def tooltips_enabled(self) -> bool:
+        """Whether framework tooltips are shown in connected viewers."""
+        return self._ui_options_host.tooltips_enabled
+
+    def set_tooltips_enabled(self, enabled: bool) -> None:
+        """Show or hide every framework tooltip on all connected browsers.
+
+        Covers tooltips attached to controls, groups, menus, and viewer chrome.
+        Newly connected browsers start with the current setting.
+        """
+        self._ui_options_host.set_tooltips_enabled(enabled)
+
     def set_control_visible(self, control_id: str, visible: bool) -> None:
         """Show or hide a mounted control by its id (no layout re-push)."""
         self._layout.set_control_visible(control_id, visible)
+
+    def set_control_tooltip(self, control_id: str, tooltip: str) -> None:
+        """Set a mounted control's tooltip text (``""`` clears it).
+
+        No layout re-push: the new text is sent as ``control_state``.  No-op when
+        *control_id* is not a mounted control.
+        """
+        self._layout.set_control_tooltip(control_id, tooltip)
 
     def set_control_range(
         self,
@@ -1961,6 +1984,7 @@ class Visualizer(_JupyterDisplayMixin):
                 layout_callback=self._layout._layout_serialized_for,
                 scene_layout_callback=self._layout._scene_layout_for,
                 theme_callback=self._theme_host._theme_define_payload,
+                ui_options_callback=self._ui_options_host.serialize,
                 theme_static_dirs=external_theme_dirs(),
                 image_frames_callback=self._image_frames_for,
                 layout_image_frames_callback=self._layout.background_image_frames,

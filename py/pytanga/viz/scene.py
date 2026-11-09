@@ -32,7 +32,12 @@ from ._types import SceneEntity, TransformRotation, Triple, Vec3, VizInputType
 from ._props import _normalize_color
 from ._style_dict import StylesMap, _resolve_label_style, _resolve_tex_label_style
 from ._viz_styles import VizStyles, make_styles
-from .surface.material import SurfaceMaterial, SurfaceShader, SurfaceTexture, surface_material
+from .surface.material import (
+    SurfaceMaterial,
+    SurfaceShader,
+    SurfaceTexture,
+    surface_material,
+)
 
 if TYPE_CHECKING:
     from ._interaction import InteractionConfig, MouseButton
@@ -398,7 +403,9 @@ class Scene:
                 node.transform = transform
             node.mark("full")
             return image_id
-        return self.add_depth_image(image_id, payload, images=images, transform=transform)
+        return self.add_depth_image(
+            image_id, payload, images=images, transform=transform
+        )
 
     def depth_image_frames(self) -> list[tuple[str, bytes]]:
         """Return ``(id, encoded_frame)`` for every depth image node with pixels."""
@@ -443,18 +450,14 @@ class Scene:
                     )
         return frames
 
-    def _set_surface_textures(
-        self, oid: str, material: SurfaceMaterial | None
-    ) -> None:
+    def _set_surface_textures(self, oid: str, material: SurfaceMaterial | None) -> None:
         """Register (or drop) the surface textures for a scene object id."""
         if material is not None and material.textures:
             self._surface_textures[oid] = list(material.textures)
         else:
             self._surface_textures.pop(oid, None)
 
-    def _push_surface_texture_frames(
-        self, textures: list[SurfaceTexture]
-    ) -> None:
+    def _push_surface_texture_frames(self, textures: list[SurfaceTexture]) -> None:
         """Send surface texture frames over the live transport, if connected."""
         transport = getattr(getattr(self, "_host", None), "_transport", None)
         if transport is None:

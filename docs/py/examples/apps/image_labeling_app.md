@@ -343,9 +343,7 @@ class ImageLabeler:
         act = self.selected
         for shape in self.shapes:
             if shape.act is act:
-                self._canvas.handle.update(
-                    shape.act.entity_id, color=self.fill_color
-                )
+                self._canvas.handle.update(shape.act.entity_id, color=self.fill_color)
                 break
         self._canvas.handle.flush()
         self.selected = None
@@ -416,11 +414,17 @@ class ImageLabeler:
         """Wrap a plain labelme entity in an interactive act (click-to-select)."""
         select = self._make_select_handler()
         if isinstance(entity, Rectangle2D):
-            return ActRectangle2D.from_entity(entity, on_click=select, handle_style=self._handle_style)
+            return ActRectangle2D.from_entity(
+                entity, on_click=select, handle_style=self._handle_style
+            )
         if isinstance(entity, Ellipse):
-            return ActEllipse.from_entity(entity, on_click=select, handle_style=self._handle_style)
+            return ActEllipse.from_entity(
+                entity, on_click=select, handle_style=self._handle_style
+            )
         if isinstance(entity, Circle):
-            return ActCircle.from_entity(entity, on_click=select, handle_style=self._handle_style)
+            return ActCircle.from_entity(
+                entity, on_click=select, handle_style=self._handle_style
+            )
         if isinstance(entity, Line):
             return ActLine(
                 start=entity.start,

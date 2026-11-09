@@ -28,7 +28,14 @@ class _FakeTransport:
 
     def send_bytes(self, payload: bytes) -> None: ...
 
-    def register(self, object_id: str, handler: object, *, event: str = "change", origin: object = None) -> None:  # noqa: ANN001
+    def register(
+        self,
+        object_id: str,
+        handler: object,
+        *,
+        event: str = "change",
+        origin: object = None,
+    ) -> None:  # noqa: ANN001
         ...
 
 
@@ -66,7 +73,9 @@ class TestHtmlExport:
         assert first and first[0]["id"] == "img1"
 
         # Change the image and re-capture with include_images=True.
-        canvas.set_image(ImageData("img1", data=np.full((2, 2, 3), 255, dtype=np.uint8)))
+        canvas.set_image(
+            ImageData("img1", data=np.full((2, 2, 3), 255, dtype=np.uint8))
+        )
         rec.capture_frame(include_images=True)
         assert rec.frame_assets[1] != first
 
@@ -129,7 +138,9 @@ class TestAssetStore:
         assert asset["source"] == "data"
         assert asset["codec"] == "zlib"
         assert asset["width"] == 4 and asset["height"] == 3 and asset["channels"] == 1
-        assert asset["data"] == base64.b64encode(zlib.compress(arr.tobytes())).decode("ascii")
+        assert asset["data"] == base64.b64encode(zlib.compress(arr.tobytes())).decode(
+            "ascii"
+        )
 
     def test_uint8_image_captured_as_jpeg_data_url(self) -> None:
         _, canvas = _canvas()
@@ -153,13 +164,21 @@ class TestAssetStore:
         asset = rec.assets["img1"]
         assert asset["source"] == "data"
         assert asset["codec"] == "zlib"
-        assert asset["data"] == base64.b64encode(zlib.compress(arr.tobytes())).decode("ascii")
+        assert asset["data"] == base64.b64encode(zlib.compress(arr.tobytes())).decode(
+            "ascii"
+        )
 
     def test_url_image_captured_as_url(self) -> None:
         _, canvas = _canvas()
         canvas.set_image(
-            ImageData("u", url="http://x", width=4, height=3, channels=3,
-                      dtype=ImageDType.UINT8)
+            ImageData(
+                "u",
+                url="http://x",
+                width=4,
+                height=3,
+                channels=3,
+                dtype=ImageDType.UINT8,
+            )
         )
         rec = AnimationRecording(canvas.handle.scene)
         rec.capture_frame()
@@ -212,7 +231,9 @@ class TestAssetStore:
 
         asset = rec.assets["img1"]
         assert asset["codec"] == "zlib"
-        assert asset["data"] == base64.b64encode(zlib.compress(arr.tobytes())).decode("ascii")
+        assert asset["data"] == base64.b64encode(zlib.compress(arr.tobytes())).decode(
+            "ascii"
+        )
 
     def test_image_codec_jpeg_on_non_eligible_raises(self) -> None:
         _, canvas = _canvas()

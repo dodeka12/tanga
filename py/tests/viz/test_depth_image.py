@@ -240,7 +240,9 @@ class TestDepthImageStyle:
         assert merged["double_sided"] is True
 
     def test_max_grazing_angle_to_dict(self) -> None:
-        assert DepthImageStyle(max_grazing_angle=80).to_dict()["max_grazing_angle"] == 80.0
+        assert (
+            DepthImageStyle(max_grazing_angle=80).to_dict()["max_grazing_angle"] == 80.0
+        )
         assert "max_grazing_angle" not in DepthImageStyle().to_dict()
 
     def test_max_grazing_angle_rejects_ge_90(self) -> None:

@@ -5,15 +5,20 @@
 
 Creates one of each control kind — slider, dropdown, button (with icon and
 icon-only variants), text field, text area, color picker, checkbox, and file
-chooser — grouped into titled ``GroupView`` panels with icons and tooltips,
-plus a full-screen text editor (`open_editor`).  Each handler updates either
-the sphere or the viewport annotation, so the effect of every control is
-visible.  Two synced radius sliders, a stepper value-edit, and a live readout
-text field demonstrate programmatic value updates (`*View.set_value`).
+chooser — grouped into titled ``GroupView`` panels with icons, plus a
+full-screen text editor (`open_editor`).  Each handler updates either the
+sphere or the viewport annotation, so the effect of every control is visible.
+Two synced radius sliders, a stepper value-edit, and a live readout text field
+demonstrate programmatic value updates (`*View.set_value`).
+
+Every control, group, and menu carries a ``tooltip=`` text.  A permanent menu
+bar on top holds a single **Help → Show tooltips** option that calls
+``Visualizer.set_tooltips_enabled`` to hide/show every framework tooltip
+page-wide (the label stays visible, so the option can always be found again).
 
 Run with:  uv run python py/examples/viz/ui/controls/all_controls.py
 
-Keywords: controls, slider, dropdown, button, VisualizerApp
+Keywords: controls, slider, dropdown, button, tooltip, menu, VisualizerApp
 """
 
 from __future__ import annotations
@@ -29,8 +34,10 @@ from pytanga.viz import (
     EIconUC,
     FileChooserView,
     GroupView,
+    MenuView,
     SceneView,
     SliderView,
+    StackView,
     TextAreaView,
     TextFieldView,
     ValueEditView,
@@ -106,6 +113,12 @@ class AllControlsApp(VisualizerApp):
 
     async def on_file(self, value: str, _event: ControlEvent) -> None:
         self._set_annotation(f"File: `{value}`")
+
+    async def on_toggle_tooltips(self, value: bool, _event: ControlEvent) -> None:
+        """Show/hide every framework tooltip page-wide (Help menu option)."""
+        self.viz.set_tooltips_enabled(bool(value))
+        state = "on" if value else "off"
+        self._set_annotation(f"Tooltips {state} — reopen **Help** to switch them back.")
 
     async def on_poke(self, _value: None, _event: ControlEvent) -> None:
         self._set_annotation("Poke!")
@@ -185,7 +198,7 @@ class AllControlsApp(VisualizerApp):
             digits=2,
             value=self._radius,
             editable=True,
-            tooltip="Increment with buttons, arrow keys, or the scroll wheel; type to edit",
+            tooltip="Click to type; buttons, arrow keys, and the scroll wheel step the value",
             on_change=self.on_radius_value,
         )
         self._radius_display_view = TextFieldView(
@@ -240,66 +253,95 @@ class AllControlsApp(VisualizerApp):
             tooltip="Pick a file",
             on_change=self.on_file,
         )
+        # A permanent menu bar with one "Help" menu whose single option toggles
+        # every tooltip on the page (no layout re-push: ``ui_options`` message).
+        help_bar = MenuView(
+            mode="bar",
+            children=[
+                MenuView(
+                    "Help",
+                    [
+                        CheckboxView(
+                            "show_tooltips",
+                            label="Show tooltips",
+                            value=True,
+                            tooltip="Hide or show every tooltip on this page",
+                            on_change=self.on_toggle_tooltips,
+                        ),
+                    ],
+                    trigger_icon=EIconMaterial.HELP,
+                    tooltip="Help topics",
+                ),
+            ],
+        )
         self.viz.set_layout(
-            SceneView(
-                "",
-                overlay=[
-                    GroupView(
-                        "Appearance",
-                        [
-                            self._radius_view,
-                            self._radius2_view,
-                            self._radius_value_view,
-                            self._radius_display_view,
-                            self._mode_view,
-                            self._color_view,
-                            self._wireframe_view,
-                            name_view,
+            StackView(
+                "vertical",
+                [
+                    help_bar,
+                    SceneView(
+                        "",
+                        overlay=[
+                            GroupView(
+                                "Appearance",
+                                [
+                                    self._radius_view,
+                                    self._radius2_view,
+                                    self._radius_value_view,
+                                    self._radius_display_view,
+                                    self._mode_view,
+                                    self._color_view,
+                                    self._wireframe_view,
+                                    name_view,
+                                ],
+                                icon=EIconUC.GEAR,
+                                tooltip="Shape and material",
+                                position="bottom-right",
+                            ),
+                            GroupView(
+                                "Text & files",
+                                [notes_view, data_file_view],
+                                icon="material:edit",  # raw-string icon (same as the enum form)
+                                tooltip="Free-form notes and a file picker",
+                                position="top-right",
+                            ),
+                            GroupView(
+                                "Actions",
+                                [
+                                    ButtonView(
+                                        "edit_annotation",
+                                        label="Edit annotation",
+                                        icon=EIconUC.PENCIL,
+                                        tooltip="Edit the annotation in a full editor",
+                                        on_click=self.on_edit_annotation,
+                                    ),
+                                    ButtonView(
+                                        "poke",
+                                        label="Poke",
+                                        icon=EIconMaterial.PLAY_ARROW,
+                                        tooltip="Do something",
+                                        on_click=self.on_poke,
+                                    ),
+                                    ButtonView(
+                                        "reset",
+                                        label="Reset",
+                                        icon=EIconMaterial.REFRESH,
+                                        tooltip="Reset everything",
+                                        on_click=self.on_reset,
+                                    ),
+                                    ButtonView(
+                                        "quit",
+                                        icon=EIconUC.CLOSE,
+                                        icon_only=True,
+                                        tooltip="Quit",
+                                        on_click=self.on_quit,
+                                    ),
+                                ],
+                                icon=EIconMaterial.SETTINGS,
+                                tooltip="Actions on the sphere and the annotation",
+                                position="top-left",
+                            ),
                         ],
-                        icon=EIconUC.GEAR,
-                        tooltip="Shape and material",
-                        position="bottom-right",
-                    ),
-                    GroupView(
-                        "Text & files",
-                        [notes_view, data_file_view],
-                        icon="material:edit",  # raw-string icon (same as the enum form)
-                        position="top-right",
-                    ),
-                    GroupView(
-                        "Actions",
-                        [
-                            ButtonView(
-                                "edit_annotation",
-                                label="Edit annotation",
-                                icon=EIconUC.PENCIL,
-                                tooltip="Edit the annotation in a full editor",
-                                on_click=self.on_edit_annotation,
-                            ),
-                            ButtonView(
-                                "poke",
-                                label="Poke",
-                                icon=EIconMaterial.PLAY_ARROW,
-                                tooltip="Do something",
-                                on_click=self.on_poke,
-                            ),
-                            ButtonView(
-                                "reset",
-                                label="Reset",
-                                icon=EIconMaterial.REFRESH,
-                                tooltip="Reset everything",
-                                on_click=self.on_reset,
-                            ),
-                            ButtonView(
-                                "quit",
-                                icon=EIconUC.CLOSE,
-                                icon_only=True,
-                                tooltip="Quit",
-                                on_click=self.on_quit,
-                            ),
-                        ],
-                        icon=EIconMaterial.SETTINGS,
-                        position="top-left",
                     ),
                 ],
             )

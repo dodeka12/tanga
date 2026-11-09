@@ -57,15 +57,23 @@ _DATA_DIR = Path(__file__).resolve().parent / "data" / "tless"
 
 # Shown in the right (world) pane.
 _ATTRIBUTION = (
-    "Image & data: T-LESS (Hodan et al., WACV 2017), BOP benchmark — "
-    "License: CC BY 4.0"
+    "Image & data: T-LESS (Hodan et al., WACV 2017), BOP benchmark — License: CC BY 4.0"
 )
 
 # The 12 edges of the unit cube corner indices returned by :func:`_bbox_corners`.
 _BOX_EDGES = (
-    (0, 1), (0, 2), (1, 3), (2, 3),
-    (4, 5), (4, 6), (5, 7), (6, 7),
-    (0, 4), (1, 5), (2, 6), (3, 7),
+    (0, 1),
+    (0, 2),
+    (1, 3),
+    (2, 3),
+    (4, 5),
+    (4, 6),
+    (5, 7),
+    (6, 7),
+    (0, 4),
+    (1, 5),
+    (2, 6),
+    (3, 7),
 )
 
 

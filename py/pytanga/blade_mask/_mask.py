@@ -87,14 +87,20 @@ class BladeMask:
                 pass
             elif isinstance(ids, str):
                 # single expression string
-                raw.update(_parse_mv_string(ids, alg.dim, alg._composite_basis()).keys())
+                raw.update(
+                    _parse_mv_string(ids, alg.dim, alg._composite_basis()).keys()
+                )
             else:
                 ids_list = list(ids)
                 if ids_list and isinstance(ids_list[0], str):
                     # list of expression strings
                     for s in ids_list:
                         if isinstance(s, str):
-                            raw.update(_parse_mv_string(s, alg.dim, alg._composite_basis()).keys())
+                            raw.update(
+                                _parse_mv_string(
+                                    s, alg.dim, alg._composite_basis()
+                                ).keys()
+                            )
                 else:
                     # iterable of int blade ids
                     raw.update(int(b) for b in ids_list)

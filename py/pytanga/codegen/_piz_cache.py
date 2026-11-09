@@ -78,10 +78,9 @@ def get_or_build_piz(*, verbose: bool = False) -> ModuleType | None:
             precompiled_key = piz_entry.get("key", "")
             if not precompiled_key or precompiled_key == key:
                 for candidate in precompiled.iterdir():
-                    if (
-                        candidate.name.startswith(f"{_MODULE_NAME}.")
-                        and candidate.suffix in (".so", ".pyd")
-                    ):
+                    if candidate.name.startswith(
+                        f"{_MODULE_NAME}."
+                    ) and candidate.suffix in (".so", ".pyd"):
                         dest = entry / candidate.name
                         shutil.copy2(candidate, dest)
                         (entry / "meta.json").write_text(
@@ -103,9 +102,7 @@ def get_or_build_piz(*, verbose: bool = False) -> ModuleType | None:
 
     # --- JIT build ---
     try:
-        so = build_binding(
-            _CPP, entry / "cmake_build", _MODULE_NAME, verbose=verbose
-        )
+        so = build_binding(_CPP, entry / "cmake_build", _MODULE_NAME, verbose=verbose)
     except Exception:
         return None
 

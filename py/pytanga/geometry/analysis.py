@@ -237,11 +237,7 @@ def _coerce_operator(
 
 def _is_origin(point: Point) -> bool:
     """Return whether *point* is (approximately) the origin."""
-    return (
-        abs(point.x) < 1e-12
-        and abs(point.y) < 1e-12
-        and abs(point.z) < 1e-12
-    )
+    return abs(point.x) < 1e-12 and abs(point.y) < 1e-12 and abs(point.z) < 1e-12
 
 
 # ── typed dispatchers ──────────────────────────────────────────

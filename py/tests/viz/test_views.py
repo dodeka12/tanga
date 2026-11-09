@@ -282,6 +282,22 @@ class TestGroupView:
         assert g.title == "Renamed"
         assert pushed == [(g.id, {"title": "Renamed"})]
 
+    def test_set_tooltip_mutates_and_pushes(self):  # noqa: ANN201
+        g = GroupView("Actions")
+        pushed: list[tuple[str, dict[str, str]]] = []
+
+        def _capture(cid: str, state: dict[str, str]) -> None:
+            pushed.append((cid, state))
+
+        g._push_state = _capture
+        g.set_tooltip("Shape and material")
+        assert g.tooltip == "Shape and material"
+        assert pushed == [(g.id, {"tooltip": "Shape and material"})]
+
+        g.set_tooltip("")
+        assert g.tooltip == ""
+        assert pushed[-1] == (g.id, {"tooltip": ""})  # empty string clears
+
     def test_visible_enabled_serialize_when_non_default(self):  # noqa: ANN201
         node = serialize_layout(GroupView("Actions", visible=False, enabled=False))[
             "root"
@@ -360,9 +376,9 @@ class TestGroupView:
         ]
         assert node["tooltip"] == "Shape and material"
 
-    def test_serialize_tooltip_omitted_when_empty(self):  # noqa: ANN201
+    def test_serialize_tooltip_empty_by_default(self):  # noqa: ANN201
         node = serialize_layout(GroupView("Actions"))["root"]
-        assert "tooltip" not in node
+        assert node["tooltip"] == ""  # always emitted, so a re-push clears it
 
     def test_serialize_gap(self):  # noqa: ANN201
         node = serialize_layout(GroupView("t", [], gap=0))["root"]
@@ -388,6 +404,12 @@ class TestMenuView:
             "root"
         ]
         assert node["trigger_icon"] == "material:settings"
+
+    def test_serialize_tooltip(self):  # noqa: ANN201
+        node = serialize_layout(MenuView("Help", tooltip="Help topics"))["root"]
+        assert node["tooltip"] == "Help topics"
+        defaults = serialize_layout(MenuView("Help"))["root"]
+        assert defaults["tooltip"] == ""  # always emitted
 
     def test_serialize_nested_child(self):  # noqa: ANN201
         sub = MenuView("Sub", [SliderView("s1")])
@@ -753,6 +775,28 @@ def test_control_view_set_enabled_visible_mutates_and_pushes() -> None:
         ("s1", {"enabled": False}),
         ("s1", {"visible": False}),
     ]
+
+
+def test_control_view_set_tooltip_mutates_and_pushes() -> None:
+    view = SliderView("s1", tooltip="old")
+    assert view._push_state is None  # unmounted → no state callback
+
+    pushed: list[tuple[str, dict[str, str]]] = []
+
+    def _capture(cid: str, state: dict[str, str]) -> None:
+        pushed.append((cid, state))
+
+    view._push_state = _capture
+    view.set_tooltip("Radius in mm")
+
+    assert view.tooltip == "Radius in mm"
+    assert view.control.tooltip == "Radius in mm"  # both copies stay in sync
+    assert pushed == [("s1", {"tooltip": "Radius in mm"})]
+
+    view.set_tooltip("")
+    assert view.tooltip == ""
+    assert view.control.tooltip == ""
+    assert pushed[-1] == ("s1", {"tooltip": ""})  # empty string clears
 
 
 def test_slider_view_set_range_mutates_and_pushes() -> None:

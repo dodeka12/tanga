@@ -41,8 +41,10 @@ _DEFAULT_CACHE_SIZE = 256
 
 
 def _encode_jpeg(tile: np.ndarray) -> bytes:
-    if tile.dtype != np.dtype("uint8") or tile.ndim not in (2, 3) or (
-        tile.ndim == 3 and tile.shape[2] != 3
+    if (
+        tile.dtype != np.dtype("uint8")
+        or tile.ndim not in (2, 3)
+        or (tile.ndim == 3 and tile.shape[2] != 3)
     ):
         raise ValueError(
             f"jpeg format requires uint8 1/3-channel tiles, got "
@@ -102,13 +104,13 @@ class ImagePyramid:
     Tiles are square (``tile_size``, default 256) with edge tiles clipped.
     """
 
-    def __init__(self, image_id: str, data: np.ndarray, *, tile_size: int = 256) -> None:
+    def __init__(
+        self, image_id: str, data: np.ndarray, *, tile_size: int = 256
+    ) -> None:
         if data.ndim not in (2, 3):
             raise ValueError(f"expected a 2-D or 3-D array, got ndim={data.ndim}")
         if data.ndim == 3 and data.shape[2] not in (1, 3, 4):
-            raise ValueError(
-                f"expected 1, 3, or 4 channels, got {data.shape[2]}"
-            )
+            raise ValueError(f"expected 1, 3, or 4 channels, got {data.shape[2]}")
         if tile_size <= 0:
             raise ValueError("tile_size must be positive")
         self.image_id = image_id
@@ -165,7 +167,9 @@ class ImagePyramid:
 
     # -- tiles ----------------------------------------------------
 
-    def get_tile(self, level: int, x: int, y: int, format: str = "jpeg") -> bytes | None:
+    def get_tile(
+        self, level: int, x: int, y: int, format: str = "jpeg"
+    ) -> bytes | None:
         """Return the encoded tile bytes, or ``None`` if the tile is out of range."""
         if format not in FORMAT_CONTENT_TYPE:
             raise ValueError(f"unknown tile format {format!r}")

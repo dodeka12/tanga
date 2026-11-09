@@ -144,7 +144,9 @@ class TestLayerStyle:
     def test_add_layer_partial_style(self) -> None:
         view = ImageView("img1")
         view.set_image(_img("img1"))
-        view.add_layer(_img("img2", dtype="uint16"), ImageLayerStyle(enabled=False, blend="add"))
+        view.add_layer(
+            _img("img2", dtype="uint16"), ImageLayerStyle(enabled=False, blend="add")
+        )
         assert view.uniforms["u_layer1_enabled"] == 0
         assert view.uniforms["u_layer1_blend"] == 1  # add
         assert view.uniforms["u_layer1_opacity"] == 1.0  # default
@@ -223,8 +225,14 @@ class TestSerialize:
     def test_serialize_url_image(self) -> None:
         view = ImageView("u")
         view.set_image(
-            ImageData("u", url="http://x", width=4, height=3, channels=3,
-                      dtype=ImageDType.UINT8)
+            ImageData(
+                "u",
+                url="http://x",
+                width=4,
+                height=3,
+                channels=3,
+                dtype=ImageDType.UINT8,
+            )
         )
         img = view._serialize()["images"][0]
         assert img["source"] == "url"

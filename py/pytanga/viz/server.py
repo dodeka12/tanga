@@ -296,6 +296,7 @@ InteractionCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
 SceneListCallback = Callable[[], list[str]]
 LayoutCallback = Callable[[str], dict[str, Any] | None]
 ThemeCallback = Callable[[], dict[str, Any]]
+UICallback = Callable[[], dict[str, Any]]
 
 
 @dataclass
@@ -342,10 +343,12 @@ class VizServer:
         self._browser_sessions: dict[str, BrowserSession] = {}
         self._flush_callback: FlushCallback | None = None
         self._config_callback: ConfigCallback | None = None
-        self._image_frames_callback: Callable[[str], list[tuple[str, bytes]]] | None = None
-        self._layout_image_frames_callback: Callable[[], list[tuple[str, bytes]]] | None = (
+        self._image_frames_callback: Callable[[str], list[tuple[str, bytes]]] | None = (
             None
         )
+        self._layout_image_frames_callback: (
+            Callable[[], list[tuple[str, bytes]]] | None
+        ) = None
         self._scene_config_callback: SceneConfigCallback | None = None
         self._scene_list_callback: SceneListCallback | None = None
         self._layout_callback: LayoutCallback | None = None
@@ -355,6 +358,7 @@ class VizServer:
             None
         )
         self._theme_callback: ThemeCallback | None = None
+        self._ui_options_callback: UICallback | None = None
         self._theme_static_dirs: dict[str, Path] = {}
         self._image_pyramids: dict[str, Any] = {}
         self._camera_streams: dict[str, Any] = {}
@@ -391,10 +395,12 @@ class VizServer:
         layout_callback: LayoutCallback | None = None,
         scene_layout_callback: LayoutCallback | None = None,
         theme_callback: ThemeCallback | None = None,
+        ui_options_callback: UICallback | None = None,
         theme_static_dirs: dict[str, Path] | None = None,
         on_ready: Callable[[], None] | None = None,
         image_frames_callback: Callable[[str], list[tuple[str, bytes]]] | None = None,
-        layout_image_frames_callback: Callable[[], list[tuple[str, bytes]]] | None = None,
+        layout_image_frames_callback: Callable[[], list[tuple[str, bytes]]]
+        | None = None,
     ) -> None:
         """Build and start the aiohttp application (non-blocking setup)."""
         self._flush_callback = flush_callback
@@ -406,6 +412,7 @@ class VizServer:
         self._layout_callback = layout_callback
         self._scene_layout_callback = scene_layout_callback
         self._theme_callback = theme_callback
+        self._ui_options_callback = ui_options_callback
         self._theme_static_dirs = theme_static_dirs or {}
         self._control_callback = control_callback
         self._interaction_callback = interaction_callback
@@ -671,6 +678,20 @@ class VizServer:
         # Small delay to ensure clear_all is processed before subsequent messages
         await asyncio.sleep(0.05)
 
+        # 0a. Page-level UI options (tooltip switch) — sent right after the reset
+        # so the browser matches the server before the layout arrives.
+        if self._ui_options_callback is not None:
+            ui_options_payload = json.dumps(
+                {"type": "ui_options", **self._ui_options_callback()}
+            )
+            logger.info(
+                "WS SEND t=%.3f id=%s %s",
+                time.monotonic(),
+                browser_id,
+                _ws_msg_brief(ui_options_payload),
+            )
+            await ws.send_str(ui_options_payload)
+
         # 0b. Background image frames (layout-level) — sent before the layout so
         # the pending-frame store has them when the background quad builds.
         if self._layout_image_frames_callback is not None:
@@ -712,7 +733,9 @@ class VizServer:
 
             if self._image_frames_callback is not None:
                 for image_id, frame in self._image_frames_callback(scene_name):
-                    logger.info("WS SEND-BINARY t=%.3f image=%s", time.monotonic(), image_id)
+                    logger.info(
+                        "WS SEND-BINARY t=%.3f image=%s", time.monotonic(), image_id
+                    )
                     await ws.send_bytes(frame)
 
             if self._flush_callback is not None:

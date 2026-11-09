@@ -9,7 +9,12 @@ import { applyOverlayAnchor } from './views/three-view.js';
 import { buildViewTree, collectSceneRoutes, collectViewByIds } from './views/build.js';
 import { collectNodeTypes, planReconciliation } from './views/reconcile.js';
 import { getOverlay } from './overlay.js';
-import { applyControlValue, applyControlState, applyEnumOptions } from './controls-panel.js';
+import {
+    applyControlValue,
+    applyControlState,
+    applyEnumOptions,
+    setTooltipsEnabled,
+} from './controls-panel.js';
 import { applyMessageUpdate } from './views/message-view.js';
 import { logForwardingEnabled, sendLog, setLogForwarding, setWebSocket as setEventsWebSocket } from './events.js';
 import {
@@ -684,6 +689,11 @@ async function handleMessage(msg) {
         return;
     }
 
+    if (msg.type === 'ui_options') {
+        setTooltipsEnabled(!!msg.tooltips_enabled);
+        return;
+    }
+
     if (msg.type === 'control_state') {
         applyControlState(msg.id, msg);
         if (msg.visible !== undefined) {
@@ -697,6 +707,10 @@ async function handleMessage(msg) {
         if (msg.enabled !== undefined) {
             const host = _viewRegistry.get(msg.id);
             if (host && typeof host.setEnabled === 'function') host.setEnabled(!!msg.enabled);
+        }
+        if (msg.tooltip !== undefined) {
+            const host = _viewRegistry.get(msg.id);
+            if (host && typeof host.setTooltip === 'function') host.setTooltip(msg.tooltip);
         }
         if (msg.row !== undefined && msg.title !== undefined) {
             const paramsView = _viewRegistry.get(msg.id);

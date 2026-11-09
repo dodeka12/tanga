@@ -351,9 +351,7 @@ def create_operator(basis: Algebra, operator: Operator) -> MV:
                 f"TwistBivector requires BasisN3; not supported in "
                 f"{_detect(basis).upper()}."
             )
-        return mod.create_twist_bivector(
-            basis, operator.rotor, operator.translator
-        )
+        return mod.create_twist_bivector(basis, operator.rotor, operator.translator)
     elif isinstance(operator, GeneralRotor):
         return mod.create_general_rotor(
             basis, operator.angle, operator.axis, operator.origin

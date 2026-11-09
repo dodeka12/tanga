@@ -24,7 +24,11 @@ from pytanga.geometry.entities import (
     Sphere,
 )
 from pytanga.viz._active import _plane_basis
-from pytanga.viz._decompose import _entity_decompose, _plane_basis_u0, is_placement_entity
+from pytanga.viz._decompose import (
+    _entity_decompose,
+    _plane_basis_u0,
+    is_placement_entity,
+)
 from pytanga.viz._nodes import VizSceneObject
 
 
@@ -47,7 +51,9 @@ class TestEntityDecompose:
 
     def test_cylinder_align_center_folds_into_position(self) -> None:
         t, shape = _entity_decompose(
-            Cylinder(origin=Point(0, 0, 0), axis=Direction(0, 0, 1), length=4.0, radius=1.0)
+            Cylinder(
+                origin=Point(0, 0, 0), axis=Direction(0, 0, 1), length=4.0, radius=1.0
+            )
         )
         assert t.position == (0.0, 0.0, 2.0)
         assert shape == {"length": 4.0, "radius": 1.0}

@@ -125,7 +125,9 @@ def test_n2_mask_named_basis():  # noqa: ANN201
     assert_mask_basis(
         alg, ReflectionPoint, ["e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo", "einf∧eo"]
     )
-    assert_mask_basis(alg, GeneralRotor, ["s", "e12", "e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo"])
+    assert_mask_basis(
+        alg, GeneralRotor, ["s", "e12", "e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo"]
+    )
 
 
 def test_n3_mask_named_basis():  # noqa: ANN201
@@ -135,46 +137,127 @@ def test_n3_mask_named_basis():  # noqa: ANN201
     assert_mask_basis(
         alg,
         Line,
-        ["e12∧einf", "e12∧eo", "e13∧einf", "e13∧eo", "e1∧einf∧eo", "e23∧einf", "e23∧eo", "e2∧einf∧eo", "e3∧einf∧eo"],
+        [
+            "e12∧einf",
+            "e12∧eo",
+            "e13∧einf",
+            "e13∧eo",
+            "e1∧einf∧eo",
+            "e23∧einf",
+            "e23∧eo",
+            "e2∧einf∧eo",
+            "e3∧einf∧eo",
+        ],
     )
     assert_mask_basis(
-        alg, Plane, ["e123∧einf", "e123∧eo", "e12∧einf∧eo", "e13∧einf∧eo", "e23∧einf∧eo"]
+        alg,
+        Plane,
+        ["e123∧einf", "e123∧eo", "e12∧einf∧eo", "e13∧einf∧eo", "e23∧einf∧eo"],
     )
     assert_mask_basis(
-        alg, Sphere, ["e123∧einf", "e123∧eo", "e12∧einf∧eo", "e13∧einf∧eo", "e23∧einf∧eo"]
+        alg,
+        Sphere,
+        ["e123∧einf", "e123∧eo", "e12∧einf∧eo", "e13∧einf∧eo", "e23∧einf∧eo"],
     )
     assert_mask_basis(
         alg,
         Circle,
-        ["e123", "e12∧einf", "e12∧eo", "e13∧einf", "e13∧eo", "e1∧einf∧eo", "e23∧einf", "e23∧eo", "e2∧einf∧eo", "e3∧einf∧eo"],
+        [
+            "e123",
+            "e12∧einf",
+            "e12∧eo",
+            "e13∧einf",
+            "e13∧eo",
+            "e1∧einf∧eo",
+            "e23∧einf",
+            "e23∧eo",
+            "e2∧einf∧eo",
+            "e3∧einf∧eo",
+        ],
     )
     assert_mask_basis(
         alg,
         PointPair,
-        ["e12", "e13", "e1∧einf", "e1∧eo", "e23", "e2∧einf", "e2∧eo", "e3∧einf", "e3∧eo", "einf∧eo"],
+        [
+            "e12",
+            "e13",
+            "e1∧einf",
+            "e1∧eo",
+            "e23",
+            "e2∧einf",
+            "e2∧eo",
+            "e3∧einf",
+            "e3∧eo",
+            "einf∧eo",
+        ],
     )
-    assert_mask_basis(alg, HPoint, ["e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo", "e3∧einf", "e3∧eo", "einf∧eo"])
-    assert_mask_basis(alg, HDirection, ["e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo", "e3∧einf", "e3∧eo"])
+    assert_mask_basis(
+        alg,
+        HPoint,
+        ["e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo", "e3∧einf", "e3∧eo", "einf∧eo"],
+    )
+    assert_mask_basis(
+        alg, HDirection, ["e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo", "e3∧einf", "e3∧eo"]
+    )
     assert_mask_basis(alg, Space, ["I"])
     assert_mask_basis(alg, Rotor, ["s", "e12", "e13", "e23"])
-    assert_mask_basis(alg, Translator, ["s", "e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo", "e3∧einf", "e3∧eo"])
+    assert_mask_basis(
+        alg,
+        Translator,
+        ["s", "e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo", "e3∧einf", "e3∧eo"],
+    )
     assert_mask_basis(
         alg,
         Motor,
-        ["s", "e12", "e13", "e1∧einf", "e1∧eo", "e23", "e2∧einf", "e2∧eo", "e3∧einf", "e3∧eo", "e123∧einf", "e123∧eo"],
+        [
+            "s",
+            "e12",
+            "e13",
+            "e1∧einf",
+            "e1∧eo",
+            "e23",
+            "e2∧einf",
+            "e2∧eo",
+            "e3∧einf",
+            "e3∧eo",
+            "e123∧einf",
+            "e123∧eo",
+        ],
     )
-    assert_mask_basis(alg, TwistBivector, ["e12", "e13", "e23", "e1∧einf", "e2∧einf", "e3∧einf"])
-    assert_mask_basis(alg, Dilator, ["s", "e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo", "e3∧einf", "e3∧eo", "einf∧eo"])
+    assert_mask_basis(
+        alg, TwistBivector, ["e12", "e13", "e23", "e1∧einf", "e2∧einf", "e3∧einf"]
+    )
+    assert_mask_basis(
+        alg,
+        Dilator,
+        ["s", "e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo", "e3∧einf", "e3∧eo", "einf∧eo"],
+    )
     assert_mask_basis(alg, Inversion, ["e1", "e2", "e3", "einf", "eo"])
     assert_mask_basis(
-        alg, ReflectionPlane, ["e123∧einf", "e123∧eo", "e12∧einf∧eo", "e13∧einf∧eo", "e23∧einf∧eo"]
+        alg,
+        ReflectionPlane,
+        ["e123∧einf", "e123∧eo", "e12∧einf∧eo", "e13∧einf∧eo", "e23∧einf∧eo"],
     )
     assert_mask_basis(
         alg,
         ReflectionLine,
-        ["e12∧einf", "e12∧eo", "e13∧einf", "e13∧eo", "e1∧einf∧eo", "e23∧einf", "e23∧eo", "e2∧einf∧eo", "e3∧einf∧eo"],
+        [
+            "e12∧einf",
+            "e12∧eo",
+            "e13∧einf",
+            "e13∧eo",
+            "e1∧einf∧eo",
+            "e23∧einf",
+            "e23∧eo",
+            "e2∧einf∧eo",
+            "e3∧einf∧eo",
+        ],
     )
-    assert_mask_basis(alg, ReflectionPoint, ["e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo", "e3∧einf", "e3∧eo", "einf∧eo"])
+    assert_mask_basis(
+        alg,
+        ReflectionPoint,
+        ["e1∧einf", "e1∧eo", "e2∧einf", "e2∧eo", "e3∧einf", "e3∧eo", "einf∧eo"],
+    )
     assert_mask_basis(alg, GeneralRotor, ["s", "e12", "e13", "e23"])
 
 
@@ -194,9 +277,13 @@ def test_pga2_mask_named_basis():  # noqa: ANN201
 
 def test_pga3_mask_named_basis():  # noqa: ANN201
     alg = BasisPGA3()
-    assert_mask_basis(alg, Point, ["e032", "e013", "e021", "e123", "ei32", "ei13", "ei21"])
+    assert_mask_basis(
+        alg, Point, ["e032", "e013", "e021", "e123", "ei32", "ei13", "ei21"]
+    )
     assert_mask_basis(alg, Direction, ["e032", "e013", "e021", "ei32", "ei13", "ei21"])
-    assert_mask_basis(alg, Line, ["e01", "e02", "e03", "e23", "e31", "e12", "ei1", "ei2", "ei3"])
+    assert_mask_basis(
+        alg, Line, ["e01", "e02", "e03", "e23", "e31", "e12", "ei1", "ei2", "ei3"]
+    )
     assert_mask_basis(alg, Plane, ["e0", "e1", "e2", "e3", "e0i"])
     assert_mask_basis(alg, Space, ["I", "Ii"])
     assert_mask_basis(alg, Rotor, ["s", "e23", "e31", "e12"])
@@ -207,8 +294,14 @@ def test_pga3_mask_named_basis():  # noqa: ANN201
         ["s", "e01", "e02", "e03", "e23", "e31", "e12", "ei1", "ei2", "ei3", "I", "Ii"],
     )
     assert_mask_basis(alg, ReflectionPlane, ["e0", "e1", "e2", "e3", "e0i"])
-    assert_mask_basis(alg, ReflectionLine, ["e01", "e02", "e03", "e23", "e31", "e12", "ei1", "ei2", "ei3"])
-    assert_mask_basis(alg, ReflectionPoint, ["e032", "e013", "e021", "e123", "ei32", "ei13", "ei21"])
+    assert_mask_basis(
+        alg,
+        ReflectionLine,
+        ["e01", "e02", "e03", "e23", "e31", "e12", "ei1", "ei2", "ei3"],
+    )
+    assert_mask_basis(
+        alg, ReflectionPoint, ["e032", "e013", "e021", "e123", "ei32", "ei13", "ei21"]
+    )
     assert_mask_basis(alg, GeneralRotor, ["s", "e23", "e31", "e12"])
 
 
@@ -359,9 +452,7 @@ def test_untyped_containers_raise():  # noqa: ANN201
 def test_twist_bivector_mask_is_motor_intersect_grade2():  # noqa: ANN201
     geo = Geometry(BasisN3())
     twist = geo.mask_for(TwistBivector)
-    expected = geo.mask_for(Motor).intersection(
-        BladeMask(geo.algebra, grades=[2])
-    )
+    expected = geo.mask_for(Motor).intersection(BladeMask(geo.algebra, grades=[2]))
     assert twist == expected
     assert twist.ids == [3, 5, 6, 9, 10, 12, 17, 18, 20]
 

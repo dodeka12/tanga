@@ -51,7 +51,9 @@ if TYPE_CHECKING:
         Point: type[Point]
 
 
-def _ellipse_axes_2d(entity: "Ellipse") -> tuple[tuple[float, float], tuple[float, float]]:
+def _ellipse_axes_2d(
+    entity: "Ellipse",
+) -> tuple[tuple[float, float], tuple[float, float]]:
     """The angle-rotated semi-axis directions of a 2D ellipse (XY plane)."""
     axes = entity.axis_directions()
     if axes is not None:

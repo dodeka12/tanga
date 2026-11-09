@@ -8,7 +8,8 @@ host classes.  Each host owns the state, lifecycle, and wire messages of one
 kind of feature; they depend on two ports — a
 :class:`~pytanga.viz._ports.Transport` (communication) and a
 :class:`~pytanga.viz._ports.LayoutHost` (what is drawn) — instead of the
-concrete visualizer.
+concrete visualizer.  :class:`UIOptionsHost` holds page-level UI options that
+apply to every view (currently the global tooltip switch).
 """
 
 from __future__ import annotations
@@ -169,6 +170,34 @@ class ThemeHost(OverlayHost):
             "css": theme_css_files(self._theme),
             "version": self._theme_version,
         }
+
+
+class UIOptionsHost(OverlayHost):
+    """Page-level UI options — currently the global tooltip switch.
+
+    The option set is per server (not per layout or scene), and the whole set is
+    re-sent to every newly connected browser by the server's full-state push.
+    """
+
+    def __init__(
+        self, transport: Any, layout: Any, tooltips_enabled: bool = True
+    ) -> None:
+        super().__init__(transport, layout)
+        self._tooltips_enabled = bool(tooltips_enabled)
+
+    @property
+    def tooltips_enabled(self) -> bool:
+        """Whether framework tooltips are shown in connected viewers."""
+        return self._tooltips_enabled
+
+    def serialize(self) -> dict[str, Any]:
+        """Return the current options as a ``ui_options``-shaped payload."""
+        return {"tooltips_enabled": self._tooltips_enabled}
+
+    def set_tooltips_enabled(self, enabled: bool) -> None:
+        """Show/hide every framework tooltip and push to all connected clients."""
+        self._tooltips_enabled = bool(enabled)
+        self._push_message({"type": "ui_options", **self.serialize()})
 
 
 class InteractionHost(OverlayHost):

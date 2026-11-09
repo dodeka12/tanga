@@ -108,9 +108,7 @@ def _rebuild_mvtensor(
     return MVTensor(data=result, masks=tuple(new_masks))
 
 
-def _resolve_basis_directions(
-    mask: BladeMask, spec: Any
-) -> tuple[list[str], list[MV]]:
+def _resolve_basis_directions(mask: BladeMask, spec: Any) -> tuple[list[str], list[MV]]:
     """Resolve a basis spec into ``(names, vectors)`` over *mask*."""
     if spec is None:
         return mask.basis_names, mask.basis_vectors

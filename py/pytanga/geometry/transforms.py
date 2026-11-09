@@ -386,7 +386,9 @@ def to_trs_tuple(
 # round-trips to the same orientation the frontend applies.
 
 
-def _quat_components(q: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+def _quat_components(
+    q: tuple[float, float, float, float],
+) -> tuple[float, float, float, float]:
     """Normalize *q* to a ``(x, y, z, w)`` tuple of Python floats."""
     seq = tuple(float(v) for v in q)
     if len(seq) != 4:
@@ -458,7 +460,9 @@ def quat_from_vectors(
     if dot > 1.0 - _EPS:
         return (0.0, 0.0, 0.0, 1.0)
     if dot < -1.0 + _EPS:
-        aux = np.array([1.0, 0.0, 0.0]) if abs(av[0]) < 0.9 else np.array([0.0, 1.0, 0.0])
+        aux = (
+            np.array([1.0, 0.0, 0.0]) if abs(av[0]) < 0.9 else np.array([0.0, 1.0, 0.0])
+        )
         v = np.cross(av, aux)
         vn = float(np.linalg.norm(v))
         if vn < _EPS:

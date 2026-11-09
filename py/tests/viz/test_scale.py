@@ -133,7 +133,12 @@ class TestIntervals:
     def test_nice_ticks_uses_explicit_intervals(self):  # noqa: ANN201
         # A range where the default 1/2/5 step would be 100 (0,100,...,1000),
         # but the explicit list restricts steps to {50, 200, 500}.
-        ticks = [v for v, _ in nice_linear_ticks(0.0, 1000.0, max_ticks=8, intervals=[50, 200, 500])]
+        ticks = [
+            v
+            for v, _ in nice_linear_ticks(
+                0.0, 1000.0, max_ticks=8, intervals=[50, 200, 500]
+            )
+        ]
         steps = {round(ticks[i + 1] - ticks[i], 9) for i in range(len(ticks) - 1)}
         assert steps == {200.0}
 
@@ -149,6 +154,8 @@ class TestIntervals:
     def test_zero_tick_is_exactly_zero(self):  # noqa: ANN201
         # Accumulating `t += step` used to leave a 3.4e-18 residue at the zero
         # crossing; the integer-index multiplication must yield exactly 0.0.
-        ticks = nice_linear_ticks(-0.05, 0.05, max_ticks=11, intervals=[0.01, 0.02, 0.05])
+        ticks = nice_linear_ticks(
+            -0.05, 0.05, max_ticks=11, intervals=[0.01, 0.02, 0.05]
+        )
         zero = next(v for v, _ in ticks if abs(v) < 1e-9)
         assert zero == 0.0

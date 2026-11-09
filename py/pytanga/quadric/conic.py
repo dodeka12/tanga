@@ -217,9 +217,7 @@ class Conic:
         else:
             c = tuple(float(x) for x in arr)
             if len(c) != 6:
-                raise ValueError(
-                    f"Conic coeffs must be a 6-tuple, got length {len(c)}"
-                )
+                raise ValueError(f"Conic coeffs must be a 6-tuple, got length {len(c)}")
         object.__setattr__(self, "coeffs", c)
 
     @cached_property

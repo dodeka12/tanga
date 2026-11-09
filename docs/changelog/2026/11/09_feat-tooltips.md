@@ -1,0 +1,24 @@
+# Changes since version 2.25.1
+
+## New Features
+- **Tooltips on controls, groups, and menus** — every control view and the
+  `GroupView` title bar accept `tooltip=` at construction, and `MenuView` takes
+  one for its trigger.  Icon-only buttons use the tooltip (falling back to the
+  label) as their `aria-label`.
+- **Runtime tooltip updates** — `ControlView.set_tooltip(text)`,
+  `GroupView.set_tooltip(text)`, and `Visualizer.set_control_tooltip(id, text)`
+  replace a tooltip through a granular `control_state` message (no layout
+  re-push); an empty string clears it.
+- **Page-wide tooltip switch** — `Visualizer.set_tooltips_enabled(bool)` (read
+  back via `viz.tooltips_enabled`) hides or shows every framework tooltip on all
+  connected browsers via a new `ui_options` message; a browser that connects
+  later starts with the current setting.
+- **Tooltips example** — `py/examples/viz/ui/controls/tooltips.py` demonstrates
+  construction-time tooltips, a runtime rewrite, the page-wide switch, and a
+  menu tooltip.
+
+## Bug Fixes
+- **Value-edit no longer focuses on hover** — `ValueEditView` / `ValueEditUI`
+  steppers took keyboard focus as soon as the pointer entered them, silently
+  stealing arrow-key/space shortcuts from the scene; focus (and therefore text
+  editing) now happens only on an explicit click into the field.

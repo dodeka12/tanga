@@ -150,9 +150,7 @@ class SliderView(ControlView[Slider]):
         The current value is clamped into the new ``[min, max]``; when it is
         clamped, the new value is also re-pushed via ``control_update``.
         """
-        changed, value_clamped = _apply_range(
-            self.control, min=min, max=max, step=step
-        )
+        changed, value_clamped = _apply_range(self.control, min=min, max=max, step=step)
         if changed and self._push_state is not None:
             self._push_state(self.id, changed)
         if value_clamped and self._push is not None:
@@ -748,9 +746,7 @@ class ValueEditView(ControlView[ValueEdit]):
         The current value is clamped into the new ``[min, max]``; when it is
         clamped, the new value is also re-pushed via ``control_update``.
         """
-        changed, value_clamped = _apply_range(
-            self.control, min=min, max=max, step=step
-        )
+        changed, value_clamped = _apply_range(self.control, min=min, max=max, step=step)
         if changed and self._push_state is not None:
             self._push_state(self.id, changed)
         if value_clamped and self._push is not None:

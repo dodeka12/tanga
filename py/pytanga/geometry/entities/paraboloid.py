@@ -39,7 +39,9 @@ class Paraboloid:
                 f"Expected a 2-sequence of floats, got {type(semi_axes).__name__}"
             )
         object.__setattr__(self, "vertex", to_point(vertex))
-        object.__setattr__(self, "semi_axes", (to_float(semi_axes[0]), to_float(semi_axes[1])))
+        object.__setattr__(
+            self, "semi_axes", (to_float(semi_axes[0]), to_float(semi_axes[1]))
+        )
         object.__setattr__(self, "is_hyperbolic", bool(is_hyperbolic))
 
     def __repr__(self) -> str:

@@ -106,3 +106,40 @@ radius.set_enabled(False)     # same as radius.disable()
 The control id is the one you passed when constructing the view.  This reuses
 the granular `control_state` message — no `view_layout` re-push, so the rest of
 the UI (and any WebGL panes) are untouched.
+
+## Updating control tooltips
+
+A tooltip is part of the same `control_state` message: the wire field is
+`tooltip`, an empty string clears it.  Set it on the view, or by control id
+(this also reaches dialog/banner controls and is a no-op for unknown ids):
+
+```python
+radius.set_tooltip("Radius of the sphere")
+viz.set_control_tooltip("radius", f"Radius = {r:.2f}")   # e.g. from a handler
+```
+
+The browser stores the text in a `data-tanga-tooltip` attribute and mirrors it
+to the native `title`, so no layout re-push is needed and the change is visible
+immediately.  `GroupView.set_tooltip(text)` updates a group title-bar tooltip
+the same way.
+
+## Switching all tooltips off (`ui_options`)
+
+The page-level tooltip switch is a server → client message of its own,
+`ui_options`, carrying `tooltips_enabled`:
+
+```python
+viz.set_tooltips_enabled(False)   # hide every framework tooltip
+viz.set_tooltips_enabled(True)    # show them again
+viz.tooltips_enabled              # current setting (default True)
+```
+
+- It is **per server** (not per layout or scene) and applies to every connected
+  browser: controls, groups, menus, and viewer chrome.
+- Every newly connected browser receives the current `ui_options` payload right
+  after the `clear_all` reset and before the layout, so a reconnect can never
+  show tooltips the app has switched off.
+- Only framework-set tooltips are affected; `title` attributes you set on your
+  own DOM elements are left alone.
+- No async twin is needed — the call only queues a message (`set_theme` needs an
+  async variant because it reads files).

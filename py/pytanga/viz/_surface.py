@@ -251,7 +251,9 @@ class InteractionSurface:
 
     def _resolve_drag_handler(self, event: DragEvent) -> SurfaceDragHandler | None:
         """Return the most specific matching drag binding, else the general handler."""
-        best: SurfaceDragHandler | None = self._on_drag if self._handler_enabled else None
+        best: SurfaceDragHandler | None = (
+            self._on_drag if self._handler_enabled else None
+        )
         best_mods = -1
         for binding in self._drag_bindings:
             if not binding.enabled:
@@ -267,7 +269,9 @@ class InteractionSurface:
 
     def _resolve_click_handler(self, event: ClickEvent) -> SurfaceClickHandler | None:
         """Return the most specific matching click binding, else the general handler."""
-        best: SurfaceClickHandler | None = self._on_click if self._click_enabled else None
+        best: SurfaceClickHandler | None = (
+            self._on_click if self._click_enabled else None
+        )
         best_mods = -1
         for binding in self._click_bindings:
             if not binding.enabled:

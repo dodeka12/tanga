@@ -206,10 +206,12 @@ CheckboxView(
 
 ## `ValueEditView`
 
-A numeric stepper with up/down buttons; arrow keys (while the pointer hovers
-over the control) and the scroll wheel also step the value.  By default the
-value can also be typed directly (`editable=True`); set `editable=False` to
-restrict input to the buttons, keys, and wheel:
+A numeric stepper with up/down buttons; arrow keys (once the field has focus,
+i.e. after clicking it) and the scroll wheel also step the value.  Hovering
+never focuses the field — a pointer passing over it leaves the keyboard focus
+on the scene or wherever it was.  By default the value can also be typed
+directly (`editable=True`); set `editable=False` to restrict input to the
+buttons, keys, and wheel:
 
 ```python
 ValueEditView(
@@ -488,8 +490,57 @@ GroupView("Settings", [settings_view], icon=EIconUC.GEAR)
 ## Tooltips
 
 Every control — and the `GroupView` title bar — accepts a `tooltip` string,
-rendered as a native `title` hover tooltip. Icon-only buttons show their
-tooltip (or label) as the button's accessible name.
+shown as a hover tooltip.  The text is mirrored to the native `title`
+attribute, so the platform tooltip styling applies and no extra markup is
+needed:
+
+```python
+SliderView("radius", label="Radius", tooltip="Radius of the sphere in model units")
+ButtonView("explain", icon="material:help", icon_only=True,
+           tooltip="Explain the current setup")
+GroupView("Controls", [radius_view], tooltip="Sphere controls")
+```
+
+Icon-only buttons show their tooltip (falling back to their label) as the
+button's accessible name, so a tooltip doubles as the `aria-label` for screen
+readers — give icon-only buttons a `tooltip` or a `label`.  `MenuView` takes a
+`tooltip=` too (shown on its hamburger trigger) — see [Menus](menus.md).
+
+### Updating a tooltip at runtime
+
+Replace a tooltip without re-pushing the layout — the new text travels as a
+single `control_state` message:
+
+```python
+radius_view.set_tooltip("Radius of the sphere")          # on the view
+viz.set_control_tooltip("radius", f"Radius = {r:.2f}")   # by control id
+```
+
+`Visualizer.set_control_tooltip(id, text)` also reaches dialog and banner
+controls (it is a no-op for an unknown id).  An empty string clears the
+tooltip; `GroupView.set_tooltip(text)` does the same for a group's title bar.
+
+### Switching tooltips off
+
+`Visualizer.set_tooltips_enabled(False)` suppresses **every** framework-set
+tooltip page-wide — controls, groups, menus, and viewer chrome — on all
+connected browsers.  It is handy for touch UIs, screenshots, or a presentation
+mode:
+
+```python
+async def on_show_tooltips(value, _event) -> None:
+    viz.set_tooltips_enabled(bool(value))
+
+CheckboxView("show_tooltips", label="Show tooltips", value=True,
+             on_change=on_show_tooltips)
+```
+
+The flag is per server (not per layout or scene); `viz.tooltips_enabled` reads
+it back, and a browser that connects later starts with the current value.  Only
+tooltips set through this API are switched — a `title` you set yourself on your
+own DOM elements is untouched.
+
+See `py/examples/viz/ui/controls/tooltips.py`.
 
 ## Updating control values
 

@@ -57,6 +57,7 @@ class MenuView(View):
         direction: EStackDirection | str | None = None,
         position: EAnchor | str | None = None,
         override_variant: bool = True,
+        tooltip: str = "",
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
@@ -92,6 +93,7 @@ class MenuView(View):
         self.direction = direction
         self.position = position
         self.override_variant = override_variant
+        self.tooltip = tooltip
         self.children = list(children or [])
         if override_variant:
             _apply_menu_variant(self)
@@ -105,5 +107,6 @@ class MenuView(View):
         result["mode"] = self.mode
         result["direction"] = self.direction
         result["position"] = self.position
+        result["tooltip"] = self.tooltip
         result["children"] = [child._serialize() for child in self.children]
         return result

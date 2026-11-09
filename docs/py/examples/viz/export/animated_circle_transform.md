@@ -49,7 +49,7 @@ from pytanga.geometry import Circle, Point
 from pytanga.viz import AnimStyle, PointPath, PointPathStyle, Visualizer
 
 # ── Setup ──────────────────────────────────────────────────
-ORBIT_RADIUS = 4.0   # radius of the circular path the moving circle follows
+ORBIT_RADIUS = 4.0  # radius of the circular path the moving circle follows
 MOVING_RADIUS = 0.3  # fixed radius of the moving circle
 FRAMES = 120
 FPS = 30

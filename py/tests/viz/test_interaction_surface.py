@@ -76,7 +76,9 @@ class TestSerialization:
 
     def test_serialize_includes_click_trigger_only_when_requested(self) -> None:
         drag_only = _surface(on_drag=_noop_drag).serialize()
-        assert {t["event_type"] for t in drag_only["interaction"]["triggers"]} == {"drag"}
+        assert {t["event_type"] for t in drag_only["interaction"]["triggers"]} == {
+            "drag"
+        }
 
         with_click = _surface(on_drag=_noop_drag, on_click=_noop_click).serialize()
         assert {t["event_type"] for t in with_click["interaction"]["triggers"]} == {
@@ -168,10 +170,22 @@ class TestVisualizerBinding:
 
 class TestClickAnchorResolution:
     _IDENTITY = [
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
     ]
 
     def test_surface_click_resolves_from_event_ray(self) -> None:

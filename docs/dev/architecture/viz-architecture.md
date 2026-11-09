@@ -17,7 +17,7 @@ Visualizer                facade + composition root + lifecycle (boot/loop)
 |   |- scenes:  dict[name, Scene]        entity containers (add_scene)
 |   `- layouts: dict[name, Layout]       first-class layouts (set_layout)
 |       `- Layout { base: View, overlay: OverlayContainer }
-|- ThemeHost / InteractionHost
+|- ThemeHost / UIOptionsHost / InteractionHost
 `- OverlayContainer      per-layout: overlays, dialogs, banners, editor
 ```
 
@@ -30,6 +30,9 @@ inbound dispatch that resolves them.
   many panes (`SceneView(name)`) and many layouts.
 - **`Layout`** is a `base` view tree plus an `OverlayContainer`.  URLs name
   **layouts** (`/?view=<name>`), never scenes.
+- **`ThemeHost` / `UIOptionsHost`** hold the viewer-wide settings (CSS theme and
+  the page-level tooltip switch).  They are per server, not per layout, and both
+  are re-sent to every newly connected browser.
 - **`Visualizer`** wires everything together and exposes the public `viz.*` API
   through explicit thin forwarders (no `__getattr__`).
 
@@ -45,6 +48,7 @@ inbound dispatch that resolves them.
 | entities | `Scene` (`add_viz`/`add`/`update`/`remove`/`clear`) | |
 | styles | `Scene.styles` (copy of the master `_global_styles`) | |
 | control model (value/handlers/history) | the `Control` on each `*View` | `view.control` |
+| page-level UI options (tooltip switch) | `UIOptionsHost` | per server; re-sent as `ui_options` |
 | `(id, event)` handlers | `ControlHandlerRegistry` (via `Transport`) | registered by `Control.register_handlers` |
 | inbound routing | `Transport.route` data table -> `LayoutHost.dispatch_control_event` | |
 
@@ -88,6 +92,15 @@ inbound dispatch that resolves them.
   the whole layout); `viz.remove_view(id)` removes it via `overlay_remove`.
   Per-scene overlays (`scene=…`) re-sync the layout instead.  Every `View`
   carries a stable `id` (auto `v0`…) so it can be addressed at runtime.
+- **UI options** — `Visualizer.set_tooltips_enabled(bool)` delegates to
+  `UIOptionsHost`, which stores the flag and pushes `{type: "ui_options",
+  tooltips_enabled}` to every client.  The host's `serialize()` is passed to the
+  server as `ui_options_callback`; `_push_full_state` sends the current payload
+  right after `clear_all` (before `view_layout`), so a (re)connecting browser
+  always matches the server.  `viewer.js` routes the message to
+  `setTooltipsEnabled()` in `controls-panel.js`, which merely syncs the `title`
+  attributes of everything carrying `data-tanga-tooltip` — the tooltip text is
+  never re-pushed.
 - **Layout re-push** — the frontend **reconciles the whole view tree by stable
   view id** across `view_layout` re-pushes. A single live-view registry
   (`_viewRegistry`) reuses each view whose id is unchanged: scene panes keep

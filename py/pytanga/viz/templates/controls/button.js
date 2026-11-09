@@ -21,7 +21,11 @@ export function createButton(ctrl) {
 
     if (ctrl.icon_only) {
         btn.classList.add('tanga-icon-button');
-        btn.title = ctrl.tooltip || ctrl.label || ctrl.id || '';
+        // Icon-only buttons have no visible text, so keep the label as hover
+        // text (switch-aware) and expose it to screen readers.
+        const hoverText = ctrl.tooltip || ctrl.label || ctrl.id || '';
+        applyTooltip(btn, hoverText);
+        btn.setAttribute('aria-label', hoverText);
     }
 
     wrapper.appendChild(btn);
@@ -32,11 +36,20 @@ export function createButton(ctrl) {
 
     wrapper.addEventListener('pointerdown', (e) => e.stopPropagation());
     applyTooltip(wrapper, ctrl);
+
     registerControl(ctrl.id, {
         owner: ctrl.owner || 'panel',
         kind: 'button',
         el: wrapper,
         apply: () => {},
+        applyState: (state) => {
+            applyControlStateToElement(wrapper, state);
+            if (ctrl.icon_only && state.tooltip !== undefined) {
+                const hoverText = state.tooltip || ctrl.label || ctrl.id || '';
+                applyTooltip(btn, hoverText);
+                btn.setAttribute('aria-label', hoverText);
+            }
+        },
     });
     applyControlStateToElement(wrapper, ctrl);
 

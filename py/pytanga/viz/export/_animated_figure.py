@@ -377,7 +377,9 @@ def _build_animated_figure_adapter(
             label_renderer_var="figLabelRenderer",
             width_expr=dim_w,
             height_expr=dim_h,
-        ) if has_coord_overlay else "",
+        )
+        if has_coord_overlay
+        else "",
         "",
         _js_frame0_bootstrap(
             autofit_js,
@@ -517,7 +519,9 @@ def _build_animated_fullpage_adapter(
             label_renderer_var="figLabelRenderer",
             width_expr="window.innerWidth",
             height_expr="window.innerHeight",
-        ) if has_coord_overlay else "",
+        )
+        if has_coord_overlay
+        else "",
         "",
         _js_frame0_bootstrap(
             autofit_js,

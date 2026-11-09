@@ -210,4 +210,3 @@ class TestBindExpression:
         e = v * 1.0
         with pytest.raises(ValueError):
             e.bind(v=inner)
-

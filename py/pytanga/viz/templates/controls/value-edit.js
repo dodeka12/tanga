@@ -36,13 +36,13 @@ export function createValueEdit(ctrl) {
     const upBtn = document.createElement('button');
     upBtn.type = 'button';
     upBtn.className = 'tanga-step-button';
-    upBtn.title = 'Increase';
+    applyTooltip(upBtn, 'Increase');
     upBtn.appendChild(createIconElement('uc:▲'));
 
     const downBtn = document.createElement('button');
     downBtn.type = 'button';
     downBtn.className = 'tanga-step-button';
-    downBtn.title = 'Decrease';
+    applyTooltip(downBtn, 'Decrease');
     downBtn.appendChild(createIconElement('uc:▼'));
 
     row.appendChild(input);
@@ -88,7 +88,8 @@ export function createValueEdit(ctrl) {
         stepValue(-1);
     });
 
-    // Arrow keys step the value while the control is hovered/focused.
+    // Arrow keys step the value while the field is focused (see the click
+    // handler below).  They deliberately do not act on hover alone.
     input.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
             e.preventDefault();
@@ -107,8 +108,14 @@ export function createValueEdit(ctrl) {
         input.addEventListener('change', commitText);
     }
 
-    // Focus the input on hover so arrow keys work without an explicit click.
-    wrapper.addEventListener('mouseenter', () => {
+    // Focus is granted only on an explicit click, never on hover: a pointer
+    // passing over a stepper must not steal the keyboard focus from the scene
+    // (space/arrow shortcuts) or from another control.  Clicking the field
+    // itself keeps the browser's native caret placement; clicks on the label,
+    // the unit suffix, or the wrapper padding forward focus to the field.
+    wrapper.addEventListener('click', (e) => {
+        if (e.target === input) return;
+        if (e.target.closest && e.target.closest('.tanga-step-button')) return;
         input.focus({ preventScroll: true });
     });
 

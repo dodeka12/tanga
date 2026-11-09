@@ -21,6 +21,35 @@ from pytanga.viz import (
 from pytanga.viz.views import serialize_layout
 
 
+def test_visualizer_tooltips_enabled_by_default() -> None:
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    assert viz.tooltips_enabled is True
+
+
+def test_set_tooltips_enabled_emits_ui_options(monkeypatch) -> None:  # noqa: ANN001
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    pushed: list[dict] = []
+    monkeypatch.setattr(viz._ui_options_host, "_push_message", pushed.append)
+
+    viz.set_tooltips_enabled(False)
+    assert viz.tooltips_enabled is False
+    assert pushed == [{"type": "ui_options", "tooltips_enabled": False}]
+
+    # No diffing — a repeated identical call pushes again (like set_control_enabled).
+    viz.set_tooltips_enabled(False)
+    assert pushed == [{"type": "ui_options", "tooltips_enabled": False}] * 2
+
+    viz.set_tooltips_enabled(True)
+    assert viz.tooltips_enabled is True
+    assert pushed[-1] == {"type": "ui_options", "tooltips_enabled": True}
+
+
+def test_visualizer_passes_ui_options_callback() -> None:
+    """The server is wired to the host's serializer (identity check)."""
+    viz = Visualizer(add_default_axes=False, add_default_grid=False)
+    assert viz._ui_options_host.serialize() == {"tooltips_enabled": True}
+
+
 def _layout():  # noqa: ANN202
     return SplitView("horizontal", [SceneView("a"), SceneView("b")])
 
@@ -230,6 +259,26 @@ class TestControlStatePush:
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         server = self._mount(viz, monkeypatch)
         viz.set_control_enabled("nope", False)
+        assert server.captured == []
+
+    def test_visualizer_set_control_tooltip(self, monkeypatch):  # noqa: ANN001, ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        view = SliderView("radius", value=1.0, tooltip="old")
+        viz.set_layout(view)
+        server = self._mount(viz, monkeypatch)
+
+        viz.set_control_tooltip("radius", "Radius in mm")
+
+        assert view.tooltip == "Radius in mm"
+        assert view.control.tooltip == "Radius in mm"
+        assert [json.loads(m) for m in server.captured] == [
+            {"type": "control_state", "id": "radius", "tooltip": "Radius in mm"}
+        ]
+
+    def test_set_control_tooltip_unknown_id_noop(self, monkeypatch):  # noqa: ANN001, ANN201
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        server = self._mount(viz, monkeypatch)
+        viz.set_control_tooltip("nope", "x")
         assert server.captured == []
 
     def test_set_control_range_mutates_and_pushes(self, monkeypatch):  # noqa: ANN001, ANN201

@@ -48,7 +48,9 @@ def main() -> None:
     print("raw tensor shape (out, X, X):", tensor.shape)
 
     # Same tensor recombined into the named twist basis on the variable axes.
-    named = tensor.get_array(axis_bases={1: twist.basis_vectors, 2: twist.basis_vectors})
+    named = tensor.get_array(
+        axis_bases={1: twist.basis_vectors, 2: twist.basis_vectors}
+    )
     print("named tensor shape (out display, 6 DOF, 6 DOF):", named.shape)
 
     # Contract the fixed tensor against a concrete twist and compare to the live

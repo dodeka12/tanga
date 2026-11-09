@@ -237,7 +237,12 @@ nested_view = ParamsView(
             on_change=_on_toggle_bounds,
             position="above",
         ),
-        RowSpec("detect", ButtonUI(label="Detect rim"), on_click=_on_detect, position="above"),
+        RowSpec(
+            "detect",
+            ButtonUI(label="Detect rim"),
+            on_click=_on_detect,
+            position="above",
+        ),
         RowSpec("status", MarkdownUI(), "**Idle**"),
     ],
 )

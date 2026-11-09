@@ -28,9 +28,7 @@ def test_intersection_across_equal_parameter_instances() -> None:
 def test_from_array_across_equal_parameter_instances() -> None:
     a = BasisN3()
     b = BasisN3()
-    mask = BladeMask.from_array(
-        [a.multivector({1: 1.0}), b.multivector({2: 2.0})]
-    )
+    mask = BladeMask.from_array([a.multivector({1: 1.0}), b.multivector({2: 2.0})])
     assert mask.ids == [1, 2]
 
 

@@ -154,7 +154,5 @@ layout = SplitView(
 )
 
 viz.show(layout=layout)
-print(
-    "One of each control, themed live via the Theme dropdown. Press Ctrl+C to exit."
-)
+print("One of each control, themed live via the Theme dropdown. Press Ctrl+C to exit.")
 viz.wait()

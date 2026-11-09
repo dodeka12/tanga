@@ -115,7 +115,13 @@ def test_view_set_value_pushes_full_dict() -> None:
     assert pushed == [
         (
             "p",
-            {"title": "", "value": 4.0, "total": 10, "indeterminate": False, "text": ""},
+            {
+                "title": "",
+                "value": 4.0,
+                "total": 10,
+                "indeterminate": False,
+                "text": "",
+            },
         )
     ]
 

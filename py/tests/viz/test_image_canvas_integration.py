@@ -7,7 +7,13 @@ from __future__ import annotations
 
 import numpy as np
 
-from pytanga.viz import ImageCanvas, ImageData, ImageLayerStyle, LayerBlendMode, Visualizer
+from pytanga.viz import (
+    ImageCanvas,
+    ImageData,
+    ImageLayerStyle,
+    LayerBlendMode,
+    Visualizer,
+)
 from pytanga.viz._image_wire import decode_image_frame
 
 
@@ -25,7 +31,14 @@ class _FakeTransport:
     def send_bytes(self, payload: bytes) -> None:
         self.binary_frames.append(payload)
 
-    def register(self, object_id: str, handler: object, *, event: str = "change", origin: object = None) -> None:  # noqa: ANN001
+    def register(
+        self,
+        object_id: str,
+        handler: object,
+        *,
+        event: str = "change",
+        origin: object = None,
+    ) -> None:  # noqa: ANN001
         self.registered.append((object_id, event))
 
 
@@ -89,7 +102,10 @@ class TestLayerStyle:
     def test_add_layer_returns_index(self) -> None:
         _, canvas = _canvas()
         canvas.set_image(ImageData("img1", data=np.zeros((3, 4), dtype=np.uint8)))
-        assert canvas.add_layer(ImageData("img2", data=np.zeros((3, 4), dtype=np.uint8))) == 1
+        assert (
+            canvas.add_layer(ImageData("img2", data=np.zeros((3, 4), dtype=np.uint8)))
+            == 1
+        )
 
     def test_set_layer_style_sends_uniform(self) -> None:
         _, canvas = _canvas()

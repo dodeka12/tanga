@@ -433,12 +433,17 @@ def mask_for_point_pair(basis: Algebra) -> BladeMask:
 
 def mask_for_homogeneous_point(basis: Algebra) -> BladeMask:
     """Full blade mask for HPoint in N3."""
-    return BladeMask(basis, [9, 10, 12, 17, 18, 20, 24] if basis.opns else [7, 11, 13, 14, 19, 21, 22])
+    return BladeMask(
+        basis,
+        [9, 10, 12, 17, 18, 20, 24] if basis.opns else [7, 11, 13, 14, 19, 21, 22],
+    )
 
 
 def mask_for_homogeneous_direction(basis: Algebra) -> BladeMask:
     """Full blade mask for HDirection in N3."""
-    return BladeMask(basis, [9, 10, 12, 17, 18, 20] if basis.opns else [11, 13, 14, 19, 21, 22])
+    return BladeMask(
+        basis, [9, 10, 12, 17, 18, 20] if basis.opns else [11, 13, 14, 19, 21, 22]
+    )
 
 
 def mask_for_space(basis: Algebra) -> BladeMask:

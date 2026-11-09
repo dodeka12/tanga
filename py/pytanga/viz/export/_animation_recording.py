@@ -120,9 +120,7 @@ class AnimationRecording:
         elif resolved is EImageCodec.ZLIB:
             asset["source"] = "data"
             asset["codec"] = "zlib"
-            asset["data"] = base64.b64encode(
-                encode_zlib_raw(img.data)
-            ).decode("ascii")
+            asset["data"] = base64.b64encode(encode_zlib_raw(img.data)).decode("ascii")
         else:  # RAW
             asset["source"] = "data"
             asset["codec"] = "raw"

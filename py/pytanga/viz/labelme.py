@@ -97,7 +97,9 @@ class LabelMeStore:
         coordinate_precision: int | None = None,
     ) -> None:
         self._allow_extensions = allow_extensions
-        self._mapper: CoordinateMapper = mapper if mapper is not None else PlanarMapper()
+        self._mapper: CoordinateMapper = (
+            mapper if mapper is not None else PlanarMapper()
+        )
         self._coordinate_precision = coordinate_precision
 
     # ── (De)serialization ─────────────────────────────────
@@ -173,10 +175,22 @@ class LabelMeStore:
                     "group_id": s.group_id,
                     "shape_type": s.shape_type,
                     "flags": s.flags,
-                    **({"description": s.description} if s.description is not None else {}),
+                    **(
+                        {"description": s.description}
+                        if s.description is not None
+                        else {}
+                    ),
                     **({"mask": s.mask} if s.mask is not None else {}),
-                    **({"radius_u": _round(s.radius_u)} if s.radius_u is not None else {}),
-                    **({"radius_v": _round(s.radius_v)} if s.radius_v is not None else {}),
+                    **(
+                        {"radius_u": _round(s.radius_u)}
+                        if s.radius_u is not None
+                        else {}
+                    ),
+                    **(
+                        {"radius_v": _round(s.radius_v)}
+                        if s.radius_v is not None
+                        else {}
+                    ),
                     **({"angle": _round(s.angle)} if s.angle is not None else {}),
                 }
                 for s in doc.shapes
@@ -314,9 +328,7 @@ class LabelMeStore:
         du, dv = self._mapper.pixel_axes()
         dx = Direction(b.x - a.x, b.y - a.y, b.z - a.z)
         return Rectangle2D(
-            center=Point(
-                (a.x + b.x) / 2.0, (a.y + b.y) / 2.0, (a.z + b.z) / 2.0
-            ),
+            center=Point((a.x + b.x) / 2.0, (a.y + b.y) / 2.0, (a.z + b.z) / 2.0),
             size=(abs(dx.dot(du)), abs(dx.dot(dv))),
             normal=du.cross(dv).normalized(),
             angle=0.0,
@@ -338,9 +350,17 @@ class LabelMeStore:
         )
 
     def _ellipse_entity(self, center: Point, rim_u: Point, rim_v: Point) -> Ellipse:
-        n = self._mapper.pixel_axes()[0].cross(self._mapper.pixel_axes()[1]).normalized()
-        rim_u_off = Direction(rim_u.x - center.x, rim_u.y - center.y, rim_u.z - center.z)
-        rim_v_off = Direction(rim_v.x - center.x, rim_v.y - center.y, rim_v.z - center.z)
+        n = (
+            self._mapper.pixel_axes()[0]
+            .cross(self._mapper.pixel_axes()[1])
+            .normalized()
+        )
+        rim_u_off = Direction(
+            rim_u.x - center.x, rim_u.y - center.y, rim_u.z - center.z
+        )
+        rim_v_off = Direction(
+            rim_v.x - center.x, rim_v.y - center.y, rim_v.z - center.z
+        )
         du_dir = rim_u_off.normalized()
         dv_dir = n.cross(du_dir).normalized()
         if dv_dir.dot(rim_v_off) < 0.0:
@@ -433,9 +453,7 @@ class LabelMeStore:
             return self._polygon_from_ellipse(ellipse, label)
         pixel_u, _ = self._mapper.pixel_axes()
         du, dv = self._basis(ellipse.normal, ellipse.dir_u, ellipse.dir_v)
-        angle_px = ellipse.angle + _signed_angle(
-            pixel_u, du, du.cross(dv).normalized()
-        )
+        angle_px = ellipse.angle + _signed_angle(pixel_u, du, du.cross(dv).normalized())
         return LabelShape(
             label=label,
             points=[self._mapper.to_pixel(ellipse.center)],
@@ -524,11 +542,14 @@ class LabelMeStore:
         points = [
             self._mapper.to_pixel(
                 Point(
-                    ellipse.center.x + du.x * ellipse.radius_u * math.cos(t)
+                    ellipse.center.x
+                    + du.x * ellipse.radius_u * math.cos(t)
                     + dv.x * ellipse.radius_v * math.sin(t),
-                    ellipse.center.y + du.y * ellipse.radius_u * math.cos(t)
+                    ellipse.center.y
+                    + du.y * ellipse.radius_u * math.cos(t)
                     + dv.y * ellipse.radius_v * math.sin(t),
-                    ellipse.center.z + du.z * ellipse.radius_u * math.cos(t)
+                    ellipse.center.z
+                    + du.z * ellipse.radius_u * math.cos(t)
                     + dv.z * ellipse.radius_v * math.sin(t),
                 )
             )

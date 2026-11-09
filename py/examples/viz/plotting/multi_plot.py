@@ -156,5 +156,7 @@ layout = SplitView(
 )
 
 viz.show(layout=layout)
-print("2×2 stretch-mode plots plus a full-width overlay-axes plot. Press Ctrl+C to exit.")
+print(
+    "2×2 stretch-mode plots plus a full-width overlay-axes plot. Press Ctrl+C to exit."
+)
 viz.wait()
