@@ -47,9 +47,12 @@ changes, add the branch changelog, and prepare the PR.
     title from `uv run python tools/last-release.py`, sections Feat/Docs/API as
     applicable.
 
-- [ ] **5.4 — PR prep**
+- [x] **5.4 — PR prep**
   - Follow `dev/workflows/pull-request.md` (squash → rename changelog to
     `DD_<hash>.md` → PR body from the changelog).
+  - Done: branch squashed to `e6c7c3cd7`, changelog renamed to
+    `docs/changelog/2026/11/09_e6c7c3cd7.md`, `docs/changelog/index.md` entry
+    added.
 
 ## Validation
 

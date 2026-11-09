@@ -1,6 +1,6 @@
 # Viz control tooltips — Overview
 
-**Created:** 2026-11-09 | **Status:** In progress (5.4 PR prep pending) | **Branch:** `feat/tooltips`
+**Created:** 2026-11-09 | **Status:** Done | **Branch:** `feat/tooltips`
 
 > **Architecture note — check the developer docs.** Before implementing, check
 > `docs/dev/` (especially `docs/dev/architecture/`) for the subsystem(s) this
