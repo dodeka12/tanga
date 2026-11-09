@@ -9,6 +9,11 @@ are not recognized as Python extension modules. This script detects
 precompiled binaries and rewrites the wheel filename and WHEEL metadata
 to include the correct platform tag.
 
+On macOS the platform tag is taken from ``MACOSX_DEPLOYMENT_TARGET`` when that
+variable is set (CI pins it, so wheels built on a newer runner image stay
+installable on older macOS releases); otherwise it falls back to the build
+host's own macOS version.
+
 Usage:
   uv build --wheel -o /tmp/dist
   uv run python tools/fix-wheel-tag.py -d /tmp/dist
@@ -20,6 +25,7 @@ build, use auditwheel in a manylinux container instead.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import zipfile
 from pathlib import Path
@@ -98,10 +104,19 @@ def _platform_tag() -> str:
     if system == "Linux":
         plat_tag = f"manylinux_2_35_{machine}"
     elif system == "Darwin":
-        # macOS version from platform
-        mac_ver = platform.mac_ver()[0]  # e.g. "14.0"
-        major = mac_ver.split(".")[0] if mac_ver else "14"
-        plat_tag = f"macosx_{major}_0_{machine}"
+        # Prefer the pinned deployment target (CI sets it) over the runner's own
+        # macOS version: the wheel is installable on every macOS at least as new
+        # as the deployment target, not only on the build host's release.
+        target = os.environ.get("MACOSX_DEPLOYMENT_TARGET", "")
+        if target:
+            parts = target.split(".")
+            major = parts[0]
+            minor = parts[1] if len(parts) > 1 else "0"
+        else:
+            mac_ver = platform.mac_ver()[0]  # e.g. "14.0"
+            major = mac_ver.split(".")[0] if mac_ver else "14"
+            minor = "0"
+        plat_tag = f"macosx_{major}_{minor}_{machine}"
     elif system == "Windows":
         plat_tag = "win_amd64" if machine.endswith("64") else "win32"
     else:

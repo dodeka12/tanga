@@ -190,13 +190,20 @@ jobs:
           path: dist/*.whl
 
   # -- macOS build --
+  #    macos-15 is the current arm64 GitHub-hosted image (macos-14 was retired
+  #    on 2026-11-02).  MACOSX_DEPLOYMENT_TARGET pins the minimum macOS version
+  #    compiled into the bundled extensions *and* the resulting wheel tag
+  #    (macosx_14_0_arm64), so moving to a newer runner image does not drop
+  #    users on older macOS releases.  See tools/fix-wheel-tag.py.
   build-macos:
     name: Build macOS wheel (${{ matrix.os }}, ${{ matrix.python-version }})
     needs: [compute-version]
     runs-on: ${{ matrix.os }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
     strategy:
       matrix:
-        os: [macos-14]
+        os: [macos-15]
         python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
