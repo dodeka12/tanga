@@ -179,7 +179,9 @@ class MV:
         """Return {blade_name: coeff} for all non-zero blades."""
         return {self._alg.blade_name(k): v for k, v in self._impl.to_dict().items()}
 
-    def to_algebra(self, alg: "Algebra", blade_map: dict[int, int] | None = None) -> "MV":
+    def to_algebra(
+        self, alg: "Algebra", blade_map: dict[int, int] | None = None
+    ) -> "MV":
         """Map this MV into another algebra by relabeling its blades.
 
         *blade_map* maps this MV's blade ids to *alg*'s blade ids.  When omitted,

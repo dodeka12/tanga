@@ -485,7 +485,9 @@ class CoordinateSystem:
         self._camera_mode = camera
         # Overlay axes need the data to fill the fixed frame (no letterbox), so
         # `stretch="fit"` would leave grid lines outside the letterboxed data.
-        self._stretch = "fill" if display_mode == "overlay" else _validate_stretch(stretch)
+        self._stretch = (
+            "fill" if display_mode == "overlay" else _validate_stretch(stretch)
+        )
         self._recompute_camera_ownership()
 
         cfg = self._handle.scene.config
@@ -496,8 +498,12 @@ class CoordinateSystem:
             ylim, self._yscale, self._space_dim, cfg.camera, "y"
         )
 
-        self._x_intervals = self._resolve_intervals(x_intervals, self._xlim, self._xscale)
-        self._y_intervals = self._resolve_intervals(y_intervals, self._ylim, self._yscale)
+        self._x_intervals = self._resolve_intervals(
+            x_intervals, self._xlim, self._xscale
+        )
+        self._y_intervals = self._resolve_intervals(
+            y_intervals, self._ylim, self._yscale
+        )
         self.min_tick_spacing_px = max(1.0, float(min_tick_spacing_px))
         self._pan_xlim = pan_xlim
         self._pan_ylim = pan_ylim

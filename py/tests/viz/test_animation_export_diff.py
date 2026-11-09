@@ -199,7 +199,9 @@ def _decompress_embedded_data(html: str) -> dict:
 
 def test_end_to_end_diff_payload_decompresses() -> None:
     rec, _ = _static_path_recording()
-    html = render_export_animated_html(rec.to_diff_dict(), anim_style={"compress": True})
+    html = render_export_animated_html(
+        rec.to_diff_dict(), anim_style={"compress": True}
+    )
 
     data = _decompress_embedded_data(html)
     assert {"initial", "deltas"} <= set(data)
@@ -210,7 +212,9 @@ def test_end_to_end_diff_payload_decompresses() -> None:
 
 def test_static_path_stored_once() -> None:
     rec, path_id = _static_path_recording()
-    html = render_export_animated_html(rec.to_diff_dict(), anim_style={"compress": True})
+    html = render_export_animated_html(
+        rec.to_diff_dict(), anim_style={"compress": True}
+    )
     data = _decompress_embedded_data(html)
 
     initial_ids = [e["id"] for e in data["initial"]]
@@ -225,7 +229,9 @@ def _id_map(frame: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
 
 def test_diff_payload_lossless_and_smaller() -> None:
     rec, _ = _static_path_recording()
-    html = render_export_animated_html(rec.to_diff_dict(), anim_style={"compress": True})
+    html = render_export_animated_html(
+        rec.to_diff_dict(), anim_style={"compress": True}
+    )
     data = _decompress_embedded_data(html)
 
     expanded = _expand(data["initial"], data["deltas"])

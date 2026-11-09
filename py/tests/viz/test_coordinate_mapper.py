@@ -88,4 +88,3 @@ def test_calibrated_mapper_pixel_axes() -> None:
     # Identity-pose OpenCV camera: +u = world +x, +v = world -y (image y down).
     assert (du.x, du.y, du.z) == pytest.approx((1.0, 0.0, 0.0), abs=1e-9)
     assert (dv.x, dv.y, dv.z) == pytest.approx((0.0, -1.0, 0.0), abs=1e-9)
-

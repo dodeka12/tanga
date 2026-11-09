@@ -3,6 +3,7 @@
 // as `controls-panel.js` (sliders/dropdowns stacked, buttons in a row).
 
 import { View } from './view.js';
+import { applyTooltip } from '../controls-panel.js';
 import { createSlider } from '../controls/slider.js';
 import { createButton } from '../controls/button.js';
 import { createDropdown } from '../controls/dropdown.js';
@@ -120,7 +121,7 @@ export class BannerView extends View {
         if (this.dismissable) {
             const close = document.createElement('button');
             close.textContent = '✕';
-            close.title = 'Dismiss';
+            applyTooltip(close, 'Dismiss');
             close.className = 'tanga-banner-close';
             close.addEventListener('click', () => this._dismiss(true));
             this.el.appendChild(close);

@@ -331,7 +331,6 @@ class TestDragModifiers:
         )
 
 
-
 class TestActPointLabel:
     def test_add_with_label(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
@@ -575,9 +574,7 @@ class TestBindings:
         cfg = ap.interaction_config
         # A plain ActPoint registers only the standard drag triggers (no CLICK
         # trigger and no button-specific binding triggers).
-        assert all(
-            t.event_type != InteractionEventType.CLICK for t in cfg.triggers
-        )
+        assert all(t.event_type != InteractionEventType.CLICK for t in cfg.triggers)
 
 
 def test_on_interaction_registers_in_unified_registry():  # noqa: ANN201
@@ -646,4 +643,3 @@ class TestActiveObjectBase:
         ap.set_handles_visible(False)
         assert ("pt1", False) in handle.visibility
         assert ap._enabled is False
-

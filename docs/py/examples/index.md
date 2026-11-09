@@ -114,7 +114,7 @@ uv run python py/examples/<path>.py
 
 - **Box** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
-- **button** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
+- **button** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
 - **ButtonView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
@@ -142,7 +142,7 @@ uv run python py/examples/<path>.py
 
 - **chaos** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
 
-- **checkbox** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
+- **checkbox** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
 - **CheckboxView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
@@ -406,7 +406,7 @@ uv run python py/examples/<path>.py
 
 - **grid** — [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md)
 
-- **group** — [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md)
+- **group** — [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md)
 
 - **group view** — [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md)
 
@@ -417,6 +417,8 @@ uv run python py/examples/<path>.py
 - **HDR** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
 - **heavy work** — [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md)
+
+- **help** — [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md)
 
 - **hide** — [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
 
@@ -546,7 +548,7 @@ uv run python py/examples/<path>.py
 
 - **markdown** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
 
-- **menu** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
+- **menu** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **menu bar** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
 
@@ -834,7 +836,7 @@ uv run python py/examples/<path>.py
 
 - **sizing** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
-- **slider** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
+- **slider** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md)
 
 - **SliderView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
@@ -933,6 +935,10 @@ uv run python py/examples/<path>.py
 - **tolerance** — [classify a noisy quadric within a tolerance](ga/quadric/tolerant_classification.md)
 
 - **toolbar** — [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
+
+- **tooltip** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md)
+
+- **tooltips** — [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md)
 
 - **trail** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md)
 

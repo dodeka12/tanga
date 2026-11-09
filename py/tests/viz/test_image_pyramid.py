@@ -171,7 +171,13 @@ class TestServerRoute:
             "i", ImagePyramid("i", np.zeros((64, 64, 3), dtype=np.uint8), tile_size=32)
         )
         req = SimpleNamespace(
-            match_info={"image_id": "i", "version": "0", "level": "0", "x": "0", "y": "0"},
+            match_info={
+                "image_id": "i",
+                "version": "0",
+                "level": "0",
+                "x": "0",
+                "y": "0",
+            },
             query={},
         )
         resp = asyncio.run(server._image_tile_handler(req))  # type: ignore[arg-type]
@@ -184,7 +190,13 @@ class TestServerRoute:
     def test_unknown_image_400(self) -> None:
         server = VizServer()
         req = SimpleNamespace(
-            match_info={"image_id": "nope", "version": "0", "level": "0", "x": "0", "y": "0"},
+            match_info={
+                "image_id": "nope",
+                "version": "0",
+                "level": "0",
+                "x": "0",
+                "y": "0",
+            },
             query={},
         )
         with pytest.raises(web.HTTPBadRequest):
@@ -196,7 +208,13 @@ class TestServerRoute:
             "i", ImagePyramid("i", np.zeros((64, 64, 3), dtype=np.uint8), tile_size=32)
         )
         req = SimpleNamespace(
-            match_info={"image_id": "i", "version": "0", "level": "0", "x": "99", "y": "99"},
+            match_info={
+                "image_id": "i",
+                "version": "0",
+                "level": "0",
+                "x": "99",
+                "y": "99",
+            },
             query={},
         )
         with pytest.raises(web.HTTPNotFound):
@@ -208,7 +226,13 @@ class TestServerRoute:
             "i", ImagePyramid("i", np.zeros((64, 64, 3), dtype=np.uint8), tile_size=32)
         )
         req = SimpleNamespace(
-            match_info={"image_id": "i", "version": "7", "level": "0", "x": "0", "y": "0"},
+            match_info={
+                "image_id": "i",
+                "version": "7",
+                "level": "0",
+                "x": "0",
+                "y": "0",
+            },
             query={},
         )
         resp = asyncio.run(server._image_tile_handler(req))  # type: ignore[arg-type]

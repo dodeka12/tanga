@@ -80,13 +80,15 @@ def _plane_basis_u0(normal: Any) -> np.ndarray:
     with the ``Act*`` handle frame.  ``u0 = normalize(ref × n)``.
     """
     n = _unit(normal)
-    ref = np.array([0.0, 1.0, 0.0]) if abs(float(n[1])) <= 0.999 else np.array([1.0, 0.0, 0.0])
+    ref = (
+        np.array([0.0, 1.0, 0.0])
+        if abs(float(n[1])) <= 0.999
+        else np.array([1.0, 0.0, 0.0])
+    )
     return _unit(np.cross(ref, n))
 
 
-def _frame_quaternion(
-    x_world: Any, z_world: Any
-) -> tuple[float, float, float, float]:
+def _frame_quaternion(x_world: Any, z_world: Any) -> tuple[float, float, float, float]:
     """Rotation mapping canonical +X/+Y/+Z onto an orthonormal world frame.
 
     ``x_world`` and ``z_world`` are the world axes the canonical +X and +Z map
@@ -98,7 +100,9 @@ def _frame_quaternion(
     x = x - z * float(np.dot(x, z))
     nx = float(np.linalg.norm(x))
     if nx < 1e-12:
-        aux = np.array([1.0, 0.0, 0.0]) if abs(z[0]) < 0.9 else np.array([0.0, 1.0, 0.0])
+        aux = (
+            np.array([1.0, 0.0, 0.0]) if abs(z[0]) < 0.9 else np.array([0.0, 1.0, 0.0])
+        )
         x = _unit(np.cross(z, aux))
     else:
         x = x / nx
@@ -106,9 +110,7 @@ def _frame_quaternion(
     return matrix_to_quat(np.column_stack([x, y, z]))
 
 
-def _frame_from_xy(
-    x_world: Any, y_world: Any
-) -> tuple[float, float, float, float]:
+def _frame_from_xy(x_world: Any, y_world: Any) -> tuple[float, float, float, float]:
     """Rotation mapping canonical +X/+Y onto an orthonormal world frame.
 
     ``x_world`` and ``y_world`` are the world axes the canonical +X and +Y map
@@ -120,7 +122,9 @@ def _frame_from_xy(
     y = y - x * float(np.dot(x, y))
     ny = float(np.linalg.norm(y))
     if ny < 1e-12:
-        aux = np.array([0.0, 1.0, 0.0]) if abs(x[1]) < 0.9 else np.array([0.0, 0.0, 1.0])
+        aux = (
+            np.array([0.0, 1.0, 0.0]) if abs(x[1]) < 0.9 else np.array([0.0, 0.0, 1.0])
+        )
         y = _unit(np.cross(aux, x))
     else:
         y = y / ny
@@ -340,7 +344,9 @@ def _values_close(a: Any, b: Any, eps: float) -> bool:
         b, (tuple, list, np.ndarray)
     ):
         return bool(
-            np.allclose(np.asarray(a, dtype=float), np.asarray(b, dtype=float), atol=eps)
+            np.allclose(
+                np.asarray(a, dtype=float), np.asarray(b, dtype=float), atol=eps
+            )
         )
     return a == b
 

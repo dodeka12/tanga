@@ -72,7 +72,11 @@ def test_list_directory_file_filter_glob(tmp_path):  # noqa: ANN001, ANN201
 
     result = list_directory(str(tmp_path), file_filter="hello_*.png")
 
-    assert [e["name"] for e in result["entries"]] == ["sub", "hello_moon.png", "hello_world.png"]
+    assert [e["name"] for e in result["entries"]] == [
+        "sub",
+        "hello_moon.png",
+        "hello_world.png",
+    ]
 
 
 def test_list_directory_folders_only(tmp_path):  # noqa: ANN001, ANN201
@@ -391,9 +395,7 @@ async def test_dispatch_dialog_accept_explicit_value(monkeypatch):  # noqa: ANN0
 
     viz = _viz()
     monkeypatch.setattr(viz._layout.overlay, "_push_dialog", lambda d, s: None)
-    monkeypatch.setattr(
-        viz._layout.overlay, "_push_dialog_remove", lambda i, s: None
-    )
+    monkeypatch.setattr(viz._layout.overlay, "_push_dialog_remove", lambda i, s: None)
     accepted: list = []
 
     async def _on_accept(path, event):  # noqa: ANN001, ANN202

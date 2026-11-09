@@ -15,6 +15,7 @@ MenuView(
     direction=None,      # StackDirection | None — "horizontal" for bars, else "vertical"
     position=None,      # EAnchor | None — corner or centered-edge anchor (e.g. "top-right", "bottom")
     override_variant=True,  # bool — auto-set the MENU variant on control children
+    tooltip="",             # str — hover tooltip on the menu trigger
     **kwargs,           # forwarded to View (sizes)
 )
 ```
@@ -28,6 +29,12 @@ MenuView(
 - `override_variant=True` (default) forces every eligible control in the subtree
   to the `MENU` variant, so options render flat without setting `variant=` by
   hand.
+- `tooltip` is a static string shown when hovering the menu trigger (the
+  hamburger button of a dropdown, the label of a bar menu).  Change it by
+  re-pushing the layout with a new/existing `MenuView`; the per-control
+  runtime path (`set_tooltip`) applies to the control views *inside* the menu.
+  Tooltips can be switched off page-wide with
+  `viz.set_tooltips_enabled(False)` — see [Controls](controls.md#tooltips).
 
 ## Global vs per-pane
 

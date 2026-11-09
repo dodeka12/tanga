@@ -90,8 +90,14 @@ class ImageView:
     def __init__(
         self, image_id: str, *, max_layers: int = DEFAULT_MAX_IMAGE_LAYERS
     ) -> None:
-        if not isinstance(max_layers, int) or isinstance(max_layers, bool) or max_layers < 1:
-            raise ValueError(f"max_layers must be a positive integer, got {max_layers!r}")
+        if (
+            not isinstance(max_layers, int)
+            or isinstance(max_layers, bool)
+            or max_layers < 1
+        ):
+            raise ValueError(
+                f"max_layers must be a positive integer, got {max_layers!r}"
+            )
         self.id = image_id
         self._max_layers = max_layers
         self._images: list[ImageData | None] = []
@@ -319,7 +325,9 @@ class ImageView:
         enabled = True if style.enabled is None else style.enabled
         opacity = 1.0 if style.opacity is None else style.opacity
         blend_code = (
-            LayerBlendMode.NORMAL.code if style.blend is None else _blend_code(style.blend)
+            LayerBlendMode.NORMAL.code
+            if style.blend is None
+            else _blend_code(style.blend)
         )
         channel_code = (
             default_mode(image.channels)
@@ -404,7 +412,9 @@ class ImageView:
         self._check_layer_index(index)
         self.set_uniform(f"u_layer{index}_blend", _blend_code(blend))
 
-    def set_layer_value_range(self, index: int, value_min: float, value_max: float) -> None:
+    def set_layer_value_range(
+        self, index: int, value_min: float, value_max: float
+    ) -> None:
         """Set the normalization value range of the image layer at *index*."""
         self._check_layer_index(index)
         self.set_uniform(f"u_layer{index}_value_min", float(value_min))
@@ -660,7 +670,9 @@ class ImageCanvas:
         before = self._image_view.uniforms
         self._image_view.set_layer_style(index, style)
         after = self._image_view.uniforms
-        patch = {name: value for name, value in after.items() if before.get(name) != value}
+        patch = {
+            name: value for name, value in after.items() if before.get(name) != value
+        }
         self._push_uniforms(patch)
 
     def set_uniform(self, name: str, value: float | int) -> None:

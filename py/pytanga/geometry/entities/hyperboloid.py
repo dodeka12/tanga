@@ -43,6 +43,5 @@ class Hyperboloid:
 
     def __repr__(self) -> str:
         return (
-            f"Hyperboloid(c={self.center}, axes={self.semi_axes}, "
-            f"sheets={self.sheets})"
+            f"Hyperboloid(c={self.center}, axes={self.semi_axes}, sheets={self.sheets})"
         )

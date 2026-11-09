@@ -981,7 +981,9 @@ class LayoutHostImpl:
             {
                 "type": "view_background_image",
                 "view_id": view.id,
-                "image": _image_view_meta(image_view) if image_view is not None else None,
+                "image": _image_view_meta(image_view)
+                if image_view is not None
+                else None,
             }
         )
 
@@ -1041,20 +1043,25 @@ class LayoutHostImpl:
             view._push_layout = self._sync_overlays
         return registered
 
-    def resolve_control(self, cid: str) -> Any | None:
-        """Return the control with id *cid* by walking layouts and dialogs."""
+    def resolve_control_view(self, cid: str) -> Any | None:
+        """Return the ``ControlView`` with id *cid* (layouts + dialogs), or ``None``."""
         from .views import iter_control_views
 
         for layout in self._layouts.values():
             for view in iter_control_views(layout.base):
                 if view.id == cid:
-                    return view.control
+                    return view
         for scoped in self._overlay._dialogs.values():
             for dialog in scoped.values():
                 for view in iter_control_views(dialog.content):
                     if view.id == cid:
-                        return view.control
+                        return view
         return None
+
+    def resolve_control(self, cid: str) -> Any | None:
+        """Return the control with id *cid* by walking layouts and dialogs."""
+        view = self.resolve_control_view(cid)
+        return view.control if view is not None else None
 
     def resolve_group(self, cid: str) -> Any | None:
         """Return the ``GroupView`` with id *cid* (layouts + dialogs), or ``None``."""
@@ -1099,7 +1106,11 @@ class LayoutHostImpl:
         ctrl = self.resolve_control(cid) if cid else None
         if ctrl is None and self._client_log is not None and cid == self._client_log.id:
             ctrl = self._client_log
-        if ctrl is None and self._image_status is not None and cid == self._image_status.id:
+        if (
+            ctrl is None
+            and self._image_status is not None
+            and cid == self._image_status.id
+        ):
             ctrl = self._image_status
 
         if ctrl is not None:
@@ -1178,6 +1189,17 @@ class LayoutHostImpl:
             return
         ctrl.visible = bool(visible)
         self._push_control_state(cid, {"visible": ctrl.visible})
+
+    def set_control_tooltip(self, cid: str, tooltip: str) -> None:
+        """Set a control view's tooltip text and push ``control_state``.
+
+        An empty string clears the tooltip.  No-ops when *cid* is not a mounted
+        control.
+        """
+        view = self.resolve_control_view(cid)
+        if view is None:
+            return
+        view.set_tooltip(tooltip)
 
     def set_control_range(
         self,

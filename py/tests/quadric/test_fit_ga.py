@@ -37,7 +37,13 @@ def _nullity(values: list[float], tol: float) -> int:
 def test_conic_svd_recovers_ellipse() -> None:
     q2 = BasisQ2()
     geo = Geometry(q2)
-    pts = [(2.0, 0.0), (0.0, 1.0), (-2.0, 0.0), (0.0, -1.0), (1.0, math.sqrt(3.0) / 2.0)]
+    pts = [
+        (2.0, 0.0),
+        (0.0, 1.0),
+        (-2.0, 0.0),
+        (0.0, -1.0),
+        (1.0, math.sqrt(3.0) / 2.0),
+    ]
     emb = [geo(Point(x, y, 0)) for x, y in pts]
     mask = BladeMask(q2, grades=[1])
     partial = Variable("c", mask).sp(Variable("p", mask))(
@@ -79,7 +85,13 @@ def test_quadric_svd_recovers_sphere() -> None:
 def test_singular_values_pad_to_variable_count() -> None:
     q2 = BasisQ2()
     geo = Geometry(q2)
-    pts = [(2.0, 0.0), (0.0, 1.0), (-2.0, 0.0), (0.0, -1.0), (1.0, math.sqrt(3.0) / 2.0)]
+    pts = [
+        (2.0, 0.0),
+        (0.0, 1.0),
+        (-2.0, 0.0),
+        (0.0, -1.0),
+        (1.0, math.sqrt(3.0) / 2.0),
+    ]
     emb = [geo(Point(x, y, 0)) for x, y in pts]
     mask = BladeMask(q2, grades=[1])
     partial = Variable("c", mask).sp(Variable("p", mask))(

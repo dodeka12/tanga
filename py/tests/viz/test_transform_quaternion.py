@@ -53,9 +53,7 @@ class TestTransformQuaternion:
     def test_euler_input_converts_to_quaternion(self) -> None:
         t = Transform(rotation=(0.0, 0.0, math.pi / 2))
         half = math.pi / 4
-        assert t.rotation == pytest.approx(
-            (0.0, 0.0, math.sin(half), math.cos(half))
-        )
+        assert t.rotation == pytest.approx((0.0, 0.0, math.sin(half), math.cos(half)))
 
     def test_matrix_set_matrix_roundtrip(self) -> None:
         t = Transform(

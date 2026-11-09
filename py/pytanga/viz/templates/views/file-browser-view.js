@@ -3,6 +3,7 @@
 // the backend via `file_browser_navigate` / `file_browser_listing`.
 
 import { View } from './view.js';
+import { applyTooltip } from '../controls-panel.js';
 
 export class FileBrowserView extends View {
     constructor({ controlId, path = '', onNavigate, onSelect, onClose, folders_only = false } = {}) {
@@ -71,7 +72,7 @@ export class FileBrowserView extends View {
         });
         const upBtn = document.createElement('button');
         upBtn.textContent = '⬆ Up';
-        upBtn.title = 'Parent directory';
+        applyTooltip(upBtn, 'Parent directory');
         Object.assign(upBtn.style, { padding: '4px 10px', cursor: 'pointer' });
         upBtn.addEventListener('click', () => this._up());
 
@@ -82,7 +83,7 @@ export class FileBrowserView extends View {
         if (this.folders_only) {
             const selectBtn = document.createElement('button');
             selectBtn.textContent = 'Select this folder';
-            selectBtn.title = 'Accept the current directory';
+            applyTooltip(selectBtn, 'Accept the current directory');
             Object.assign(selectBtn.style, { padding: '4px 10px', cursor: 'pointer' });
             selectBtn.addEventListener('click', () => this._accept(this._currentPath));
             pathBar.appendChild(selectBtn);

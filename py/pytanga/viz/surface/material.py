@@ -147,7 +147,9 @@ def surface_material(
     if isinstance(obj, (list, tuple)):
         textures = list(obj)
         if not all(isinstance(texture, SurfaceTexture) for texture in textures):
-            raise TypeError("a texture sequence must contain only SurfaceTexture values")
+            raise TypeError(
+                "a texture sequence must contain only SurfaceTexture values"
+            )
         return SurfaceMaterial(textures=textures)
     raise TypeError(
         "surface must be a SurfaceMaterial, SurfaceShader, SurfaceTexture, "

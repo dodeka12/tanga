@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.25.1] — 2026-11-09
+- Tooltips on controls, groups, and menus (`tooltip=`, `set_tooltip`, `set_control_tooltip`) · page-wide `Visualizer.set_tooltips_enabled` switch over a new `ui_options` message
+- Fix: value-edit steppers focus only on an explicit click (hover no longer steals scene shortcuts)
+→ [Details](2026/11/09_e6c7c3cd7.md)
+
 ## [Since 2.25.0 (2.25.1-rc2)] — 2026-10-26
 - Background tiled-pyramid initial level is picked from the pane size instead of a hardcoded 2048 budget
 → [Details](2026/10/26_67f12da72.md)

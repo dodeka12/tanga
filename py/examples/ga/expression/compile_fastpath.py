@@ -48,7 +48,10 @@ def main() -> None:
     bound_ms = _time_ms(lambda: sandwich(R=r, X=x), n)
     compiled_ms = _time_ms(lambda: compiled(R=r, X=x), n)
 
-    print("compiled == bound:", (compiled(R=r, X=x) - sandwich.evaluate(R=r, X=x)).mag < 1e-12)
+    print(
+        "compiled == bound:",
+        (compiled(R=r, X=x) - sandwich.evaluate(R=r, X=x)).mag < 1e-12,
+    )
     print(f"raw MV sandwich : {raw_ms:.4f} ms/call")
     print(f"bound Expression: {bound_ms:.4f} ms/call")
     print(f"compiled        : {compiled_ms:.4f} ms/call")
@@ -58,7 +61,10 @@ def main() -> None:
     aff = AffineExpression([v * v, v * alg.e12])
     aff_compiled = aff.compile()
     omega = 0.3 * alg.e12 + 0.1 * alg.e13
-    print("\naffine compiled == bound:", (aff.evaluate(V=omega) - aff_compiled(V=omega)).mag < 1e-12)
+    print(
+        "\naffine compiled == bound:",
+        (aff.evaluate(V=omega) - aff_compiled(V=omega)).mag < 1e-12,
+    )
 
 
 if __name__ == "__main__":

@@ -197,17 +197,23 @@ class Variable:
 
         return cast("ScalarExpression", sp(self, other))
 
-    def cp(self, other: "MV | Variable | Expression") -> "Expression | AffineExpression":
+    def cp(
+        self, other: "MV | Variable | Expression"
+    ) -> "Expression | AffineExpression":
         from ._expression import cp
 
         return cast("Expression | AffineExpression", cp(self, other))
 
-    def acp(self, other: "MV | Variable | Expression") -> "Expression | AffineExpression":
+    def acp(
+        self, other: "MV | Variable | Expression"
+    ) -> "Expression | AffineExpression":
         from ._expression import acp
 
         return cast("Expression | AffineExpression", acp(self, other))
 
-    def rc(self, other: "MV | Variable | Expression") -> "Expression | AffineExpression":
+    def rc(
+        self, other: "MV | Variable | Expression"
+    ) -> "Expression | AffineExpression":
         from ._expression import rc
 
         return cast("Expression | AffineExpression", rc(self, other))

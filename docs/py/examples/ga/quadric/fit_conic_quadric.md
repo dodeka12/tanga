@@ -149,7 +149,10 @@ def _main() -> None:
     dpts = [geo3(Point(x, y, z)) for x, y, z in degenerate]
     partial_d = c3.sp(pnt3)(p=DataArray(dpts, masks=("pnt_idx", mask3)))
     values_d, _ = partial_d.svd()
-    print("coplanar degenerate fit (nullity should be >= 2):", _nullity(values_d, q3.precision))
+    print(
+        "coplanar degenerate fit (nullity should be >= 2):",
+        _nullity(values_d, q3.precision),
+    )
 
 
 if __name__ == "__main__":

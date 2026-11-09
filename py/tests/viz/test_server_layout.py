@@ -22,6 +22,7 @@ def _server() -> VizServer:
     server._flush_callback = lambda name: ([{"id": f"{name}-obj", "kind": "Point"}], [])
     server._scene_config_callback = lambda name: {"type": "scene_config", "name": name}
     server._scene_list_callback = lambda: ["", "a", "b"]
+    server._ui_options_callback = lambda: {"tooltips_enabled": False}
     server._layout_callback = lambda name: {
         "type": "view_layout",
         "name": name,
@@ -45,11 +46,12 @@ class TestPushFullState:
         )
         types = [m["type"] for m in ws.sent]
         assert types[0] == "clear_all"
-        assert types[1] == "view_layout"
-        assert ws.sent[2]["type"] == "scene_config" and ws.sent[2]["name"] == "a"
-        assert ws.sent[3]["type"] == "scene_update" and ws.sent[3]["scene"] == "a"
-        assert ws.sent[4]["type"] == "scene_config" and ws.sent[4]["name"] == "b"
-        assert ws.sent[5]["type"] == "scene_update" and ws.sent[5]["scene"] == "b"
+        assert types[1] == "ui_options"
+        assert types[2] == "view_layout"
+        assert ws.sent[3]["type"] == "scene_config" and ws.sent[3]["name"] == "a"
+        assert ws.sent[4]["type"] == "scene_update" and ws.sent[4]["scene"] == "a"
+        assert ws.sent[5]["type"] == "scene_config" and ws.sent[5]["name"] == "b"
+        assert ws.sent[6]["type"] == "scene_update" and ws.sent[6]["scene"] == "b"
         assert types[-1] == "scene_list"
 
     def test_single_scene_push(self):  # noqa: ANN201
@@ -57,7 +59,13 @@ class TestPushFullState:
         ws = _FakeWS()
         asyncio.run(server._push_full_state(ws, scene_names=["main"], browser_id="b1"))
         types = [m["type"] for m in ws.sent]
-        assert types == ["clear_all", "scene_config", "scene_update", "scene_list"]
+        assert types == [
+            "clear_all",
+            "ui_options",
+            "scene_config",
+            "scene_update",
+            "scene_list",
+        ]
 
     def test_layout_payload_omitted_when_none(self):  # noqa: ANN201
         server = _server()
@@ -65,6 +73,29 @@ class TestPushFullState:
         asyncio.run(server._push_full_state(ws, scene_names=["a"], browser_id="b1"))
         types = [m["type"] for m in ws.sent]
         assert "view_layout" not in types
+
+    def test_ui_options_sent_after_clear_before_layout(self):  # noqa: ANN201
+        server = _server()
+        ws = _FakeWS()
+        asyncio.run(
+            server._push_full_state(
+                ws,
+                scene_names=["main"],
+                layout_payload=server._layout_callback("demo"),
+                browser_id="b1",
+            )
+        )
+        types = [m["type"] for m in ws.sent]
+        assert types[0] == "clear_all"
+        assert ws.sent[1] == {"type": "ui_options", "tooltips_enabled": False}
+        assert types.index("ui_options") < types.index("view_layout")
+
+    def test_ui_options_omitted_without_callback(self):  # noqa: ANN201
+        server = _server()
+        server._ui_options_callback = None
+        ws = _FakeWS()
+        asyncio.run(server._push_full_state(ws, scene_names=["main"], browser_id="b1"))
+        assert "ui_options" not in [m["type"] for m in ws.sent]
 
 
 class TestResolveLayout:

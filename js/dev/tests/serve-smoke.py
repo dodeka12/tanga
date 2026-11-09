@@ -84,7 +84,8 @@ def main() -> None:
         viewport=ViewportConfig(zoom=1.0, pan=(0.0, 0.0)),
         background_image=_noise(rng),
     )
-    left = SceneView("world", camera_view=cam_view, hide={frustum_ref.id})
+    left = SceneView("world", camera_view=cam_view)
+    left.set_visible(frustum_ref.id, False)
     right = SceneView("world")
     body = SplitView("horizontal", [left, right])
 

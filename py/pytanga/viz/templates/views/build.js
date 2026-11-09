@@ -146,6 +146,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             mode: node.mode,
             direction: node.direction,
             position: node.position,
+            tooltip: node.tooltip || '',
         });
         applySizeSpecs(menu, node);
         for (const childNode of node.children || []) {

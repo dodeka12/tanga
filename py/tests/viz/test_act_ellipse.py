@@ -12,7 +12,13 @@ from typing import Any
 import pytest
 
 from pytanga.geometry import Direction, Ellipse, Point
-from pytanga.viz import ActEllipse, DragEvent, DragMode, InteractionEventType, ModifierKey
+from pytanga.viz import (
+    ActEllipse,
+    DragEvent,
+    DragMode,
+    InteractionEventType,
+    ModifierKey,
+)
 from pytanga.viz._act_style import ActPointStyle
 
 
@@ -165,9 +171,7 @@ class TestPlaneZ:
 
     def test_handles_preserve_plane_z(self) -> None:
         handle = _FakeHandle(space_dim=3)
-        ellipse = ActEllipse(
-            center=Point(5.0, 5.0, -0.6), radius_u=10.0, radius_v=4.0
-        )
+        ellipse = ActEllipse(center=Point(5.0, 5.0, -0.6), radius_u=10.0, radius_v=4.0)
         ellipse._init(handle, "e1")
         for h in ellipse._radius_handles:
             assert h.point.z == -0.6
@@ -176,15 +180,12 @@ class TestPlaneZ:
 
     def test_translate_preserves_z(self) -> None:
         handle = _FakeHandle(space_dim=3)
-        ellipse = ActEllipse(
-            center=Point(5.0, 5.0, -0.6), radius_u=10.0, radius_v=4.0
-        )
+        ellipse = ActEllipse(center=Point(5.0, 5.0, -0.6), radius_u=10.0, radius_v=4.0)
         ellipse._init(handle, "e1")
         asyncio.run(
             ellipse._dispatch_translate(DragEvent(world_delta=Direction(1.0, 1.0, 0.0)))
         )
         assert ellipse.entity.center == Point(6.0, 6.0, -0.6)
-
 
 
 class TestLimits:
@@ -228,7 +229,6 @@ class TestLimits:
         assert ellipse.ellipse.radius_u == 2.0
 
 
-
 class TestCreateClamp:
     def test_create_from_points_clamps_to_min_radius(self) -> None:
         ellipse = ActEllipse.create_from_points(
@@ -263,9 +263,7 @@ class TestHandleControls:
 class TestRotateHandleOffset:
     def test_rotate_handle_independent_of_perpendicular_axis(self) -> None:
         handle = _FakeHandle(space_dim=2)
-        ellipse = ActEllipse(
-            center=Point(0.0, 0.0, 0.0), radius_u=10.0, radius_v=100.0
-        )
+        ellipse = ActEllipse(center=Point(0.0, 0.0, 0.0), radius_u=10.0, radius_v=100.0)
         ellipse._init(handle, "e1")
         before = ellipse._rotate_handle_position()
 
@@ -349,7 +347,9 @@ class TestTiltedPlane:
         ellipse._init(handle, "e1")
         asyncio.run(
             ellipse._dispatch_rotate(
-                DragEvent(world_position=Point(ellipse._v0.x, ellipse._v0.y, ellipse._v0.z))
+                DragEvent(
+                    world_position=Point(ellipse._v0.x, ellipse._v0.y, ellipse._v0.z)
+                )
             )
         )
         assert ellipse.angle == pytest.approx(math.pi / 2)
@@ -378,7 +378,6 @@ class TestHandleDragMode:
             assert len(drag) == 1
             assert drag[0].drag_mode == DragMode.VIEW_PLANE
             assert drag[0].modifiers == frozenset()
-
 
 
 def test_explicit_basis_overrides_normal() -> None:

@@ -134,10 +134,10 @@ def main() -> None:
             }
         )
 
-    async def on_image_tile_load(record: ImageStatusRecord, _event: ControlEvent) -> None:
-        log.log(
-            {"message": f"image_tile_load  level {record.level}", "level": "warn"}
-        )
+    async def on_image_tile_load(
+        record: ImageStatusRecord, _event: ControlEvent
+    ) -> None:
+        log.log({"message": f"image_tile_load  level {record.level}", "level": "warn"})
 
     async def on_image_tile_loaded(
         record: ImageStatusRecord, _event: ControlEvent

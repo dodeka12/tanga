@@ -25,9 +25,7 @@ def test_on_key_registers_under_namespaced_id() -> None:
     viz = Visualizer(add_default_axes=False, add_default_grid=False)
     viz.on_key("Delete", handler)
     assert viz._handler_registry.get_interaction("key::delete", "key") is not None
-    assert viz._layout.scene("").config.keyboard == [
-        {"key": "delete", "modifiers": []}
-    ]
+    assert viz._layout.scene("").config.keyboard == [{"key": "delete", "modifiers": []}]
 
 
 def test_interaction_key_dispatch_runs_handler() -> None:

@@ -101,19 +101,32 @@ class Frustum:
         import numpy as np
 
         position = np.asarray(camera.position, dtype=float)
-        target = np.asarray(camera.target, dtype=float) if camera.target is not None else position + np.array([0.0, 0.0, 1.0])
-        up = np.asarray(camera.up, dtype=float) if camera.up is not None else np.array([0.0, 1.0, 0.0])
+        target = (
+            np.asarray(camera.target, dtype=float)
+            if camera.target is not None
+            else position + np.array([0.0, 0.0, 1.0])
+        )
+        up = (
+            np.asarray(camera.up, dtype=float)
+            if camera.up is not None
+            else np.array([0.0, 1.0, 0.0])
+        )
 
         axis = target - position
         axis_norm = float(np.linalg.norm(axis))
         axis = axis / axis_norm if axis_norm > 1e-9 else np.array([0.0, 0.0, 1.0])
 
-        near_d = float(near if near is not None else (getattr(camera, "near", None) or 0.1))
-        far_d = float(far if far is not None else (getattr(camera, "far", None) or 10.0))
+        near_d = float(
+            near if near is not None else (getattr(camera, "near", None) or 0.1)
+        )
+        far_d = float(
+            far if far is not None else (getattr(camera, "far", None) or 10.0)
+        )
         if far_d <= 0.0:
             far_d = 10.0
 
         if getattr(camera, "type", None) == "pinhole":
+
             def half_extents(d: float) -> tuple[float, float]:
                 return (
                     d * float(camera.width) / (2.0 * float(camera.fx)),

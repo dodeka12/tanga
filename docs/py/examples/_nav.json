@@ -684,6 +684,9 @@
               },
               {
                 "Toolbar": "py/examples/viz/ui/controls/toolbar.md"
+              },
+              {
+                "Tooltips": "py/examples/viz/ui/controls/tooltips.md"
               }
             ]
           },

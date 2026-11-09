@@ -38,9 +38,7 @@ def _calib() -> CameraCalibration:
 
 
 def test_serialize_intrinsics_and_depth_kind() -> None:
-    content = _build(
-        DepthImageStyle(camera=_calib(), depth_kind="axial")
-    )
+    content = _build(DepthImageStyle(camera=_calib(), depth_kind="axial"))
     cam = content["mesh"]["camera"]
     assert cam["fx"] == pytest.approx(100.0)
     assert cam["fy"] == pytest.approx(100.0)
@@ -50,9 +48,24 @@ def test_serialize_intrinsics_and_depth_kind() -> None:
 
 
 def test_serialize_depth_kind_aliases() -> None:
-    assert _build(DepthImageStyle(camera=_calib(), depth_kind="z"))["mesh"]["camera"]["depth_kind"] == "axial"
-    assert _build(DepthImageStyle(camera=_calib(), depth_kind="range"))["mesh"]["camera"]["depth_kind"] == "radial"
-    assert _build(DepthImageStyle(camera=_calib(), depth_kind="disparity"))["mesh"]["camera"]["depth_kind"] == "inverse"
+    assert (
+        _build(DepthImageStyle(camera=_calib(), depth_kind="z"))["mesh"]["camera"][
+            "depth_kind"
+        ]
+        == "axial"
+    )
+    assert (
+        _build(DepthImageStyle(camera=_calib(), depth_kind="range"))["mesh"]["camera"][
+            "depth_kind"
+        ]
+        == "radial"
+    )
+    assert (
+        _build(DepthImageStyle(camera=_calib(), depth_kind="disparity"))["mesh"][
+            "camera"
+        ]["depth_kind"]
+        == "inverse"
+    )
 
 
 def test_camera_transform_from_calibration() -> None:
@@ -84,7 +97,9 @@ def test_pinhole_plane_z2_positions() -> None:
 
 def test_pinhole_range_conversion() -> None:
     depth = np.full((2, 2), 3.0, dtype=np.float32)
-    pos, u, v = compute_pinhole_positions(depth, fx=1.0, fy=1.0, cx=0.0, cy=0.0, depth_kind="radial")
+    pos, u, v = compute_pinhole_positions(
+        depth, fx=1.0, fy=1.0, cx=0.0, cy=0.0, depth_kind="radial"
+    )
     for i in range(pos.shape[0]):
         x = u[i]
         y = v[i]
@@ -97,7 +112,9 @@ def test_pinhole_range_conversion() -> None:
 def test_pinhole_inverse_conversion() -> None:
     # Raw inverse depth d = 1/Z; a constant d = 0.5 means Z = 2.
     depth = np.full((2, 2), 0.5, dtype=np.float32)
-    pos, u, v = compute_pinhole_positions(depth, fx=1.0, fy=1.0, cx=0.0, cy=0.0, depth_kind="inverse")
+    pos, u, v = compute_pinhole_positions(
+        depth, fx=1.0, fy=1.0, cx=0.0, cy=0.0, depth_kind="inverse"
+    )
     for i in range(pos.shape[0]):
         z = 2.0
         assert pos[i, 0] == pytest.approx(u[i] * z)

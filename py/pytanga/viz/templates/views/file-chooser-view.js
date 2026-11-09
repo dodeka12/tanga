@@ -5,6 +5,7 @@
 
 import { ControlView } from './control-view.js';
 import { sendEvent } from '../events.js';
+import { applyTooltip } from '../controls-panel.js';
 import { registerFileBrowser, unregisterFileBrowserIfCurrent } from '../file-browser.js';
 
 export class FileChooserView extends ControlView {
@@ -64,7 +65,7 @@ export class FileChooserView extends ControlView {
         });
         const upBtn = document.createElement('button');
         upBtn.textContent = '⬆ Up';
-        upBtn.title = 'Parent directory';
+        applyTooltip(upBtn, 'Parent directory');
         upBtn.addEventListener('click', () => this._up());
 
         const pathBar = document.createElement('div');
@@ -74,7 +75,7 @@ export class FileChooserView extends ControlView {
         if (this.folders_only) {
             const selectBtn = document.createElement('button');
             selectBtn.textContent = 'Select this folder';
-            selectBtn.title = 'Accept the current directory';
+            applyTooltip(selectBtn, 'Accept the current directory');
             selectBtn.addEventListener('click', () => this._select(this._currentPath));
             pathBar.appendChild(selectBtn);
         }

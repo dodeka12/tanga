@@ -32,6 +32,7 @@ _V1_HEADER = struct.Struct("<BBBIIBBQ")
 #   channels u8, dtype u8, data_len u64
 _HEADER = struct.Struct("<BBBBIIBBQ")
 
+
 def encode_jpeg(data: np.ndarray, quality: int = 85) -> bytes:
     """Encode a ``uint8`` H×W or H×W×3 array as JPEG bytes (lazy Pillow)."""
     try:
@@ -183,7 +184,9 @@ def _decode_header(buf: bytes) -> tuple[ImageFrameHeader, int]:
         _, ftype, id_len, width, height, channels, dtype_code, data_len = fields
         codec = EImageCodec.RAW
     else:
-        _, ftype, id_len, codec_code, width, height, channels, dtype_code, data_len = fields
+        _, ftype, id_len, codec_code, width, height, channels, dtype_code, data_len = (
+            fields
+        )
         codec = EImageCodec.from_code(codec_code)
 
     header = ImageFrameHeader(

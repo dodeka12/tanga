@@ -80,10 +80,11 @@ def test_register_handlers_registers_default_sinks() -> None:
     registry = ControlHandlerRegistry()
     assert ctrl.register_handlers(registry) is True
     assert registry.get(IMAGE_STATUS_ID, "image_loaded") is _default_image_status_sink
-    assert registry.get(IMAGE_STATUS_ID, "image_tile_load") is _default_image_status_sink
     assert (
-        registry.get(IMAGE_STATUS_ID, "image_tile_loaded")
-        is _default_image_status_sink
+        registry.get(IMAGE_STATUS_ID, "image_tile_load") is _default_image_status_sink
+    )
+    assert (
+        registry.get(IMAGE_STATUS_ID, "image_tile_loaded") is _default_image_status_sink
     )
 
 

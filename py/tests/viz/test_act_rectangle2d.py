@@ -252,7 +252,9 @@ class TestBehaviour:
     def test_resize_preserves_angle(self) -> None:
         rect, _ = _rect(angle=math.pi / 2)
         asyncio.run(
-            rect._dispatch_corner_drag(0, DragEvent(world_position=Point(2.0, 3.0, 0.0)))
+            rect._dispatch_corner_drag(
+                0, DragEvent(world_position=Point(2.0, 3.0, 0.0))
+            )
         )
         assert abs(rect.angle - math.pi / 2) < 1e-9
 
@@ -306,13 +308,14 @@ class TestPlaneZ:
         assert rect.entity.center == Point(6.0, 6.0, -0.6)
 
 
-
 class TestLimits:
     """Resize clamps: explicit min/max, and fp-precision when ``None``."""
 
     def test_max_size_caps(self) -> None:
         handle = _FakeHandle(space_dim=3)
-        rect = ActRectangle2D(center=Point(0.0, 0.0, 0.0), size=(1.0, 1.0), max_size=2.0)
+        rect = ActRectangle2D(
+            center=Point(0.0, 0.0, 0.0), size=(1.0, 1.0), max_size=2.0
+        )
         rect._init(handle, "r1")
         asyncio.run(
             rect._dispatch_corner_drag(
@@ -322,15 +325,12 @@ class TestLimits:
         assert rect.entity.size == (2.0, 2.0)
 
 
-
-
 class TestCreateClamp:
     def test_create_from_points_clamps_to_min_size(self) -> None:
         rect = ActRectangle2D.create_from_points(
             Point(0.0, 0.0, 0.0), Point(0.001, 0.0001, 0.0), min_size=0.5
         )
         assert rect.entity.size == (0.5, 0.5)
-
 
 
 class TestHandleVisibility:
@@ -487,7 +487,6 @@ class TestHandleDragMode:
             assert len(drag) == 1
             assert drag[0].drag_mode == DragMode.VIEW_PLANE
             assert drag[0].modifiers == frozenset()
-
 
 
 def test_explicit_basis_overrides_normal() -> None:

@@ -45,15 +45,23 @@ class _FakeHandle:
 def _doc() -> LabelMeDocument:
     return LabelMeDocument(
         shapes=[
-            LabelShape(label="rect", points=[(0.0, 0.0), (4.0, 2.0)], shape_type="rectangle"),
-            LabelShape(label="circ", points=[(1.0, 1.0), (3.0, 1.0)], shape_type="circle"),
+            LabelShape(
+                label="rect", points=[(0.0, 0.0), (4.0, 2.0)], shape_type="rectangle"
+            ),
+            LabelShape(
+                label="circ", points=[(1.0, 1.0), (3.0, 1.0)], shape_type="circle"
+            ),
             LabelShape(
                 label="poly",
                 points=[(0.0, 0.0), (2.0, 0.0), (2.0, 2.0)],
                 shape_type="polygon",
             ),
-            LabelShape(label="strip", points=[(0.0, 0.0), (2.0, 0.0)], shape_type="linestrip"),
-            LabelShape(label="line", points=[(0.0, 0.0), (1.0, 0.0)], shape_type="line"),
+            LabelShape(
+                label="strip", points=[(0.0, 0.0), (2.0, 0.0)], shape_type="linestrip"
+            ),
+            LabelShape(
+                label="line", points=[(0.0, 0.0), (1.0, 0.0)], shape_type="line"
+            ),
             LabelShape(label="pt", points=[(5.0, 5.0)], shape_type="point"),
         ]
     )
@@ -233,7 +241,9 @@ def test_calibrated_mapper_round_trip_size_shapes() -> None:
     store = LabelMeStore(mapper=CalibratedPlaneMapper(calib, depth=1.0))
     doc = LabelMeDocument(
         shapes=[
-            LabelShape(label="r", points=[(120, 150), (180, 230)], shape_type="rectangle"),
+            LabelShape(
+                label="r", points=[(120, 150), (180, 230)], shape_type="rectangle"
+            ),
             LabelShape(label="c", points=[(320, 240), (380, 240)], shape_type="circle"),
             LabelShape(
                 label="e",
@@ -361,7 +371,6 @@ def test_real_file_round_trip_full_precision() -> None:
     assert doc2 == result.document
 
 
-
 def test_ellipse_angle_is_pixel_frame() -> None:
     # PlanarMapper: pixel_u = world +x.  An ellipse whose basis is rotated +90°
     # from pixel_u, with angle=0, must export angle = 0 + pi/2 (pixel frame).
@@ -398,9 +407,15 @@ def _roll_tilt_calibration() -> CameraCalibration:
 
 
 def test_roll_tilt_rectangle_act_round_trip() -> None:
-    store = LabelMeStore(mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0))
+    store = LabelMeStore(
+        mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0)
+    )
     doc = LabelMeDocument(
-        shapes=[LabelShape(label="r", points=[(120, 150), (180, 230)], shape_type="rectangle")]
+        shapes=[
+            LabelShape(
+                label="r", points=[(120, 150), (180, 230)], shape_type="rectangle"
+            )
+        ]
     )
     objs, _ = store.iter_objects(doc)
     rect = objs[0][0]
@@ -412,7 +427,9 @@ def test_roll_tilt_rectangle_act_round_trip() -> None:
 
 
 def test_roll_tilt_ellipse_act_round_trip() -> None:
-    store = LabelMeStore(mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0))
+    store = LabelMeStore(
+        mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0)
+    )
     theta = 0.7
     doc = LabelMeDocument(
         shapes=[
@@ -436,9 +453,13 @@ def test_roll_tilt_ellipse_act_round_trip() -> None:
 
 
 def test_roll_tilt_circle_unchanged() -> None:
-    store = LabelMeStore(mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0))
+    store = LabelMeStore(
+        mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0)
+    )
     doc = LabelMeDocument(
-        shapes=[LabelShape(label="c", points=[(320, 240), (380, 240)], shape_type="circle")]
+        shapes=[
+            LabelShape(label="c", points=[(320, 240), (380, 240)], shape_type="circle")
+        ]
     )
     objs, _ = store.iter_objects(doc)
     circle = objs[0][0]
@@ -464,7 +485,9 @@ def test_legacy_ellipse_to_act_level() -> None:
     doc = LabelMeDocument(
         shapes=[
             LabelShape(
-                label="e", points=[(320, 240), (360, 240), (320, 260)], shape_type="ellipse"
+                label="e",
+                points=[(320, 240), (360, 240), (320, 260)],
+                shape_type="ellipse",
             )
         ]
     )
@@ -477,11 +500,15 @@ def test_legacy_ellipse_to_act_level() -> None:
 
 
 def test_legacy_ellipse_to_act_roll_tilt() -> None:
-    store = LabelMeStore(mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0))
+    store = LabelMeStore(
+        mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0)
+    )
     doc = LabelMeDocument(
         shapes=[
             LabelShape(
-                label="e", points=[(320, 240), (360, 240), (320, 260)], shape_type="ellipse"
+                label="e",
+                points=[(320, 240), (360, 240), (320, 260)],
+                shape_type="ellipse",
             )
         ]
     )
@@ -499,7 +526,9 @@ def test_legacy_ellipse_rotated_major_axis() -> None:
     rim_u = (cx + 40.0 * np.cos(theta), cy + 40.0 * np.sin(theta))
     rim_v = (cx - 20.0 * np.sin(theta), cy + 20.0 * np.cos(theta))
     doc = LabelMeDocument(
-        shapes=[LabelShape(label="e", points=[(cx, cy), rim_u, rim_v], shape_type="ellipse")]
+        shapes=[
+            LabelShape(label="e", points=[(cx, cy), rim_u, rim_v], shape_type="ellipse")
+        ]
     )
     objs, _ = store.iter_objects(doc)
     act = store.to_act(objs[0][0])
@@ -513,7 +542,9 @@ def test_legacy_ellipse_non_perpendicular_rim_v() -> None:
     doc = LabelMeDocument(
         shapes=[
             LabelShape(
-                label="e", points=[(320, 240), (360, 240), (330, 270)], shape_type="ellipse"
+                label="e",
+                points=[(320, 240), (360, 240), (330, 270)],
+                shape_type="ellipse",
             )
         ]
     )
@@ -525,11 +556,15 @@ def test_legacy_ellipse_non_perpendicular_rim_v() -> None:
 
 
 def test_mixed_document_to_act() -> None:
-    store = LabelMeStore(mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0))
+    store = LabelMeStore(
+        mapper=CalibratedPlaneMapper(_roll_tilt_calibration(), depth=1.0)
+    )
     doc = LabelMeDocument(
         shapes=[
             LabelShape(
-                label="legacy", points=[(320, 240), (360, 240), (320, 260)], shape_type="ellipse"
+                label="legacy",
+                points=[(320, 240), (360, 240), (320, 260)],
+                shape_type="ellipse",
             ),
             LabelShape(
                 label="new",
@@ -539,8 +574,12 @@ def test_mixed_document_to_act() -> None:
                 radius_v=20.0,
                 angle=0.5,
             ),
-            LabelShape(label="rect", points=[(100, 100), (200, 180)], shape_type="rectangle"),
-            LabelShape(label="circ", points=[(400, 300), (450, 300)], shape_type="circle"),
+            LabelShape(
+                label="rect", points=[(100, 100), (200, 180)], shape_type="rectangle"
+            ),
+            LabelShape(
+                label="circ", points=[(400, 300), (450, 300)], shape_type="circle"
+            ),
         ]
     )
     objs, errors = store.iter_objects(doc)

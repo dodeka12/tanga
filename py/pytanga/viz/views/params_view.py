@@ -133,9 +133,7 @@ class ParamsView(View):
         if dataclasses.is_dataclass(source) and not isinstance(source, type):
             self.instance = source
             self._field_types = _resolve_field_types(source)
-            return {
-                f.name: getattr(source, f.name) for f in dataclasses.fields(source)
-            }
+            return {f.name: getattr(source, f.name) for f in dataclasses.fields(source)}
         raise TypeError(
             "ParamsView source must be a dict or a dataclass instance, "
             f"got {type(source).__name__}"
@@ -229,7 +227,12 @@ class ParamsView(View):
             on_change=self._make_group_handler(),
             extra_rows=ui.extra_rows,
         )
-        return GroupView(title=title, children=[nested], collapsed=ui.collapsed)
+        return GroupView(
+            title=title,
+            children=[nested],
+            collapsed=ui.collapsed,
+            tooltip=ui.tooltip or "",
+        )
 
     def _make_group_handler(self) -> ControlHandler:
         """Forward a nested group's change to this view's shared ``on_change``.
@@ -238,6 +241,7 @@ class ParamsView(View):
         parent) view's full state, so one panel handler sees the whole dataclass
         with a dotted ``event.key``.
         """
+
         async def _handler(state: Any, event: ControlEvent) -> None:
             if self.on_change is not None:
                 await self.on_change(self._state(), event)
@@ -286,7 +290,10 @@ class ParamsView(View):
                 label="",
                 value=value,
                 on_change=self._make_handler(
-                    key, field_handler, self._coerce_for(key, ui), getattr(ui, "validate", None)
+                    key,
+                    field_handler,
+                    self._coerce_for(key, ui),
+                    getattr(ui, "validate", None),
                 ),
                 **kwargs,
             )
@@ -555,4 +562,3 @@ class ParamsView(View):
         self.values.pop(key, None)
         if self._push_layout is not None:
             self._push_layout()
-

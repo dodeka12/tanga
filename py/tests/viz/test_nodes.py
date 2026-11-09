@@ -345,7 +345,9 @@ class TestSubtreeInsertion:
     def test_add_subtree_backfills_partial_style(self):  # noqa: ANN201
         s = Scene()
         g = VizGroup("g")
-        c = VizSceneObject("c", Point(0, 0, 0), PointStyle(color="#ff0000"), kind="Point")
+        c = VizSceneObject(
+            "c", Point(0, 0, 0), PointStyle(color="#ff0000"), kind="Point"
+        )
         g.add_child(c)
         s.add_subtree(g)
         style = s.get_node("c").style

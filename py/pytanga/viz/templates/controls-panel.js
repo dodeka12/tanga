@@ -78,6 +78,9 @@ export function applyControlStateToElement(wrapper, state) {
     if (state.selected !== undefined) {
         wrapper.classList.toggle('tanga-control-selected', !!state.selected);
     }
+    if (state.tooltip !== undefined) {
+        applyTooltip(wrapper, state.tooltip);
+    }
     if (state.min !== undefined || state.max !== undefined || state.step !== undefined) {
         const range = wrapper.querySelector('input[type="range"]');
         if (range) {
@@ -154,11 +157,47 @@ export function createIconElement(iconId) {
 
 // ── Shared control helpers ───────────────────────────────────
 
-function _applyTooltip(wrapper, ctrl) {
-    if (ctrl && ctrl.tooltip) wrapper.title = ctrl.tooltip;
-}
-export { _applyTooltip as applyTooltip };
+// ── Tooltips ─────────────────────────────────────────────────
+// Every framework tooltip goes through `applyTooltip`: it records the intended
+// text in `data-tanga-tooltip` and mirrors it to the native `title` attribute.
+// Keeping the text in an attribute lets `setTooltipsEnabled()` mute or restore
+// every tooltip on the page without any per-view bookkeeping.
 
+const TOOLTIP_ATTR = 'data-tanga-tooltip';
+let _tooltipsEnabled = true;
+
+function _syncTooltipTitle(el) {
+    const text = el.getAttribute(TOOLTIP_ATTR);
+    if (text && _tooltipsEnabled) el.title = text;
+    else el.removeAttribute('title');
+}
+
+/**
+ * Set (or clear, for an empty text) an element's native tooltip.
+ *
+ * `source` is either a serialization object with a `tooltip` field or a plain
+ * string.  Pass `''` to clear the tooltip.
+ */
+export function applyTooltip(el, source) {
+    if (!el) return;
+    const text = typeof source === 'string'
+        ? source
+        : ((source && source.tooltip) || '');
+    if (text) el.setAttribute(TOOLTIP_ATTR, text);
+    else el.removeAttribute(TOOLTIP_ATTR);
+    _syncTooltipTitle(el);
+}
+
+/** Enable/disable every framework tooltip on the page (page-level switch). */
+export function setTooltipsEnabled(enabled) {
+    _tooltipsEnabled = !!enabled;
+    document.querySelectorAll(`[${TOOLTIP_ATTR}]`).forEach(_syncTooltipTitle);
+}
+
+/** Whether framework tooltips are currently shown. */
+export function tooltipsEnabled() {
+    return _tooltipsEnabled;
+}
 export function attachDebouncedChange(input, controlId) {
     let debounceTimer = null;
     input.addEventListener('input', () => {

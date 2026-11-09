@@ -67,6 +67,16 @@ in a row by full-size distinct colours), then asserts each enabled layer renders
 its colour at the pane centre.  `SMOKE_ITERS=N` (default `20`) overrides the
 number of full replace cycles — the issue's acceptance suggests `50`.
 
+There is also a **value-edit focus** smoke:
+
+1. `uv run python js/dev/tests/serve-value-edit-smoke.py`
+2. `node js/dev/tests/value-edit-focus-smoke.mjs <printed-url>`
+
+It guards the stepper interaction rules: hovering the field or its label must
+not focus it (a hover-focus would steal the scene's arrow-key/space shortcuts),
+clicking the field or label focuses it, arrow keys only step once focused, and
+the scroll wheel still steps the value on hover.
+
 ## CI
 
 JS tests, esbuild, and Playwright **never run in GitHub Actions**. They are

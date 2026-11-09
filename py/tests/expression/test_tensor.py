@@ -132,4 +132,3 @@ def test_affine_get_tensor_rejects_counting_axes() -> None:
     aff = AffineExpression([partial])
     with pytest.raises(ValueError, match="counting axes"):
         aff.get_tensor()
-

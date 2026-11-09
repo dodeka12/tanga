@@ -260,7 +260,12 @@ def create_paraboloid(basis: "Algebra", paraboloid: "Paraboloid") -> MV:
             [inv_a2, 0.0, 0.0, -vx * inv_a2],
             [0.0, inv_b2, 0.0, -vy * inv_b2],
             [0.0, 0.0, 0.0, -0.5],
-            [-vx * inv_a2, -vy * inv_b2, -0.5, vx * vx * inv_a2 + vy * vy * inv_b2 + vz],
+            [
+                -vx * inv_a2,
+                -vy * inv_b2,
+                -0.5,
+                vx * vx * inv_a2 + vy * vy * inv_b2 + vz,
+            ],
         ]
     )
     return _matrix_to_mv(basis, matrix)

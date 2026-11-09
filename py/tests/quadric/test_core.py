@@ -146,5 +146,3 @@ class TestEmbedding:
             lhs = _embed_point(b, x, y, z).sp(coeff_mv)
             rhs = 0.5 * _quadratic_value(q, (x, y, z))
             assert lhs == pytest.approx(rhs)
-
-

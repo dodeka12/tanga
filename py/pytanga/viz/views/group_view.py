@@ -106,6 +106,16 @@ class GroupView(StackView):
         if self._push_state is not None:
             self._push_state(self.id, {"title": title})
 
+    def set_tooltip(self, tooltip: str) -> None:
+        """Set this group's tooltip and push ``control_state`` (if mounted).
+
+        An empty string clears the tooltip.  Only ``tooltip`` is pushed — the
+        title is left alone (use :meth:`set_title` for that).
+        """
+        self.tooltip = tooltip
+        if self._push_state is not None:
+            self._push_state(self.id, {"tooltip": self.tooltip})
+
     def _serialize(self) -> dict[str, Any]:
         result = super()._serialize()
         result["title"] = self.title
@@ -118,8 +128,7 @@ class GroupView(StackView):
         if self.icon is not None:
             result["icon"] = str(self.icon)
         result["icon_only"] = self.icon_only
-        if self.tooltip:
-            result["tooltip"] = self.tooltip
+        result["tooltip"] = self.tooltip
         if self.parent_id is not None:
             result["parent_id"] = self.parent_id
         return result

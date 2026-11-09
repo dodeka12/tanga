@@ -78,7 +78,11 @@ def _background_image() -> ImageData:
         u, v = _project(xyz)
         for dy in range(-8, 9):
             for dx in range(-8, 9):
-                if dx * dx + dy * dy <= 64 and 0 <= u + dx < WIDTH and 0 <= v + dy < HEIGHT:
+                if (
+                    dx * dx + dy * dy <= 64
+                    and 0 <= u + dx < WIDTH
+                    and 0 <= v + dy < HEIGHT
+                ):
                     img[v + dy, u + dx] = [0, 255, 0]
     return ImageData("camera", data=img)
 

@@ -169,7 +169,9 @@ class Matrix:
         return cls(r)
 
     @classmethod
-    def scale(cls, sx: float, sy: float | None = None, sz: float | None = None) -> "Matrix":
+    def scale(
+        cls, sx: float, sy: float | None = None, sz: float | None = None
+    ) -> "Matrix":
         """Return a 3×3 scale matrix (uniform when only ``sx`` is given)."""
         if sy is None and sz is None:
             sx = sy = sz = float(sx)

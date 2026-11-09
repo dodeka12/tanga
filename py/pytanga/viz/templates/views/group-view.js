@@ -6,7 +6,7 @@ import { Size } from './size.js';
 import { View } from './view.js';
 import { StackView } from './stack-view.js';
 import { stackMainAxis, stackMinSize, stackPreferredSize } from './stack-size.js';
-import { createIconElement, sendControlEvent } from '../controls-panel.js';
+import { applyTooltip, createIconElement, sendControlEvent } from '../controls-panel.js';
 
 // Fallback vertical chrome (border-box px) used when the rendered DOM can't be
 // measured (fake DOM in tests, or before the first layout).  Derived from
@@ -103,7 +103,7 @@ export class GroupView extends StackView {
 
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'tanga-group-toggle';
-        toggleBtn.title = 'Collapse / Expand';
+        applyTooltip(toggleBtn, 'Collapse / Expand');
         this._toggleBtn = toggleBtn;
         this._updateFoldIcon();
 
@@ -147,7 +147,7 @@ export class GroupView extends StackView {
             span.textContent = this.title || 'Controls';
             wrap.appendChild(span);
         }
-        wrap.title = this.tooltip || '';
+        applyTooltip(wrap, this.tooltip);
     }
 
     update(node) {
@@ -199,6 +199,11 @@ export class GroupView extends StackView {
     setTitle(title) {
         this.title = title;
         this._renderTitle();
+    }
+
+    setTooltip(tooltip) {
+        this.tooltip = tooltip || '';
+        applyTooltip(this._titleWrap, this.tooltip);
     }
 
     // Collapse/expand.  When collapsed the pane is reduced to its title bar, so

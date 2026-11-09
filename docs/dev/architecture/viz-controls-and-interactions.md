@@ -595,6 +595,40 @@ existing `control:group_toggle` route: the frontend click handler sends
 `on_toggle` (`(id, "toggle")`), registered by `LayoutHost.register` when
 `GroupView.on_toggle` is set.
 
+## Tooltips (`applyTooltip` + `ui_options`)
+
+Tooltip text is a single string on the model (`Control.tooltip`,
+`GroupView.tooltip`, `MenuView.tooltip`), serialized only when non-empty.  The
+browser keeps it in one place: `applyTooltip(el, text)` in
+`templates/controls-panel.js` writes `el.dataset.tangaTooltip` and mirrors it to
+`el.title`.  Every view factory (controls, group title bars, menu triggers,
+toolbar/fit affordances) calls that helper instead of setting `title` itself, so
+there is exactly one code path and no per-view bookkeeping.
+
+Runtime updates reuse the existing seams:
+
+- `ControlView.set_tooltip(text)` / `GroupView.set_tooltip(text)` mutate the
+  model and push `{type: "control_state", id, tooltip}`
+  (`LayoutHost._push_control_state`); `Visualizer.set_control_tooltip(cid, text)`
+  resolves the control (layouts **and** dialogs, no-op when unknown) and pushes
+  the same message.  `applyControlState` → `applyTooltip` on the frontend; an
+  empty string clears it.  No `view_layout` re-push.
+- Icon-only buttons derive `aria-label` from the tooltip (falling back to the
+  label), and the hover fallback is switch-aware — see
+  `controls/button.js`.
+- `MenuView(tooltip=…)` is static: menus are rebuilt on re-push, so updating a
+  menu tooltip means re-pushing the layout.
+
+The page-wide switch is **client-side by design**: the text never changes when
+tooltips are disabled, only whether it is visible.  `UIOptionsHost` holds
+`tooltips_enabled` and pushes `{type: "ui_options", tooltips_enabled}`;
+`setTooltipsEnabled(bool)` walks every element carrying `data-tanga-tooltip` and
+syncs its `title` attribute (set vs. remove).  The server therefore stores one
+boolean per server, and — because `_push_full_state` sends `ui_options` right
+after `clear_all` — a reconnecting browser can never show stale tooltips.
+Because the flag is applied by syncing `title`, tooltips set by the app directly
+on its own DOM are unaffected.
+
 ## Keyboard shortcuts (per-scene, per-pane focus)
 
 Scene-level keyboard shortcuts use the same `(id, event)` registry and the

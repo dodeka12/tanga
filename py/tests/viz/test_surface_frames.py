@@ -92,7 +92,9 @@ def test_set_surface_uniform_mutates_node_style() -> None:
             "vec3 surfaceColor(vec3 b, vec3 n, vec3 p){ return b; }",
             uniforms={"u_twirl": 2.0},
         ),
-        textures=[SurfaceTexture(image=ImageData("t0", data=_rgb_uint8()), uniform="uTexture")],
+        textures=[
+            SurfaceTexture(image=ImageData("t0", data=_rgb_uint8()), uniform="uTexture")
+        ],
     )
     eid = scene.add_viz(Sphere(Point(0.0, 0.0, 0.0), 1.0), surface=material)
 
@@ -110,7 +112,9 @@ def test_set_surface_uniform_flushes_as_surface_uniforms_patch() -> None:
             "vec3 surfaceColor(vec3 b, vec3 n, vec3 p){ return b; }",
             uniforms={"u_twirl": 2.0},
         ),
-        textures=[SurfaceTexture(image=ImageData("t0", data=_rgb_uint8()), uniform="uTexture")],
+        textures=[
+            SurfaceTexture(image=ImageData("t0", data=_rgb_uint8()), uniform="uTexture")
+        ],
     )
     eid = scene.add_viz(Sphere(Point(0.0, 0.0, 0.0), 1.0), surface=material)
     scene.flush()  # consume the initial "full" patch

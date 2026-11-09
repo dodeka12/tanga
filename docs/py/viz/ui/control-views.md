@@ -29,7 +29,7 @@ applies the `"menu"` variant to its control children automatically
 variant to its eligible control children, so you usually don't pass `variant=`
 by hand.
 
-### Shared state (`enabled`, `visible`)
+### Shared state (`enabled`, `visible`, `tooltip`)
 
 Every control carries `enabled` and `visible` flags (default `True`).  A disabled
 control is greyed out and non-interactive; a hidden control is removed from view
@@ -37,6 +37,14 @@ but stays in the layout.  Toggle them at runtime via the view (`disable()` /
 `enable()` / `hide()` / `show()`, or `set_enabled()` / `set_visible()`) or via
 `viz.set_control_enabled(id, …)` / `viz.set_control_visible(id, …)` — see
 [Controls](controls.md#enable-disable-hide-a-control).
+
+Every view also carries a `tooltip` string, set at construction with
+`tooltip=` and updated at runtime via `set_tooltip(text)` (an empty string
+clears it).  Like `set_enabled` / `set_visible` it pushes a single
+`control_state` message instead of re-pushing the layout.  `GroupView` has the
+same method for its title bar, `MenuView` takes `tooltip=` for its trigger, and
+`Visualizer.set_control_tooltip(id, text)` does it by control id — see
+[Controls](controls.md#tooltips).
 
 ## Layout containers
 
@@ -416,8 +424,9 @@ CheckboxView(
 
 ### ValueEditView
 
-A numeric stepper (up/down buttons; arrow keys and the scroll wheel also
-step). `_node_type` is `"value_edit_view"`.
+A numeric stepper (up/down buttons; arrow keys once clicked into the field, and
+the scroll wheel, also step; hovering the control does not focus it).
+`_node_type` is `"value_edit_view"`.
 
 ```python
 ValueEditView(

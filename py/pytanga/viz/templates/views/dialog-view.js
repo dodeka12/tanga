@@ -6,7 +6,7 @@
 import { View } from './view.js';
 import { buildViewTree } from './build.js';
 import { sendEvent } from '../events.js';
-import { forgetControl } from '../controls-panel.js';
+import { applyTooltip, forgetControl } from '../controls-panel.js';
 import { unregisterFileBrowser } from '../file-browser.js';
 
 export class DialogView extends View {
@@ -81,7 +81,7 @@ export class DialogView extends View {
         if (this.dismissable) {
             const close = document.createElement('button');
             close.textContent = '✕';
-            close.title = 'Dismiss';
+            applyTooltip(close, 'Dismiss');
             close.className = 'tanga-dialog-close';
             close.addEventListener('click', () => this._dismiss(true));
             this.el.appendChild(close);
@@ -96,7 +96,7 @@ export class DialogView extends View {
     _setupResize() {
         this._resizeHandle = document.createElement('div');
         this._resizeHandle.className = 'tanga-dialog-resize';
-        this._resizeHandle.title = 'Resize';
+        applyTooltip(this._resizeHandle, 'Resize');
         this._resizeHandle.addEventListener('pointerdown', (e) => this._startResize(e));
         this.el.appendChild(this._resizeHandle);
     }

@@ -33,7 +33,9 @@ def main() -> None:
     viz = Visualizer(title="Tanga — Shader error reporting")
 
     async def _on_shader_error(record: Any, _event: Any) -> None:
-        error = record.data.get("error", record.message) if record.data else record.message
+        error = (
+            record.data.get("error", record.message) if record.data else record.message
+        )
         viz.show_banner(
             f"**Shader compile failed**\n\n```\n{error}\n```",
             title="Shader error",

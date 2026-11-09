@@ -74,7 +74,9 @@ def test_nice_linear_ticks_parity():  # noqa: ANN201
     )
     _assert_ticks(
         out["linearZeroCross"],
-        nice_linear_ticks(-0.05, 0.05, max_ticks=11, fmt=".4g", intervals=[0.01, 0.02, 0.05]),
+        nice_linear_ticks(
+            -0.05, 0.05, max_ticks=11, fmt=".4g", intervals=[0.01, 0.02, 0.05]
+        ),
     )
 
 

@@ -24,7 +24,13 @@ def test_background_image_serialize():  # noqa: ANN201
     assert meta["images"][0]["id"] == "bg"
     assert meta["images"][0]["enabled"] == 1
     assert meta["max_layers"] == 8
-    del meta["version"], meta["shader"], meta["uniforms"], meta["images"], meta["max_layers"]
+    del (
+        meta["version"],
+        meta["shader"],
+        meta["uniforms"],
+        meta["images"],
+        meta["max_layers"],
+    )
     assert meta == {
         "id": "bg",
         "width": 12,
@@ -196,7 +202,9 @@ def test_set_layout_new_instance_resends():  # noqa: ANN201
         SceneView(
             "main",
             camera_view=CameraView(
-                background_image=ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8))
+                background_image=ImageData(
+                    "bg", data=np.zeros((8, 12, 3), dtype=np.uint8)
+                )
             ),
         )
     )
@@ -205,7 +213,9 @@ def test_set_layout_new_instance_resends():  # noqa: ANN201
         SceneView(
             "main",
             camera_view=CameraView(
-                background_image=ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8))
+                background_image=ImageData(
+                    "bg", data=np.zeros((8, 12, 3), dtype=np.uint8)
+                )
             ),
         )
     )
@@ -279,7 +289,9 @@ def test_set_background_image_preserves_shader_and_uniforms():  # noqa: ANN201
     fake = _FakeTransport()
     viz._layout._transport = fake  # type: ignore[attr-defined]
     view = SceneView("main")
-    viz.set_background_image(view, ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8)))
+    viz.set_background_image(
+        view, ImageData("bg", data=np.zeros((8, 12, 3), dtype=np.uint8))
+    )
     viz.register_background_shader(view, "frag")
     viz.set_background_uniform(view, "u_contrast", 1.5)
 
@@ -381,9 +393,7 @@ def test_bound_set_layer_pushes_only_changed_frame():  # noqa: ANN201
     assert len(fake.binary_frames) == 1
     assert decode_image_frame(fake.binary_frames[0])["id"] == "img3"
 
-    img_msgs = [
-        m for m in fake.json_messages if m["type"] == "view_background_image"
-    ]
+    img_msgs = [m for m in fake.json_messages if m["type"] == "view_background_image"]
     assert len(img_msgs) == 1
     assert img_msgs[0]["view_id"] == view.id
     assert img_msgs[0]["image"]["images"][0]["id"] == "img1"
@@ -406,9 +416,7 @@ def test_bound_remove_layer_updates_meta_and_prunes_cache():  # noqa: ANN201
 
     bg.remove_layer(1)
 
-    img_msgs = [
-        m for m in fake.json_messages if m["type"] == "view_background_image"
-    ]
+    img_msgs = [m for m in fake.json_messages if m["type"] == "view_background_image"]
     assert len(img_msgs) == 1
     meta = img_msgs[0]["image"]
     assert meta["images"][1] is None
@@ -444,6 +452,7 @@ def test_unbound_mutators_emit_nothing():  # noqa: ANN201
     bg.set_uniform("u_brightness", 0.2)
     bg.remove_layer(1)
     assert bg.uniforms["u_layer1_enabled"] == 0
+
 
 def test_bound_set_image_registers_tiled_pyramid():  # noqa: ANN201
     from pytanga.viz import ImageView, Visualizer
@@ -534,4 +543,3 @@ def test_bound_set_image_refreshes_layout_and_prunes_frame():  # noqa: ANN201
     meta = serialized["root"]["camera_view"]["background_image"]
     assert meta["source"] == "tiled"
     assert meta["tile_version"] == 1
-
