@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.25.1 (2.26.0-rc1)] — 2026-11-10
+- Exported animations no longer rebuild unchanged entities (source-object identity skip) · frame application serialized through a frame pump · `PointPath`/`Axis`/`Axes2D`/`Axes3D`/`Grid` update in place · self-checking export example
+→ [Details](2026/11/10_57fe1dc51.md)
+
 ## [Since 2.25.1] — 2026-11-09
 - macOS wheels build on `macos-15` again (macOS 14 runners were retired) · wheel tag pinned through `MACOSX_DEPLOYMENT_TARGET=14.0` · debug build workflow and installation docs updated
 → [Details](2026/11/09_7bd13e117.md)

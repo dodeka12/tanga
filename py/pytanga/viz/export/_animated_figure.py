@@ -37,6 +37,7 @@ from pytanga.viz.export._bootstrap import (
     js_coordinate_overlay_setup,
     js_expand_frames,
     js_footer,
+    js_frame_pump,
     js_tanga_destructure,
     js_reconcile_frame,
     js_resize_handler,
@@ -369,6 +370,8 @@ def _build_animated_figure_adapter(
             camera_size_h_expr=dim_h,
         ),
         "",
+        js_frame_pump(),
+        "",
         js_coordinate_overlay_setup(
             objects_expr="(frames[0] || [])",
             container_expr="figContainer",
@@ -510,6 +513,8 @@ def _build_animated_fullpage_adapter(
             camera_size_w_expr="window.innerWidth",
             camera_size_h_expr="window.innerHeight",
         ),
+        "",
+        js_frame_pump(),
         "",
         js_coordinate_overlay_setup(
             objects_expr="(frames[0] || [])",

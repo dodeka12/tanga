@@ -322,11 +322,12 @@ export function contentChanged(ent, prev, keys) {
 }
 
 /**
- * Apply the common, non-structural style fields (opacity, color, scale) to a
- * mesh and its children.  Used by the shared update dispatcher and by
- * per-entity updaters so the mutations are defined in one place.
+ * Apply only the opacity / fill-opacity style fields to a mesh and its
+ * children.  Safe for meshes whose colour comes from vertex attributes: a
+ * `LineMaterial` colour would multiply the vertex colours, so the colour block
+ * must not run there.  Opacity is colour-agnostic and always safe.
  */
-export function applyStyleUpdate(mesh, ent) {
+export function applyOpacityUpdate(mesh, ent) {
     const opacity = styleParam(ent, 'opacity', undefined);
     const fillOpacity = styleParam(ent, 'fill_opacity', undefined);
     if (opacity !== undefined || fillOpacity !== undefined) {
@@ -361,6 +362,15 @@ export function applyStyleUpdate(mesh, ent) {
             }
         });
     }
+}
+
+/**
+ * Apply the common, non-structural style fields (opacity, color, scale) to a
+ * mesh and its children.  Used by the shared update dispatcher and by
+ * per-entity updaters so the mutations are defined in one place.
+ */
+export function applyStyleUpdate(mesh, ent) {
+    applyOpacityUpdate(mesh, ent);
 
     const color = styleParam(ent, 'color', null);
     if (color) {
@@ -378,6 +388,40 @@ export function applyStyleUpdate(mesh, ent) {
 }
 
 /**
+ * Empty a group for an in-place refill, leaving the group object (and
+ * therefore its ``userData``, parents, transforms and registry entry) intact.
+ *
+ * Detaches nested CSS2D label DOM first — ``Object3D.remove()`` only
+ * dispatches ``removed`` on the object itself, not its CSS2D descendants, so
+ * without this the labels would linger as ghosts.  ``disposeMaterials: false``
+ * is for callers that keep a shared material across the refill (a grid uses
+ * one material for every segment line).
+ *
+ * @param {THREE.Group} group
+ * @param {{ disposeMaterials?: boolean }} [opts]
+ */
+export function clearGroupChildren(group, { disposeMaterials = true } = {}) {
+    for (const child of [...group.children]) {
+        child.traverse((c) => {
+            if (c.isCSS2DObject && c.element && c.element.parentNode) {
+                c.element.parentNode.removeChild(c.element);
+            }
+        });
+        group.remove(child);
+        child.traverse((c) => {
+            if (c.geometry) c.geometry.dispose();
+            if (c.material && disposeMaterials) {
+                if (Array.isArray(c.material)) {
+                    c.material.forEach((m) => m.dispose());
+                } else {
+                    c.material.dispose();
+                }
+            }
+        });
+    }
+}
+
+/**
  * Return true when an entity whose geometry derives directly from its fields
  * must be rebuilt rather than updated in place.
  *
@@ -385,7 +429,6 @@ export function applyStyleUpdate(mesh, ent) {
  * a brand-new entity; callers invoking this on an in-place path always have it).
  */
 export function entityRequiresRebuild(ent, prev) {
-    if (ent.kind === 'PointPath') return true;
     // SDF proxies: only structural changes (tree/sdfKind) rebuild the shader;
     // member-transform changes (an SdfGroup) and style-only changes are applied
     // in place by updateSdfProxy (which also resizes the proxy box).
@@ -395,11 +438,9 @@ export function entityRequiresRebuild(ent, prev) {
         if (JSON.stringify(ent.tree) !== JSON.stringify(prev.tree)) return true;
         return false;
     }
-    // Axes/grids are drawn fresh (axis line + CSS2D value labels; many grid
-    // segments) and their geometry derives from many fields, so rebuild whenever
-    // their content changes — e.g. a live time axis whose ticks move each frame.
-    if (ent.kind === 'Axis' || ent.kind === 'Axes2D' || ent.kind === 'Axes3D') return true;
-    if (ent.kind === 'Grid') return true;
+    // Axis / Axes2D / Axes3D / Grid own their in-place decision in their
+    // co-located updaters (updateAxis / updateAxes2D / updateAxes3D /
+    // updateGrid); they no longer short-circuit to a rebuild here.
     if (ent.radius !== undefined && (!prev || !approxEqual(ent.radius, prev.radius))) return true;
     if (ent.alignCenter !== undefined && (!prev || !approxEqual(ent.alignCenter, prev.alignCenter))) return true;
     if (ent.extent !== undefined && (!prev || !approxEqual(ent.extent, prev.extent))) return true;

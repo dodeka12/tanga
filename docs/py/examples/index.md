@@ -50,7 +50,7 @@ uv run python py/examples/<path>.py
 
 - **animate_to** — [Keyframe timeline with fade-in and move](viz/animation/timeline.md)
 
-- **animated** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md), [Export an animated noise image stream](viz/export/animated_image_stream.md)
+- **animated** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export animated HTML and verify it uses in-place frame updates](viz/export/animated_inplace_update_check.md)
 
 - **animation** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md), [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md), [Moving point with a color-gradient trail](viz/animation/point_path_trail.md), [Keyframe timeline with fade-in and move](viz/animation/timeline.md), [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md), [Animation](viz/jupyter/animation.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [SDF object groups with per-member CSG + independent animation](viz/sdf/group.md), [Animate a directional light around a sphere](viz/sdf/light_animation.md)
 
@@ -318,7 +318,7 @@ uv run python py/examples/<path>.py
 
 - **explicit** — [Auto-fit, explicit, and partial camera modes](viz/camera/modes.md)
 
-- **export** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md), [Export](viz/jupyter/export.md)
+- **export** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md), [Export an animated noise image stream](viz/export/animated_image_stream.md), [Export animated HTML and verify it uses in-place frame updates](viz/export/animated_inplace_update_check.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Presentation figure export with FigureStyle](viz/export/figure.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md), [Programmatic PNG screenshot at custom resolution](viz/export/screenshot.md), [Export](viz/jupyter/export.md)
 
 - **expression** — [Expressions, variables, and DataArray bindings](expression_dataarray.md)
 
@@ -359,6 +359,8 @@ uv run python py/examples/<path>.py
 - **fold** — [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md)
 
 - **fr** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
+
+- **frame skip** — [Export animated HTML and verify it uses in-place frame updates](viz/export/animated_inplace_update_check.md)
 
 - **frame streaming** — [Frame-by-frame animation at ~60 FPS](viz/animation/orbit.md)
 
@@ -402,7 +404,7 @@ uv run python py/examples/<path>.py
 
 - **grazing angle** — [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md)
 
-- **Grid** — [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
+- **Grid** — [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md), [Export animated HTML and verify it uses in-place frame updates](viz/export/animated_inplace_update_check.md), [Custom axes and grid as explicit scene objects](viz/plotting/axes_custom.md)
 
 - **grid** — [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md)
 
@@ -428,7 +430,7 @@ uv run python py/examples/<path>.py
 
 - **homogeneous** — [Projective 3D geometry: Points, Directions, Lines, Planes](ga/geometry/p3_entities.md), [Least-squares homogeneous line fitting in P2](ga/numerics/solver_line_fitting_p2.md)
 
-- **HTML** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Export](viz/jupyter/export.md)
+- **HTML** — [Animated HTML export with JS playback engine](viz/export/animated.md), [2D animated HTML export with a moving camera](viz/export/animated_camera_2d.md), [3D animated HTML export with a moving camera](viz/export/animated_camera_3d.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md), [Export animated HTML and verify it uses in-place frame updates](viz/export/animated_inplace_update_check.md), [Compare the three HTML delivery modes](viz/export/export_delivery.md), [Self-contained HTML and glTF export](viz/export/html_export.md), [Export](viz/jupyter/export.md)
 
 - **html** — [Export a programmatic image as HTML with JPEG compression](viz/export/image_export.md)
 
@@ -451,6 +453,8 @@ uv run python py/examples/<path>.py
 - **ImageData.update** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md)
 
 - **ImageView** — [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
+
+- **in-place update** — [Export animated HTML and verify it uses in-place frame updates](viz/export/animated_inplace_update_check.md)
 
 - **indeterminate** — [Determinate and indeterminate progress bars with a status line](viz/ui/controls/progress_bar.md)
 
@@ -700,7 +704,7 @@ uv run python py/examples/<path>.py
 
 - **point-line matching** — [Recover a rotor from 3D point ↔ projection-ray matches](ga/numerics/solver_point_line_p3.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md)
 
-- **PointPath** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md)
+- **PointPath** — [Moving point with a color-gradient trail](viz/animation/point_path_trail.md), [Animated export with transform and content changes](viz/export/animated_circle_transform.md), [Export animated HTML and verify it uses in-place frame updates](viz/export/animated_inplace_update_check.md)
 
 - **points** — [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 

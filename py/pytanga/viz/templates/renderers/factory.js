@@ -41,10 +41,10 @@ import { createReflectionLine } from './operators/reflection_line.js';
 import { createReflectionPlane } from './operators/reflection_plane.js';
 import { createReflectionPoint } from './operators/reflection_point.js';
 import { createPointPath, updatePointPath } from './point_path.js';
-import { createAxis } from './axis.js';
-import { createAxes2D } from './axes2d.js';
-import { createAxes3D } from './axes3d.js';
-import { createGrid } from './grid.js';
+import { createAxis, updateAxis } from './axis.js';
+import { createAxes2D, updateAxes2D } from './axes2d.js';
+import { createAxes3D, updateAxes3D } from './axes3d.js';
+import { createGrid, updateGrid } from './grid.js';
 import { createVizGroup } from './group.js';
 import { createSdfProxy, updateSdfProxy } from './sdf.js';
 import { createRayProxy, updateRayProxy } from './ray.js';
@@ -258,6 +258,14 @@ export function updateEntityMesh(mesh, ent, prev) {
             return updateLine(mesh, ent, prev);
         case 'PointPath':
             return updatePointPath(mesh, ent, prev);
+        case 'Axis':
+            return updateAxis(mesh, ent, prev);
+        case 'Axes2D':
+            return updateAxes2D(mesh, ent, prev);
+        case 'Axes3D':
+            return updateAxes3D(mesh, ent, prev);
+        case 'Grid':
+            return updateGrid(mesh, ent, prev);
         case 'Direction':
             return updateDirection(mesh, ent, prev);
         case 'Arc':

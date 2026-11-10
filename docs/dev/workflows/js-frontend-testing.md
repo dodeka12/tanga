@@ -42,6 +42,14 @@ node js/dev/tests/reconcile-smoke.mjs <url>      # terminal 2 (system Chrome)
 The smoke uses Playwright's bundled Chromium (headless, SwiftShader flags for
 software WebGL) — the same browser on Linux and Windows.
 
+For animated-export changes, also run the animated-export smoke (it serves an
+exported animated HTML and asserts unchanged entities are not rebuilt):
+
+```bash
+uv run python js/dev/tests/serve-anim-export-smoke.py   # terminal 1 (exported HTML)
+node js/dev/tests/anim-export-smoke.mjs <url>           # terminal 2 (Playwright)
+```
+
 ## GitHub Actions
 
 JS tests, esbuild, and Playwright **do not run in GitHub Actions** (CI is

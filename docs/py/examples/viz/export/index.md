@@ -7,6 +7,7 @@
 | [Animated Camera 3D](animated_camera_3d.md) | export, HTML, animated, camera, 3D | 3D animated HTML export with a moving camera |
 | [Animated Circle Transform](animated_circle_transform.md) | export, HTML, animated, transform, Circle, PointPath | Animated export with transform and content changes |
 | [Animated Image Stream](animated_image_stream.md) | export, animated, image, noise, stream, jpeg, AnimationRecording | Export an animated noise image stream |
+| [Animated Inplace Update Check](animated_inplace_update_check.md) | export, HTML, animated, in-place update, frame skip, PointPath, Grid | Export animated HTML and verify it uses in-place frame updates |
 | [Export Delivery](export_delivery.md) | export, HTML, delivery, cdn, inline, offline | Compare the three HTML delivery modes |
 | [Figure](figure.md) | export, figure, FigureStyle, presentation | Presentation figure export with FigureStyle |
 | [Html Export](html_export.md) | export, HTML, glTF, snapshot | Self-contained HTML and glTF export |
@@ -15,4 +16,4 @@
 
 ## Keywords
 
-2D · 3D · AnimationRecording · Circle · FigureStyle · HTML · ImageCanvas · ImageData · PNG · PointPath · animated · camera · cdn · delivery · export · figure · glTF · html · image · inline · jpeg · noise · offline · playback · presentation · screenshot · snapshot · stream · transform
+2D · 3D · AnimationRecording · Circle · FigureStyle · Grid · HTML · ImageCanvas · ImageData · PNG · PointPath · animated · camera · cdn · delivery · export · figure · frame skip · glTF · html · image · in-place update · inline · jpeg · noise · offline · playback · presentation · screenshot · snapshot · stream · transform

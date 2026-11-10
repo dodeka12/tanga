@@ -3,7 +3,15 @@
 
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { makeFatLine, parseColor, styleParam } from './utils.js';
+import {
+    applyStyleUpdate,
+    clearGroupChildren,
+    contentChanged,
+    makeFatLine,
+    parseColor,
+    styleParam,
+} from './utils.js';
+import { styleNeedsRebuild } from './style-diff.js';
 
 /**
  * Parse a Python-style float format specifier (e.g. ".2f") into a number of
@@ -197,4 +205,27 @@ export function createAxis(ent) {
     const group = new THREE.Group();
     addAxis(group, ent);
     return group;
+}
+
+/**
+ * Update a standalone Axis in place.
+ *
+ * Refilling keeps the group (and its parent/transform/registry entry) intact,
+ * so only the axis' own lines and labels are recreated — and a pure
+ * ``color``/``opacity`` change recreates nothing at all.  A change to a
+ * create-time label style (``value_style`` / ``label_style`` fonts, offsets,
+ * alignment) is not applied in place and returns ``false`` to rebuild.
+ */
+export function updateAxis(mesh, ent, prev) {
+    if (!prev) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
+    if (contentChanged(ent, prev, [
+        'start', 'end', 'majorInterval', 'ticks', 'showValueLabels',
+        'valueFormat', 'valueStart', 'valueStep', 'label', 'showTicks',
+    ])) {
+        clearGroupChildren(mesh);
+        addAxis(mesh, ent);
+    }
+    applyStyleUpdate(mesh, ent);
+    return true;
 }

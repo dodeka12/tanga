@@ -369,6 +369,9 @@
             "Animated Image Stream": "py/examples/viz/export/animated_image_stream.md"
           },
           {
+            "Animated Inplace Update Check": "py/examples/viz/export/animated_inplace_update_check.md"
+          },
+          {
             "Export Delivery": "py/examples/viz/export/export_delivery.md"
           },
           {

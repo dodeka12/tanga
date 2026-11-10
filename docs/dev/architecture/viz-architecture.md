@@ -171,11 +171,18 @@ re-serialization.
 3. Serialize it in the node layer (`VizSceneObject`/`SceneObject` in
    `scene.py` / `_nodes.py`).
 4. Add a frontend renderer + a test (round-trip + flush).
-5. Export an `update<Kind>(mesh, ent, prev)` from the renderer module (return
-   `false` to rebuild) for kinds whose geometry derives from content fields, so
-   a live content change re-samples/re-builds the mesh instead of falling
-   through to the flat `entityRequiresRebuild` field list.  Wire it into
-   `factory.js::updateEntityMesh`.
+5. Export an `update<Kind>(mesh, ent, prev)` from the renderer module for kinds
+   whose geometry derives from content fields, so a live content change updates
+   the mesh instead of falling through to the flat `entityRequiresRebuild`
+   field list.  An updater may restyle in place **or** rewrite geometry in
+   place (rewrite `setPositions`/`setColors`, or refill an internal group such
+   as an axis or grid) and return `true`; `return false` means the
+   representation changed or a rebuild is genuinely cheaper, and
+   `styleNeedsRebuild(ent, prev)` is the style gate.  An updater that returns
+   `true` must leave the mesh fully consistent with `ent` (the caller then
+   records `_data`/`_src` and re-applies the transform).  Wire it into
+   `factory.js::updateEntityMesh`; `PointPath`, `Axis`, `Axes2D`, `Axes3D` and
+   `Grid` are the current examples that own their decision this way.
 
 ### New control (`*View`)
 
@@ -342,9 +349,23 @@ reading `window.__TANGA_ANIMATION__`.
 or were removed (whole-entity diffs).  The animated bootstrap expands them back
 to full `frames[]` at load via `_expandFrames`
 (`py/pytanga/viz/export/_bootstrap/_animation.py`) before the id-based
-`_reconcileFrame` plays them, so unchanged entities are stored once and playback/
-scrubbing are unchanged.  `to_dict()` still emits the full `frames` list for
-legacy consumers.
+`_reconcileFrame` plays them, so unchanged entities are stored once.
+`to_dict()` still emits the full `frames` list for legacy consumers.
+
+The expander keeps a `state` Map and reuses the **same object instance** for
+every entity that did not change in a frame, so `_reconcileFrame` can skip work
+with an identity comparison: it stores the last applied source object on
+`mesh.userData._src` (and `entry.obj.userData._src` for overlays) and, on a
+match, re-asserts `visible` and moves on — no style pass, no transform
+re-apply, no dispose/recreate.  The hide loop only flips `visible` (never
+disposes), so a hidden-then-returning entity is compared against the object it
+was built from.  Frame application is serialized by the pure
+`frame-pump.js` module (`createFramePump(apply, onError)` →
+`request(n)` / `busy` / `idle()`): one apply in flight, the newest target wins,
+and `_figAnimate` is a synchronous loop that only *requests* frames, so
+playback and scrubbing can no longer interleave two reconciliations.  A legacy
+recording embedded as full `frames[]` carries no object identity and therefore
+keeps the old whole-scene-per-frame behaviour.
 
 `ImageView` supports up to `max_layers` image layers (**default 8** — the WebGL 1
 fragment-texture-unit floor; serialized as `max_layers` so the frontend can later
