@@ -365,11 +365,12 @@ function contentChanged(ent, prev, keys) {
 }
 
 /**
- * Apply the common, non-structural style fields (opacity, color, scale) to a
- * mesh and its children.  Used by the shared update dispatcher and by
- * per-entity updaters so the mutations are defined in one place.
+ * Apply only the opacity / fill-opacity style fields to a mesh and its
+ * children.  Safe for meshes whose colour comes from vertex attributes: a
+ * `LineMaterial` colour would multiply the vertex colours, so the colour block
+ * must not run there.  Opacity is colour-agnostic and always safe.
  */
-function applyStyleUpdate(mesh, ent) {
+function applyOpacityUpdate(mesh, ent) {
     const opacity = styleParam(ent, 'opacity', undefined);
     const fillOpacity = styleParam(ent, 'fill_opacity', undefined);
     if (opacity !== undefined || fillOpacity !== undefined) {
@@ -404,6 +405,15 @@ function applyStyleUpdate(mesh, ent) {
             }
         });
     }
+}
+
+/**
+ * Apply the common, non-structural style fields (opacity, color, scale) to a
+ * mesh and its children.  Used by the shared update dispatcher and by
+ * per-entity updaters so the mutations are defined in one place.
+ */
+function applyStyleUpdate(mesh, ent) {
+    applyOpacityUpdate(mesh, ent);
 
     const color = styleParam(ent, 'color', null);
     if (color) {
@@ -421,6 +431,40 @@ function applyStyleUpdate(mesh, ent) {
 }
 
 /**
+ * Empty a group for an in-place refill, leaving the group object (and
+ * therefore its ``userData``, parents, transforms and registry entry) intact.
+ *
+ * Detaches nested CSS2D label DOM first — ``Object3D.remove()`` only
+ * dispatches ``removed`` on the object itself, not its CSS2D descendants, so
+ * without this the labels would linger as ghosts.  ``disposeMaterials: false``
+ * is for callers that keep a shared material across the refill (a grid uses
+ * one material for every segment line).
+ *
+ * @param {THREE.Group} group
+ * @param {{ disposeMaterials?: boolean }} [opts]
+ */
+function clearGroupChildren(group, { disposeMaterials = true } = {}) {
+    for (const child of [...group.children]) {
+        child.traverse((c) => {
+            if (c.isCSS2DObject && c.element && c.element.parentNode) {
+                c.element.parentNode.removeChild(c.element);
+            }
+        });
+        group.remove(child);
+        child.traverse((c) => {
+            if (c.geometry) c.geometry.dispose();
+            if (c.material && disposeMaterials) {
+                if (Array.isArray(c.material)) {
+                    c.material.forEach((m) => m.dispose());
+                } else {
+                    c.material.dispose();
+                }
+            }
+        });
+    }
+}
+
+/**
  * Return true when an entity whose geometry derives directly from its fields
  * must be rebuilt rather than updated in place.
  *
@@ -428,7 +472,6 @@ function applyStyleUpdate(mesh, ent) {
  * a brand-new entity; callers invoking this on an in-place path always have it).
  */
 function entityRequiresRebuild(ent, prev) {
-    if (ent.kind === 'PointPath') return true;
     // SDF proxies: only structural changes (tree/sdfKind) rebuild the shader;
     // member-transform changes (an SdfGroup) and style-only changes are applied
     // in place by updateSdfProxy (which also resizes the proxy box).
@@ -438,11 +481,9 @@ function entityRequiresRebuild(ent, prev) {
         if (JSON.stringify(ent.tree) !== JSON.stringify(prev.tree)) return true;
         return false;
     }
-    // Axes/grids are drawn fresh (axis line + CSS2D value labels; many grid
-    // segments) and their geometry derives from many fields, so rebuild whenever
-    // their content changes — e.g. a live time axis whose ticks move each frame.
-    if (ent.kind === 'Axis' || ent.kind === 'Axes2D' || ent.kind === 'Axes3D') return true;
-    if (ent.kind === 'Grid') return true;
+    // Axis / Axes2D / Axes3D / Grid own their in-place decision in their
+    // co-located updaters (updateAxis / updateAxes2D / updateAxes3D /
+    // updateGrid); they no longer short-circuit to a rebuild here.
     if (ent.radius !== undefined && (!prev || !approxEqual(ent.radius, prev.radius))) return true;
     if (ent.alignCenter !== undefined && (!prev || !approxEqual(ent.alignCenter, prev.alignCenter))) return true;
     if (ent.extent !== undefined && (!prev || !approxEqual(ent.extent, prev.extent))) return true;
@@ -2482,35 +2523,28 @@ function createReflectionPoint(ent) {
 // honored as a screen-space pixel width.
 
 /**
- * Create a fat line for a PointPath entity JSON dict.
- *
- * ent.points: [[x,y,z], ...]
- * ent.colors: ["#ff0000", null, "#00ff00", ...]  — null = use uniform fallback
- * ent.color: "#ffffff"  — uniform fallback color
- * ent.opacity: 1.0
- * ent.line_thickness: 2  — screen-space pixel width
+ * Return true when any entry of ``ent.colors`` is a real colour (non-null).
+ * A path with no real per-point colour is drawn uniform-coloured.
  */
-function createPointPath(ent) {
-    const points = ent.points || [];
-    if (points.length < 2) {
-        // Need at least 2 points for a line segment
-        return new THREE.Group();
-    }
+function hasVertexColors(ent) {
+    return (ent.colors || []).some((c) => c !== null && c !== undefined);
+}
 
-    const perPointColors = ent.colors || [];
-    const uniformColor = parseColor(ent, '#ffffff');
-    const opacity = styleParam(ent, 'opacity', 1.0);
-    const lineWidth = styleParam(ent, 'line_thickness', 2);
-
-    // Determine if we should use per-vertex colors
-    const hasAnyVertexColor = perPointColors.some(
+/**
+ * Flatten an ordered list of points into fat-line segment data.
+ *
+ * Each consecutive pair of points forms one segment, so ``n`` points produce
+ * ``2 * (n - 1)`` vertex positions.  Returns ``{ positions, vertexColors }``
+ * where ``vertexColors`` is null unless ``hasVertexColors`` was true; null
+ * per-point colours fall back to ``uniformColor``.
+ */
+function flattenPath(points, perPointColors, uniformColor) {
+    const hasAnyVertexColor = (perPointColors || []).some(
         (c) => c !== null && c !== undefined
     );
 
-    // Build segment pairs: each consecutive pair of points forms one segment
-    // For n points we have n-1 segments, so 2*(n-1) positions.
     const n = points.length;
-    const numVertices = (n - 1) * 2;
+    const numVertices = Math.max(0, (n - 1) * 2);
     const positions = new Float32Array(numVertices * 3);
     let vertexColors = null;
     if (hasAnyVertexColor) {
@@ -2544,6 +2578,33 @@ function createPointPath(ent) {
         }
     }
 
+    return { positions, vertexColors };
+}
+
+/**
+ * Create a fat line for a PointPath entity JSON dict.
+ *
+ * ent.points: [[x,y,z], ...]
+ * ent.colors: ["#ff0000", null, "#00ff00", ...]  — null = use uniform fallback
+ * ent.color: "#ffffff"  — uniform fallback color
+ * ent.opacity: 1.0
+ * ent.line_thickness: 2  — screen-space pixel width
+ */
+function createPointPath(ent) {
+    const points = ent.points || [];
+    if (points.length < 2) {
+        // Need at least 2 points for a line segment
+        return new THREE.Group();
+    }
+
+    const perPointColors = ent.colors || [];
+    const uniformColor = parseColor(ent, '#ffffff');
+    const opacity = styleParam(ent, 'opacity', 1.0);
+    const lineWidth = styleParam(ent, 'line_thickness', 2);
+
+    const hasAnyVertexColor = hasVertexColors(ent);
+    const { positions, vertexColors } = flattenPath(points, perPointColors, uniformColor);
+
     const line = hasAnyVertexColor
         ? makeFatSegmentsColored(positions, vertexColors, opacity, lineWidth)
         : makeFatSegmentsFromFlat(positions, uniformColor, opacity, lineWidth);
@@ -2551,11 +2612,35 @@ function createPointPath(ent) {
     return line;
 }
 
-function updatePointPath(_mesh, _ent, _prev) {
-    // The fat-line geometry is rebuilt from ``points``/``colors``, so an
-    // in-place update is never correct.  Returning false forces the caller
-    // to dispose and recreate the mesh from the current frame's data.
-    return false;
+function updatePointPath(mesh, ent, prev) {
+    if (!prev) return false;
+    // Coloured ↔ uniform switches the material (vertexColors flag) → recreate.
+    if (hasVertexColors(ent) !== hasVertexColors(prev)) return false;
+    // Non-cheap style fields (line_thickness, …) are create-time inputs.
+    if (styleNeedsRebuild(ent, prev)) return false;
+    const points = ent.points || [];
+    if (points.length < 2) return false; // degenerate → recreate
+    if (!mesh.geometry || typeof mesh.geometry.setPositions !== 'function') return false;
+
+    const colored = hasVertexColors(ent);
+    const { positions, vertexColors } = flattenPath(
+        points,
+        ent.colors || [],
+        parseColor(ent, '#ffffff')
+    );
+    mesh.geometry.setPositions(positions);
+    if (colored && vertexColors) mesh.geometry.setColors(vertexColors);
+    mesh.geometry.computeBoundingBox();
+    mesh.geometry.computeBoundingSphere();
+    if (colored) {
+        // Vertex colours come from the attributes; the colour block would
+        // tint the white base colour, so apply opacity only.
+        applyOpacityUpdate(mesh, ent);
+    } else {
+        applyStyleUpdate(mesh, ent);
+    }
+    if (mesh.material && mesh.material.dashed) mesh.computeLineDistances();
+    return true;
 }
 
 /**
@@ -2766,6 +2851,29 @@ function createAxis(ent) {
     return group;
 }
 
+/**
+ * Update a standalone Axis in place.
+ *
+ * Refilling keeps the group (and its parent/transform/registry entry) intact,
+ * so only the axis' own lines and labels are recreated — and a pure
+ * ``color``/``opacity`` change recreates nothing at all.  A change to a
+ * create-time label style (``value_style`` / ``label_style`` fonts, offsets,
+ * alignment) is not applied in place and returns ``false`` to rebuild.
+ */
+function updateAxis(mesh, ent, prev) {
+    if (!prev) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
+    if (contentChanged(ent, prev, [
+        'start', 'end', 'majorInterval', 'ticks', 'showValueLabels',
+        'valueFormat', 'valueStart', 'valueStep', 'label', 'showTicks',
+    ])) {
+        clearGroupChildren(mesh);
+        addAxis(mesh, ent);
+    }
+    applyStyleUpdate(mesh, ent);
+    return true;
+}
+
 // Axes2D renderer — a group of coordinate axes in a 2D plane.
 // Each axis half is drawn via the shared `addAxis` base so all axes
 // render identically.
@@ -2777,6 +2885,19 @@ function createAxes2D(ent) {
     }
     tagEntity(group, ent);
     return group;
+}
+
+function updateAxes2D(mesh, ent, prev) {
+    if (!prev) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
+    if (contentChanged(ent, prev, ['axes'])) {
+        clearGroupChildren(mesh);
+        for (const axis of ent.axes || []) {
+            addAxis(mesh, axis);
+        }
+    }
+    applyStyleUpdate(mesh, ent);
+    return true;
 }
 
 // Axes3D renderer — a group of coordinate axes in 3D space.
@@ -2792,13 +2913,35 @@ function createAxes3D(ent) {
     return group;
 }
 
+function updateAxes3D(mesh, ent, prev) {
+    if (!prev) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
+    if (contentChanged(ent, prev, ['axes'])) {
+        clearGroupChildren(mesh);
+        for (const axis of ent.axes || []) {
+            addAxis(mesh, axis);
+        }
+    }
+    applyStyleUpdate(mesh, ent);
+    return true;
+}
+
 // Grid renderer — a coordinate grid in a UV plane.
 // Draws lines parallel to dir_u and dir_v across the given ranges.
 // range_u / range_v are [min, max] pairs relative to `origin`.
 
-function createGrid(ent) {
-    const group = new THREE.Group();
+function _gridMaterial(ent) {
+    const color = parseColor(ent, '#555555');
+    const opacity = styleParam(ent, 'opacity', 0.5);
+    const lineWidth = styleParam(ent, 'line_thickness', 1);
+    return makeLineMaterial(color, opacity, lineWidth);
+}
 
+/**
+ * Return the ordered `[a, b]` segment endpoint pairs for a grid, in the order
+ * `createGrid` draws them (lines parallel to dir_u first, then dir_v).
+ */
+function _gridSegments(ent) {
     const origin = new THREE.Vector3(...(ent.origin || [0, 0, 0]));
     const dirU = new THREE.Vector3(...(ent.dir_u || [1, 0, 0])).normalize();
     const dirV = new THREE.Vector3(...(ent.dir_v || [0, 1, 0])).normalize();
@@ -2815,20 +2958,12 @@ function createGrid(ent) {
     const intervalU = Math.abs(ent.interval_u ?? 1.0);
     const intervalV = Math.abs(ent.interval_v ?? 1.0);
 
-    const color = parseColor(ent, '#555555');
-    const opacity = styleParam(ent, 'opacity', 0.5);
-    const lineWidth = styleParam(ent, 'line_thickness', 1);
-    const material = makeLineMaterial(color, opacity, lineWidth);
-
     // Corner of the grid rectangle in UV space.
     const corner = origin.clone()
         .addScaledVector(dirU, minU)
         .addScaledVector(dirV, minV);
 
-    function addLine(a, b) {
-        const line = makeFatLineWithMaterial([a, b], material);
-        group.add(line);
-    }
+    const segments = [];
 
     // Lines parallel to dir_u (positioned along dir_v).
     if (Array.isArray(ent.line_positions_v)) {
@@ -2836,16 +2971,14 @@ function createGrid(ent) {
             const a = origin.clone()
                 .addScaledVector(dirU, minU)
                 .addScaledVector(dirV, vp);
-            const b = a.clone().addScaledVector(dirU, extentU);
-            addLine(a, b);
+            segments.push([a, a.clone().addScaledVector(dirU, extentU)]);
         }
     } else {
         const vSteps = Math.floor(extentV / intervalV);
         for (let i = 0; i <= vSteps; i++) {
             const t = i * intervalV;
             const a = corner.clone().addScaledVector(dirV, t);
-            const b = a.clone().addScaledVector(dirU, extentU);
-            addLine(a, b);
+            segments.push([a, a.clone().addScaledVector(dirU, extentU)]);
         }
     }
 
@@ -2855,21 +2988,61 @@ function createGrid(ent) {
             const a = origin.clone()
                 .addScaledVector(dirU, up)
                 .addScaledVector(dirV, minV);
-            const b = a.clone().addScaledVector(dirV, extentV);
-            addLine(a, b);
+            segments.push([a, a.clone().addScaledVector(dirV, extentV)]);
         }
     } else {
         const uSteps = Math.floor(extentU / intervalU);
         for (let i = 0; i <= uSteps; i++) {
             const t = i * intervalU;
             const a = corner.clone().addScaledVector(dirU, t);
-            const b = a.clone().addScaledVector(dirV, extentV);
-            addLine(a, b);
+            segments.push([a, a.clone().addScaledVector(dirV, extentV)]);
         }
     }
 
+    return segments;
+}
+
+function createGrid(ent) {
+    const group = new THREE.Group();
+    const material = _gridMaterial(ent);
+    for (const [a, b] of _gridSegments(ent)) {
+        group.add(makeFatLineWithMaterial([a, b], material));
+    }
     tagEntity(group, ent);
     return group;
+}
+
+/**
+ * Update a grid in place.
+ *
+ * When the segment count is unchanged, each line's positions are rewritten and
+ * the shared material is reused; otherwise the group is refilled with the
+ * (kept) shared material.  A change to a non-cheap style field (e.g. dash
+ * patterns) is not applied in place and returns ``false`` to rebuild.
+ */
+function updateGrid(mesh, ent, prev) {
+    if (!prev) return false;
+    if (styleNeedsRebuild(ent, prev)) return false;
+    const segs = _gridSegments(ent);
+    const lines = mesh.children.filter(
+        (c) => c.geometry && typeof c.geometry.setPositions === 'function'
+    );
+    if (lines.length === segs.length && lines.length === mesh.children.length) {
+        // Same segment count → rewrite each line's positions, reuse material.
+        for (let i = 0; i < segs.length; i++) {
+            const [a, b] = segs[i];
+            lines[i].geometry.setPositions([a.x, a.y, a.z, b.x, b.y, b.z]);
+            lines[i].geometry.computeBoundingSphere();
+        }
+    } else {
+        const material = lines.length ? lines[0].material : _gridMaterial(ent);
+        clearGroupChildren(mesh, { disposeMaterials: false });
+        for (const [a, b] of segs) {
+            mesh.add(makeFatLineWithMaterial([a, b], material));
+        }
+    }
+    applyStyleUpdate(mesh, ent);
+    return true;
 }
 
 // VizGroup renderer — an empty THREE.Group container (no geometry).
@@ -5231,6 +5404,14 @@ function updateEntityMesh(mesh, ent, prev) {
             return updateLine(mesh, ent, prev);
         case 'PointPath':
             return updatePointPath(mesh, ent, prev);
+        case 'Axis':
+            return updateAxis(mesh, ent, prev);
+        case 'Axes2D':
+            return updateAxes2D(mesh, ent, prev);
+        case 'Axes3D':
+            return updateAxes3D(mesh, ent, prev);
+        case 'Grid':
+            return updateGrid(mesh, ent, prev);
         case 'Direction':
             return updateDirection(mesh, ent, prev);
         case 'Arc':
@@ -7048,6 +7229,83 @@ function decodeImageFrame(buffer) {
     };
 }
 
+// Tanga — frame pump. Serializes frame application for the animated export:
+// at most one apply in flight, the newest requested target wins (a stale
+// pending target is dropped), and a request issued from inside `apply` is
+// queued rather than re-entering the apply function.
+//
+// Pure module: no DOM, no three.js, no imports — the export pipeline strips
+// `import`/`export` and concatenates this into the library scope, and the
+// unit tests import it directly with `node --test`.
+
+/**
+ * Create a frame pump around an async apply function.
+ *
+ * Contract:
+ * - `request(n)` returns a promise that resolves when the pump is next idle
+ *   (coalesced requests resolve too — the caller can ignore it).
+ * - `busy` is true while an apply is in flight.
+ * - `idle()` resolves immediately when idle, otherwise when the current run
+ *   finishes.
+ * - A rejecting `apply` is reported to `onError` (never rethrown, so a
+ *   `requestAnimationFrame`-driven loop survives), the stale target is
+ *   cleared, and the pump returns to idle.
+ *
+ * @param {(n: any) => Promise<void>} apply
+ * @param {(err: unknown) => void} [onError]
+ * @returns {{ request: (n: any) => Promise<void>, busy: boolean, idle: () => Promise<void> }}
+ */
+function createFramePump(apply, onError = (err) => console.error(err)) {
+    let running = false;
+    let pending = null;
+    let waiters = [];
+
+    function settle() {
+        running = false;
+        const w = waiters;
+        waiters = [];
+        for (const resolve of w) resolve();
+    }
+
+    async function drain() {
+        running = true;
+        try {
+            while (pending !== null) {
+                const n = pending;
+                pending = null;
+                try {
+                    await apply(n);
+                } catch (err) {
+                    pending = null; // drop the stale target
+                    onError(err);   // never rethrow: rAF loop must survive
+                    break;
+                }
+            }
+        } finally {
+            settle();
+        }
+    }
+
+    function whenIdle() {
+        if (!running) return Promise.resolve();
+        return new Promise((resolve) => waiters.push(resolve));
+    }
+
+    return {
+        request(n) {
+            pending = n; // newest target wins (coalesced)
+            if (!running) drain(); // fire-and-forget
+            return whenIdle();
+        },
+        get busy() {
+            return running;
+        },
+        idle() {
+            return whenIdle();
+        },
+    };
+}
+
 // Local-space transform expression for an SDF node.
 //
 // A node's `transform` places its primitive in world space: the serializer
@@ -7214,5 +7472,5 @@ function emitTree(tree) {
 }
 
 window.__tanga = {
-    THREE, OrbitControls, CSS2DRenderer, CSS2DObject, Line2, LineSegments2, LineMaterial, LineGeometry, LineSegmentsGeometry, buildSceneObject, buildOverlay, applyTransformToObject, fitCamera, orthoFrustum, finiteAspect, applyOrthoFrustum, updateEntityMesh, removeEntityMesh, AxesOverlay, GridUnderlay, storeImageFrame, takeImageFrame, hasImageFrame, registerImageFrameConsumer,
+    THREE, OrbitControls, CSS2DRenderer, CSS2DObject, Line2, LineSegments2, LineMaterial, LineGeometry, LineSegmentsGeometry, buildSceneObject, buildOverlay, applyTransformToObject, fitCamera, orthoFrustum, finiteAspect, applyOrthoFrustum, createFramePump, updateEntityMesh, removeEntityMesh, AxesOverlay, GridUnderlay, storeImageFrame, takeImageFrame, hasImageFrame, registerImageFrameConsumer,
 };
