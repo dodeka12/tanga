@@ -77,7 +77,7 @@ function _togglePlay() {
     } else {
         if (currentFrame >= frames.length - 1 && !_loopEnabled) {
             // Restart from the first frame when at the end and not looping
-            _playFrame(0);
+            _requestFrame(0);
             startTime = performance.now();
         } else {
             startTime = performance.now() - (Math.max(0, currentFrame) / fps * 1000);
@@ -104,7 +104,7 @@ function _updateScrubBar() {
 
 async function _onScrub(val) {
     const targetFrame = parseInt(val, 10);
-    await _playFrame(targetFrame);
+    await _requestFrame(targetFrame);
     if (isPlaying) startTime = performance.now() - (targetFrame / fps * 1000);
     _updateScrubBar();
 }
@@ -229,6 +229,13 @@ def js_reconcile_frame(
     dispatcher.  When a per-frame camera entry exists, ``_playFrame`` also
     applies it via ``applyCameraConfig``.
 
+    ``mesh.userData._src`` (and ``entry.obj.userData._src`` for overlays) holds
+    the exact frame object last applied.  An identity match means the mesh
+    already reflects that entity, so the reconcile loop skips it outright and
+    only re-asserts ``visible``.  The hide loop below only flips ``visible``
+    (never disposes), so a hidden-then-returning entity is compared against the
+    object it was last built from.
+
     Args:
         scene_var: JS variable name for the three.js Scene.
         label_objects_map_var: JS variable name for the label objects Map.
@@ -252,8 +259,14 @@ async function _reconcileFrame(frame) {{
             let entry = {registry_var}.get(ent.id);
             if (!entry) {{
                 entry = buildOverlay(ent, {scene_var}, {registry_var});
-                if (entry && entry.obj) {label_objects_map_var}.set(ent.id, entry.obj);
+                if (entry && entry.obj) {{
+                    {label_objects_map_var}.set(ent.id, entry.obj);
+                    entry.obj.userData._src = ent;
+                }}
             }}
+            // Nothing about this overlay changed since it was last applied:
+            // the expander reuses the same object for unchanged entities.
+            if (entry && entry.obj.userData._src === ent) continue;
             if (entry) {{
                 entry.obj.visible = true;
                 if (entry.obj.element) entry.obj.element.style.display = '';
@@ -268,8 +281,18 @@ async function _reconcileFrame(frame) {{
             if (entry) {{
                 {mesh_map_var}.set(ent.id, entry.mesh);
                 entry.mesh.userData._data = ent;
+                entry.mesh.userData._src = ent;
                 entry.mesh.visible = true;
             }}
+            continue;
+        }}
+
+        // Nothing about this entity changed since it was last applied: the
+        // expander hands out the same object instance for unchanged entities,
+        // so an identity match means "already correct" — only re-assert
+        // visibility (a hidden frame in between must not stick).
+        if (mesh.userData._src === ent) {{
+            mesh.visible = true;
             continue;
         }}
 
@@ -288,6 +311,7 @@ async function _reconcileFrame(frame) {{
             if (newEntry) {{
                 {mesh_map_var}.set(ent.id, newEntry.mesh);
                 newEntry.mesh.userData._data = merged;
+                newEntry.mesh.userData._src = ent;
                 newEntry.obj.userData._labels = [];
                 for (const lblId of oldLabels) {{
                     const lbl = {label_objects_map_var}.get(lblId);
@@ -302,6 +326,7 @@ async function _reconcileFrame(frame) {{
         }}
         if (updateEntityMesh(mesh, ent, prev)) {{
             mesh.userData._data = {{ ...prev, ...ent }};
+            mesh.userData._src = ent;
             mesh.visible = true;
             // Transform placement rides on the wrapper node (`entry.obj`), so an
             // in-place content update must re-apply it — mirroring the live
@@ -320,6 +345,7 @@ async function _reconcileFrame(frame) {{
             if (newEntry) {{
                 {mesh_map_var}.set(ent.id, newEntry.mesh);
                 newEntry.mesh.userData._data = merged;
+                newEntry.mesh.userData._src = ent;
                 newEntry.obj.userData._labels = [];
                 for (const lblId of oldLabels) {{
                     const lbl = {label_objects_map_var}.get(lblId);
@@ -361,6 +387,26 @@ async function _playFrame(n) {{
 }}"""
 
 
+def js_frame_pump() -> str:
+    """Generate the ``_framePump`` / ``_requestFrame`` declarations.
+
+    Wraps ``_playFrame`` in a frame pump (``createFramePump``) so frame
+    application is serialized: at most one apply in flight, the newest
+    requested target wins.  ``_requestFrame`` is fire-and-forget for the
+    render loop, but ``_onScrub`` awaits its promise so the scrub bar reflects
+    the applied frame.  Uses the pump's default ``onError`` (``console.error``)
+    because ``sendLog`` lives in the library scope and is not a bridge symbol.
+
+    Returns:
+        JS code string declaring ``_framePump`` and ``_requestFrame``.
+    """
+    return """// ── Frame pump (one apply in flight; newest target wins) ──
+const _framePump = createFramePump(_playFrame);
+function _requestFrame(n) {
+    return _framePump.request(n);
+}"""
+
+
 def js_controls_ui(show_controls: bool = True) -> str:
     """Return the playback controls JS, or empty string if hidden.
 
@@ -397,21 +443,24 @@ def js_animated_render_loop(
     """Generate the animated render loop.
 
     The loop computes the target frame from elapsed time (with loop modulo)
-    and jumps directly to it via ``_playFrame`` — no frame-by-frame walking.
+    and *requests* it via ``_requestFrame`` — no frame-by-frame walking, and
+    frame application is serialized by the frame pump (at most one apply in
+    flight; the newest target wins).
 
     Args:
         fps: Playback frame rate.
         scene_var: JS variable name for the scene (``"figScene"``).
         label_objects_map_var: JS variable name for the label objects Map
             (``"labelObjects"``).  Kept for signature compatibility with the
-            previous API; the loop itself delegates to ``_playFrame``.
+            previous API; the loop itself delegates to ``_playFrame`` via
+            ``_requestFrame``.
         extra_per_frame: JS snippet run every frame before the render calls.
 
     Returns:
         JS code string with the ``_figAnimate`` render loop.
     """
     return f"""// ── Render loop ──────────────────────────────────────────
-async function _figAnimate(timestamp) {{
+function _figAnimate(timestamp) {{
     requestAnimationFrame(_figAnimate);
 
     if (isPlaying && frames.length > 0) {{
@@ -422,7 +471,7 @@ async function _figAnimate(timestamp) {{
         }}
         const targetFrame = Math.floor(effectiveTime * {fps});
         if (targetFrame >= 0 && targetFrame < frames.length && targetFrame !== currentFrame) {{
-            await _playFrame(targetFrame);
+            _requestFrame(targetFrame);
         }}
         if (effectiveTime >= totalDuration && !animData.loop) {{
             isPlaying = false;

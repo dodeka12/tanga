@@ -22,7 +22,7 @@ _TANGA_BRIDGE_SYMBOLS = (
     "THREE, OrbitControls, CSS2DRenderer, CSS2DObject, "
     "Line2, LineSegments2, LineMaterial, LineGeometry, LineSegmentsGeometry, "
     "buildSceneObject, buildOverlay, applyTransformToObject, fitCamera, orthoFrustum, finiteAspect, applyOrthoFrustum, "
-    "updateEntityMesh, removeEntityMesh, AxesOverlay, GridUnderlay, "
+    "createFramePump, updateEntityMesh, removeEntityMesh, AxesOverlay, GridUnderlay, "
     "storeImageFrame, takeImageFrame, hasImageFrame, registerImageFrameConsumer"
 )
 

@@ -7,11 +7,13 @@ The frontend (`py/pytanga/viz/templates/`) must be written so its logic can be
 
 1. **Pure logic goes in DOM-free modules.** Any logic that does not need
    `document`, `window`, or `three` — reconciliation, sizing math, shader
-   assembly, serialization helpers — lives in a `.js` module that imports none
-   of those. Reference: `templates/views/reconcile.js` (layout reconciliation /
-   orphan-map accounting).
+   assembly, serialization helpers, frame scheduling — lives in a `.js` module
+   that imports none of those. Reference: `templates/views/reconcile.js` (layout
+   reconciliation / orphan-map accounting) and `templates/frame-pump.js`
+   (animated-export frame serialization).
 2. **Unit-test pure modules with `node --test`.** Every pure module has a
-   sibling `*.test.mjs` under `js/dev/tests/`, run with `node --test`.
+   sibling `*.test.mjs` under `js/dev/tests/`, run with `node --test` (e.g.
+   `js/dev/tests/frame-pump.test.mjs`).
 3. **Keep DOM/WebGL glue thin.** `view.js` / `three-view.js` / `viewer.js` /
    `build.js` stay thin adapters over the pure modules; their behaviour is
    validated by the Playwright smoke (`js/dev/tests/reconcile-smoke.mjs`), not

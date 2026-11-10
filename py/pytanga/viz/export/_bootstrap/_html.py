@@ -138,6 +138,8 @@ _TEMPLATES_DIR = _RENDERERS_DIR.parent
 # ``scene-builder.js`` provides the scene-graph construction shared by the
 # live viewer and the export bootstrap.  ``camera-fit.js`` is the shared,
 # pure ortho/aspect math used by ``fit_camera.js`` and ``js_apply_camera``.
+# ``frame-pump.js`` serializes animated-export frame application (one apply
+# in flight, newest target wins).
 _SHARED_JS_FILES: list[Path] = [
     _TEMPLATES_DIR / "nice-ticks.js",
     _TEMPLATES_DIR / "axes-overlay-math.js",
@@ -147,6 +149,7 @@ _SHARED_JS_FILES: list[Path] = [
     _TEMPLATES_DIR / "scene-builder.js",
     _TEMPLATES_DIR / "fit_camera.js",
     _TEMPLATES_DIR / "image-frames.js",
+    _TEMPLATES_DIR / "frame-pump.js",
     # SDF tree emitters used by the per-object SDF proxy renderer (`sdf.js`).
     _TEMPLATES_DIR / "sdf" / "objects" / "transform.js",
     _TEMPLATES_DIR / "sdf" / "objects" / "primitives.js",
