@@ -183,6 +183,11 @@ re-serialization.
    records `_data`/`_src` and re-applies the transform).  Wire it into
    `factory.js::updateEntityMesh`; `PointPath`, `Axis`, `Axes2D`, `Axes3D` and
    `Grid` are the current examples that own their decision this way.
+   Growing a `LineSegmentsGeometry` in place needs one extra step: three.js
+   caches the first-render instance bound in `geometry._maxInstanceCount`, so
+   dispose the geometry before `setPositions` when the segment count grows (and
+   pin `instanceCount`); `renderers/fat-line-update.js::rewriteFatLinePositions`
+   encapsulates this.
 
 ### New control (`*View`)
 
