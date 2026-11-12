@@ -2,12 +2,12 @@
 
 .tanga-action-button {
     width: 100%;
-    padding: 5px 12px;
+    padding: var(--tanga-button-padding);
     background: var(--tanga-surface);
     border: 1px solid var(--tanga-border-strong);
     border-radius: 4px;
     color: var(--tanga-fg-strong);
-    font-size: var(--tanga-font-size-body);
+    font-size: var(--tanga-button-font-size);
     cursor: pointer;
     transition: background 0.15s;
 }
@@ -21,8 +21,8 @@
 }
 
 .tanga-icon-button {
-    width: 28px;
-    height: 28px;
+    width: var(--tanga-icon-control-size);
+    height: var(--tanga-icon-control-size);
     padding: 0;
     display: flex;
     align-items: center;
@@ -35,7 +35,7 @@
 }
 
 .tanga-icon-button .material-symbols-outlined {
-    font-size: 18px;
+    font-size: var(--tanga-icon-button-icon-size);
 }
 
 /* Selected/active state — highlights a toggle-style button (e.g. an armed

@@ -12,7 +12,8 @@ when the layout is set).
 There are no `add_*` facade methods — every control kind is declared as a view.
 For the per-kind parameter tables and handler payloads, see
 [Controls](controls.md); for placing views in layouts, see
-[Layouts](layouts.md).
+[Layouts](layouts.md).  `MarkdownView` also accepts `font_size=` for a
+per-instance override (see [Display Views](display-views.md)).
 
 Every control view is a plain `View` (no scene) that renders a single HTML
 control. A handler written for one control kind works unchanged for the others
@@ -168,12 +169,16 @@ the declarative grouping view (the former `add_control_group`).
 
 ```python
 GroupView(
-    title="",          # str
+    title="",          # str | None — None/"" render no title (no "Controls" fallback)
     children=None,     # list[View] | None
     *,
     direction="vertical",  # StackDirection
     position=None,     # EAnchor | None — corner or centered-edge anchor (e.g. "top-right", "bottom")
     collapsed=False,   # bool
+    show_header=True,  # bool — False removes the whole header bar (forces collapsible=False)
+    collapsible=True,  # bool — False renders a static group without a fold toggle
+    title_size=None,   # float | None — title font size in px for this instance
+    variant=EGroupVariant.DEFAULT,  # EGroupVariant | str — "default" | "small" | "tiny"
     scrollable=False,  # bool — scroll the content (title bar stays pinned)
     gap=None,          # int | None — px spacing (None = default 4 px, 0 = none)
     align="stretch",   # "start" | "center" | "end" | "stretch"
@@ -190,6 +195,36 @@ GroupView(
 and the content region scrolls instead of clipping when the pane is smaller
 than the controls (a thin dark scrollbar appears only on overflow). The
 fold/unfold button in the title bar is a borderless icon.
+
+`EGroupVariant` (`DEFAULT` / `SMALL` / `TINY`) is a **presentational** size
+variant.  It only re-scopes the `--tanga-group-*` tokens; it does not change
+layout semantics:
+
+| Variant | Padding | Title font | Title background | Header spacing |
+|---------|---------|------------|------------------|----------------|
+| `default` | `--tanga-group-padding` | `--tanga-group-title-font-size` | `--tanga-group-title-bg` | `--tanga-group-header-*` |
+| `small` | `--tanga-group-small-padding` | `--tanga-group-small-title-font-size` | `--tanga-group-small-title-bg` | `--tanga-group-small-header-*` |
+| `tiny` | `--tanga-group-tiny-padding` | `--tanga-group-tiny-title-font-size` | `--tanga-group-tiny-title-bg` | `--tanga-group-tiny-header-*` |
+
+The variants default to the current look, except `tiny`, whose title is one
+step smaller.  `show_header=False` keeps the panel padding/border but removes
+the header bar; `collapsible=False` keeps a static header (title/icon only) and
+ignores fold requests.  A `collapsed=True` group must be collapsible.
+
+!!! warning "No implicit title"
+    An empty or `None` title no longer falls back to `"Controls"`.  Pass an
+    explicit title to keep the old look.
+
+#### Header click-to-fold and ParamsView groups
+
+A collapsible group folds when any part of its header (title area) is clicked;
+the toggle button still works and is never double-fired.  `collapsible=False`
+headers ignore clicks.
+
+`ParamsView` creates a `GroupView` for each dataclass/dict sub-panel.  Those
+groups are `small` at depth 0 and `tiny` deeper; `GroupUI(variant=…)` overrides
+one field.  A bare `ParamsView` has no panel chrome, so wrap it in a
+`GroupView(variant=…)` for the top-level panel.
 
 ### ToolbarView
 
@@ -584,8 +619,10 @@ type: `bool` → checkbox, `int`/`float` → stepper, `str` → text field (colo
 picker for `#rgb`/`#rrggbb`), `list`/`tuple` → dropdown, `Enum`/`Literal` →
 dropdown of the members/values (an `X | None` / `Optional[X]` field unwraps to
 `X`).  A dataclass-valued field renders as a nested `GroupView` (customized with
-`ui=GroupUI(title=…, collapsed=…, extra_rows=[…])` — a nested group can carry its
-own button/status rows).
+`ui=GroupUI(title=…, collapsed=…, variant=…, extra_rows=[…])` — a nested group
+can carry its own button/status rows).  `GroupUI.variant` accepts an
+`EGroupVariant` or its string value; `None` uses the depth default (`SMALL` at
+depth 0, `TINY` deeper).
 
 `on_change(state, event)` fires on every change with the full state — the live
 `dict` (dict mode) or the dataclass instance (dataclass mode, mutated in place).
@@ -617,6 +654,13 @@ rows — `set_enabled("surface", False)` greys + collapses the group), plus
 
 `title_from_name=True` derives row titles from snake_case keys (`radius_mm` →
 "Radius mm"), and `dense=True` applies a per-view compact density.
+
+### Row tooltips
+
+A value row's key label shows its control's `tooltip` (or the dataclass
+`metadata["description"]`).  The key label is a sibling of the control, so this
+is applied explicitly when the row is built; the page-wide
+`Visualizer.set_tooltips_enabled()` switch covers it like every other tooltip.
 
 `ParamsView` accepts the standard `View` size parameters (`size=`, `min_width=`,
 `min_height=`, `preferred_width=`, `preferred_height=`, `max_width=`,

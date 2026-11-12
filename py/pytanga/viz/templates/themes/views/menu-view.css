@@ -13,6 +13,21 @@
     border-radius: 3px;
 }
 
+/* The whole option row is the hit target.  Button and checkbox options stretch
+ * to fill the row so the hover highlight, cursor and click area agree; the
+ * delegated menu click handler forwards any remaining blank-area clicks. */
+.tanga-menu-item:has(> .tanga-action-button),
+.tanga-menu-item:has(> .tanga-checkbox-row) {
+    display: flex;
+    min-height: var(--tanga-control-min-height);
+    cursor: pointer;
+}
+
+.tanga-menu-item:has(> .tanga-action-button) > .tanga-action-button,
+.tanga-menu-item:has(> .tanga-checkbox-row) > .tanga-checkbox-row {
+    flex: 1 1 auto;
+}
+
 .tanga-menu-item .tanga-action-button {
     background: none;
     border: none;

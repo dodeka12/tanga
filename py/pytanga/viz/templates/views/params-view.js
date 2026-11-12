@@ -5,6 +5,7 @@
 
 import { View } from './view.js';
 import { stackMinSize, stackPreferredSize } from './stack-size.js';
+import { applyTooltip } from '../controls-panel.js';
 
 export class ParamsView extends View {
     constructor({ title = '', dense = false } = {}) {
@@ -39,7 +40,7 @@ export class ParamsView extends View {
         this._invalidateContent();
     }
 
-    addRow({ key, title, control, full_width = false }) {
+    addRow({ key, title, control, full_width = false, tooltip = '' }) {
         const row = document.createElement('div');
         row.className = 'tanga-params-row';
 
@@ -54,11 +55,13 @@ export class ParamsView extends View {
         let keyEl = null;
         if (isFullWidth) {
             row.classList.add('tanga-params-row-group');
-            if (isGroup) control.el.classList.add('tanga-group-nested');
         } else {
             keyEl = document.createElement('span');
             keyEl.className = 'tanga-params-key';
             keyEl.textContent = title || key;
+            // The key label is a sibling of the control, so it never inherits
+            // the control's tooltip; put it on the label explicitly.
+            applyTooltip(keyEl, tooltip || control.tooltip || '');
             row.appendChild(keyEl);
         }
 
@@ -72,7 +75,7 @@ export class ParamsView extends View {
         control.on('constraintschange', syncVisibility);
         control.on('preferredchange', syncVisibility);
 
-        this._rows.push({ key, title, control, row, keyEl, syncVisibility });
+        this._rows.push({ key, title, control, row, keyEl, tooltip, syncVisibility });
         this.children.push(control);
         this._invalidateContent();
         return control;
@@ -90,7 +93,10 @@ export class ParamsView extends View {
         const entry = this._rows.find((r) => r.key === key);
         if (!entry) return;
         entry.title = title;
-        if (entry.keyEl) entry.keyEl.textContent = title || key;
+        if (entry.keyEl) {
+            entry.keyEl.textContent = title || key;
+            applyTooltip(entry.keyEl, entry.tooltip || entry.control.tooltip || '');
+        }
         this._invalidateContent();
     }
 

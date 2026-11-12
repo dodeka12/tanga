@@ -814,6 +814,7 @@ class MarkdownView(ControlView[Markdown]):
         *,
         value: str = "",
         tooltip: str = "",
+        font_size: float | None = None,
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
@@ -822,6 +823,8 @@ class MarkdownView(ControlView[Markdown]):
         max_width: SizeSpec = None,
         max_height: SizeSpec = None,
     ) -> None:
+        if font_size is not None and font_size <= 0:
+            raise ValueError("font_size must be None or > 0")
         super().__init__(
             cid,
             tooltip=tooltip,
@@ -838,12 +841,18 @@ class MarkdownView(ControlView[Markdown]):
             label="",
             tooltip=self.tooltip,
             value=value,
+            font_size=font_size,
         )
 
     @property
     def value(self) -> str:
         """The markdown source text."""
         return self.control.value
+
+    @property
+    def font_size(self) -> float | None:
+        """The markdown font size override (``None`` follows the theme)."""
+        return self.control.font_size
 
 
 class ProgressBarView(ControlView[ProgressBar]):

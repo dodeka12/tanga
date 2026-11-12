@@ -18,7 +18,13 @@ server layers, so it is unit-testable in isolation.
 from __future__ import annotations
 
 from ._base import View
-from ._enums import EOrientation, EStackAlign, EStackDirection, EStackJustify
+from ._enums import (
+    EGroupVariant,
+    EOrientation,
+    EStackAlign,
+    EStackDirection,
+    EStackJustify,
+)
 from .._size import SizeSpec, size_from_dict
 from .camera_view import CameraView
 from .control_view import ControlView
@@ -66,6 +72,7 @@ __all__ = [
     "ColorPickerView",
     "ControlView",
     "DropdownView",
+    "EGroupVariant",
     "EOrientation",
     "EStackAlign",
     "EStackDirection",

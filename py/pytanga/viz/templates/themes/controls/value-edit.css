@@ -13,8 +13,8 @@
     border: 1px solid var(--tanga-border-strong);
     border-radius: 4px;
     color: var(--tanga-fg);
-    padding: 4px 6px;
-    font-size: var(--tanga-font-size-body);
+    padding: var(--tanga-control-padding);
+    font-size: var(--tanga-control-font-size);
     outline: none;
     text-align: right;
 }
@@ -42,7 +42,7 @@
 }
 
 .tanga-step-button .tanga-icon-uc {
-    font-size: 10px;
+    font-size: var(--tanga-step-button-icon-size);
     line-height: 1;
 }
 

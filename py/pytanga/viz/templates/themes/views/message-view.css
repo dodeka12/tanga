@@ -2,6 +2,7 @@
 
 .tanga-message-view {
     font-family: var(--tanga-font);
+    font-size: var(--tanga-font-size-log);
     color: var(--tanga-fg);
     background: var(--tanga-bg);
 }
@@ -9,8 +10,8 @@
 .tanga-message-row {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 8px;
-    padding: 3px 8px;
+    gap: var(--tanga-log-row-gap);
+    padding: var(--tanga-log-row-padding);
     border-bottom: 1px solid var(--tanga-border-subtle);
 }
 

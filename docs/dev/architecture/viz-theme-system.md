@@ -32,8 +32,36 @@ The JS assigns **stable semantic classes** (`.tanga-action-button`,
 `.tanga-range-input`, `.tanga-checkbox`, `.tanga-banner`, `.tanga-dialog`,
 `.tanga-menu-trigger`, `.tanga-warning-banner`, …) and **never inlines
 appearance**.  Only *computed geometry* (overlay anchors, banner/dialog
-`transform: translate(-x%,-y%)`, drag `left/top`) stays inline.  Overrides and
-themes target those stable classes.
+`transform: translate(-x%,-y%)`, drag `left/top`) stays inline.  The only other
+inline writes are **scoped instance custom properties** (decision B): a
+per-instance font size or title size sets e.g.
+`--tanga-font-size-log` / `--tanga-group-title-font-size` on that view's root
+element instead of a resolved `font-size`, so every theme rule keeps applying.
+Overrides and themes target those stable classes.
+
+Group variants add `tanga-group-small` / `tanga-group-tiny`;
+`tanga-group-nested` is retained for one release as a deprecated alias for
+`small`.  A variant only re-scopes `--tanga-group-*` tokens (padding, title
+font/background, header spacing) — it does not change layout semantics.
+`--tanga-group-nested-title-size` is now the deprecated token that feeds
+`--tanga-group-small-title-font-size`.
+
+## GroupView chrome and ParamsView groups
+
+`group-view.js` creates a header only when
+`show_header and (collapsible or title or icon)`; otherwise the group is just
+the panel shell around its content.  `title=None`/`""` render no title text (the
+old `"Controls"` fallback is gone), `collapsible=False` renders a static header
+without a fold toggle, and a collapsible header folds on a click anywhere on the
+bar (the toggle and interactive children are ignored; the click delegates to the
+existing `setCollapsed()` state path and `control:group_toggle` event).  Without
+a header, `_chromeY()` returns `{folded: 0, chrome: <measured shell>}`; a
+headerless group is never collapsible.
+
+`ParamsView` creates the only framework sub-groups: a field group is `SMALL` at
+depth 0 and `TINY` deeper (`GroupUI.variant` overrides one field), and a
+`ParamsView` row's key label carries its control's tooltip, since the label is a
+sibling of the control.  A bare `ParamsView` has no panel chrome of its own.
 
 ## Density & typography tokens
 
@@ -57,14 +85,45 @@ without touching the layout model:
   its height is measured from the rendered rows.
 - `--tanga-font-size-title` / `--tanga-font-size-body` / `--tanga-font-size-label` /
   `--tanga-font-size-value` — the typography scale (14 / 13 / 12 / 12 px).
-- `--tanga-group-nested-title-size` — the smaller title font for a `GroupView`
-  nested inside a `ParamsView` (defaults to `var(--tanga-font-size-body)`).
+- Control chrome: `--tanga-control-font-size` (aliases the body size),
+  `--tanga-control-padding`, `--tanga-control-label-margin-bottom`,
+  `--tanga-button-font-size` / `--tanga-button-padding`,
+  `--tanga-color-picker-height` / `--tanga-color-picker-padding`,
+  `--tanga-step-button-icon-size`, and the icon tokens `--tanga-icon-size` /
+  `--tanga-icon-button-icon-size`.  These let a theme shorten the text field,
+  value edit, dropdown, color picker and button controls without changing the
+  layout model.
+- `--tanga-group-nested-title-size` — deprecated alias feeding the `small`
+  variant's title size (defaults to `var(--tanga-font-size-body)`).
+- Component typography (`views/group-view.css`, `message-view.css`,
+  `markdown-view.css`): `--tanga-group-title-font-size`,
+  `--tanga-group-body-font-size`, `--tanga-group-toggle-font-size` /
+  `--tanga-group-toggle-size`, `--tanga-font-size-log`,
+  `--tanga-log-row-padding` / `--tanga-log-row-gap`, `--tanga-font-size-markdown`,
+  `--tanga-markdown-table-cell-padding`.  The font sizes alias the type scale.
+- Group surface + spacing: `--tanga-group-title-bg`, `--tanga-group-title-padding`,
+  `--tanga-group-title-radius`, `--tanga-group-padding`,
+  `--tanga-group-header-padding` / `-margin-bottom` / `-gap`, and the shared
+  all-variant knobs `--tanga-group-padding-base`, `--tanga-group-title-bg-base`,
+  `--tanga-group-header-{padding,margin-bottom,gap}-base`.
+- Variant knobs: `--tanga-group-{small,tiny}-{padding,title-font-size,title-bg,header-padding,header-margin-bottom,header-gap}`.
+  Each defaults to its `*-base` token, so a theme moves all variants with one
+  base declaration or one level with a variant token.
+- `--tanga-stack-gap` — the default `StackView` gap.  `stack-view.js` writes it
+  as `var(--tanga-stack-gap, 4px)` and reads the **computed** gap back through
+  `_gapPx()` for the size maths (decision A), so a theme move changes the layout
+  and the measured min/preferred size together.  An explicit Python `gap` wins;
+  the cache is dropped on `_applyFlex`, `mount`, and `tanga:themechange`.
 
 A disabled `GroupView` (`.tanga-group-disabled`) greys its header with
-`var(--tanga-disabled-opacity)`, the same token controls use when disabled.
+`var(--tanga-disabled-opacity)`, the same token controls use when disabled.  A
+static (`collapsible=False`) disabled group dims its content instead, because it
+cannot fold.
 
-The built-in `compact` theme overrides these tokens and re-lays-out the
-value-edit stepper via a `value-edit` override, producing a dense variant.  The
+The built-in `compact` theme overrides these tokens (including the control
+chrome, `--tanga-icon-size`, `--tanga-group-title-font-size` and the
+`small`/`tiny` variant titles/spacing) and re-lays-out the value-edit stepper via
+a `value-edit` override, producing a dense variant.  The
 active theme is selected at construction with `Visualizer(theme=…)` /
 `VisualizerApp(theme=…)` (equivalent to `set_theme(…)` before the browser
 connects); a single `ParamsView(dense=True)` applies a local compact density via

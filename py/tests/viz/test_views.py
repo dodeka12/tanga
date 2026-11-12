@@ -3,10 +3,12 @@
 
 """Tests for the declarative view/layout model (`views.py`)."""
 
+from dataclasses import dataclass, field
+
 import pytest
 
-from pytanga.viz import EAnchor
-from pytanga.viz._controls import EControlVariant
+from pytanga.viz import EAnchor, EGroupVariant, GroupUI, ParamsView
+from pytanga.viz._controls import EControlVariant, Markdown
 from pytanga.viz._size import Size
 from pytanga.viz.views import (
     ButtonView,
@@ -20,6 +22,7 @@ from pytanga.viz.views import (
     EStackJustify,
     GroupView,
     LabelView,
+    LogView,
     MarkdownView,
     MenuView,
     SceneView,
@@ -385,6 +388,117 @@ class TestGroupView:
         assert node["type"] == "group"
         assert node["gap"] == 0
 
+    def test_serialize_title_none(self):  # noqa: ANN201
+        node = serialize_layout(GroupView(None))["root"]
+        assert node["title"] is None
+        assert node["show_header"] is True
+        assert node["collapsible"] is True
+
+    def test_serialize_header_flags(self):  # noqa: ANN201
+        defaults = serialize_layout(GroupView("x"))["root"]
+        assert defaults["show_header"] is True
+        assert defaults["collapsible"] is True
+
+        headerless = serialize_layout(GroupView("x", show_header=False))["root"]
+        assert headerless["show_header"] is False
+        assert headerless["collapsible"] is False
+
+    def test_title_size_serialized_only_when_set(self):  # noqa: ANN201
+        assert "title_size" not in serialize_layout(GroupView("x"))["root"]
+        assert (
+            serialize_layout(GroupView("x", title_size=15))["root"]["title_size"]
+            == 15.0
+        )
+
+    def test_variant_serialized_only_when_non_default(self):  # noqa: ANN201
+        assert "variant" not in serialize_layout(GroupView("x"))["root"]
+        assert (
+            serialize_layout(GroupView("x", variant=EGroupVariant.SMALL))["root"][
+                "variant"
+            ]
+            == "small"
+        )
+        assert (
+            serialize_layout(GroupView("x", variant="tiny"))["root"]["variant"]
+            == "tiny"
+        )
+
+    def test_variant_validation(self):  # noqa: ANN201
+        with pytest.raises(ValueError, match="small"):
+            GroupView("x", variant="huge")
+
+    def test_collapsed_validation(self):  # noqa: ANN201
+        with pytest.raises(ValueError):
+            GroupView("x", collapsed=True, collapsible=False)
+        with pytest.raises(ValueError):
+            GroupView("x", collapsed=True, show_header=False)
+
+    def test_title_size_validation(self):  # noqa: ANN201
+        with pytest.raises(ValueError):
+            GroupView("x", title_size=0)
+
+    def test_set_title_none_pushes_null(self):  # noqa: ANN201
+        g = GroupView("Actions")
+        pushed: list[tuple[str, dict[str, str | None]]] = []
+
+        def _capture(cid: str, state: dict[str, str | None]) -> None:
+            pushed.append((cid, state))
+
+        g._push_state = _capture
+        g.set_title(None)
+        assert g.title is None
+        assert pushed == [(g.id, {"title": None})]
+
+    def test_set_collapsed_requires_collapsible(self):  # noqa: ANN201
+        g = GroupView("Actions", collapsible=False)
+        pushed: list[tuple[str, dict[str, bool]]] = []
+
+        def _capture(cid: str, state: dict[str, bool]) -> None:
+            pushed.append((cid, state))
+
+        g._push_state = _capture
+        with pytest.raises(ValueError):
+            g.set_collapsed(True)
+        assert g.collapsed is False
+        assert pushed == []
+
+
+@dataclass
+class _VariantLeaf:
+    value: float = 1.0
+
+
+@dataclass
+class _VariantMiddle:
+    leaf: _VariantLeaf = field(default_factory=_VariantLeaf)
+
+
+@dataclass
+class _VariantOuter:
+    middle: _VariantMiddle = field(default_factory=_VariantMiddle)
+
+
+class TestParamsGroupVariants:
+    def test_group_variant_defaults_by_depth(self):  # noqa: ANN201
+        node = ParamsView(_VariantOuter())._serialize()
+        small = node["rows"][0]["control"]
+        assert small["variant"] == "small"
+        tiny = small["children"][0]["rows"][0]["control"]
+        assert tiny["variant"] == "tiny"
+
+    def test_group_variant_override(self):  # noqa: ANN201
+        default = ParamsView(
+            {"shape": {"detail": 24}},
+            styles={"shape": GroupUI(variant=EGroupVariant.DEFAULT)},
+        )._serialize()
+        assert "variant" not in default["rows"][0]["control"]
+
+        tiny = ParamsView(
+            {"shape": {"detail": 24}},
+            styles={"shape": GroupUI(variant="tiny")},
+        )._serialize()
+        assert tiny["rows"][0]["control"]["variant"] == "tiny"
+
 
 class TestMenuView:
     def test_serialize_fields(self):  # noqa: ANN201
@@ -663,6 +777,27 @@ class TestControlViews:
         assert node["type"] == "markdown_view"
         assert node["id"] == "m1"
         assert node["value"] == "# Hi"
+
+    def test_markdown_view_font_size(self):  # noqa: ANN201
+        view = MarkdownView("md", value="# x", font_size=16)
+        assert view.control.font_size == 16.0
+        assert view.font_size == 16.0
+        assert serialize_layout(view)["root"]["font_size"] == 16.0
+
+    def test_markdown_view_font_size_validation(self):  # noqa: ANN201
+        with pytest.raises(ValueError):
+            MarkdownView("md", font_size=0)
+
+    def test_markdown_font_size_absent_by_default(self):  # noqa: ANN201
+        assert Markdown(id="md", value="x")._fields() == {"value": "x"}
+
+    def test_log_view_font_size_serialized_only_when_set(self):  # noqa: ANN201
+        assert "font_size" not in serialize_layout(LogView("log"))["root"]
+        assert serialize_layout(LogView("log", font_size=16))["root"]["font_size"] == 16
+
+    def test_log_view_font_size_validation(self):  # noqa: ANN201
+        with pytest.raises(ValueError):
+            LogView("log", font_size=0)
 
     def test_text_area_serialize(self):  # noqa: ANN201
         node = serialize_layout(TextAreaView("ta1", label="Notes", rows=6))["root"]

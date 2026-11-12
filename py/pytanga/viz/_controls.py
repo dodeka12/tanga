@@ -1847,15 +1847,25 @@ class Label(Control):
 
 @dataclass
 class Markdown(Control):
-    """A read-only display markdown control (rendered with optional KaTeX math)."""
+    """A read-only display markdown control (rendered with optional KaTeX math).
+
+    ``font_size`` is an optional per-instance override in px.  Unlike
+    :class:`Label.font_size` (which defaults to ``14``), it defaults to ``None``
+    so the theme's ``--tanga-font-size-markdown`` governs unless the caller
+    opts in.
+    """
 
     kind: str = "markdown"
     _value_type: ClassVar[type | None] = str
 
     def _fields(self) -> dict[str, Any]:
-        return {"value": self.value}
+        fields: dict[str, Any] = {"value": self.value}
+        if self.font_size is not None:
+            fields["font_size"] = self.font_size
+        return fields
 
     value: str = ""
+    font_size: float | None = None
 
 
 @dataclass

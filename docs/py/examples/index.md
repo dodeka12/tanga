@@ -114,7 +114,7 @@ uv run python py/examples/<path>.py
 
 - **Box** — [the Disk, PartialDisk, Box, Ellipsoid, Ellipse, and](viz/entities/extra_entities.md)
 
-- **button** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
+- **button** — [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md)
 
 - **ButtonView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
@@ -142,7 +142,7 @@ uv run python py/examples/<path>.py
 
 - **chaos** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md)
 
-- **checkbox** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
+- **checkbox** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md)
 
 - **CheckboxView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
@@ -206,7 +206,7 @@ uv run python py/examples/<path>.py
 
 - **control update** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
 
-- **controls** — [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
+- **controls** — [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
 - **CoordinateSystem** — [VisualizerApp with a sin/cos split view and draggable points](viz/app/split_view_app.md), [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [annotations in a CoordinateSystem's data frame](viz/plotting/cs_annotations.md), [logarithmic plotting with CoordinateSystem](viz/plotting/log_plot.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md)
 
@@ -286,7 +286,7 @@ uv run python py/examples/<path>.py
 
 - **DragPreview** — [Label images in the labelme JSON format](apps/image_labeling_app.md)
 
-- **dropdown** — [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
+- **dropdown** — [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **dtype** — [Creating and configuring an Algebra](ga/algebra/algebra_demo.md)
 
@@ -418,6 +418,8 @@ uv run python py/examples/<path>.py
 
 - **HDR** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
+- **header** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md)
+
 - **heavy work** — [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md)
 
 - **help** — [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md)
@@ -518,7 +520,7 @@ uv run python py/examples/<path>.py
 
 - **lift** — [lift a 2D conic into a 3D cone through an apex](ga/quadric/cone_from_conic.md)
 
-- **light** — [Animate a directional light around a sphere](viz/sdf/light_animation.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
+- **light** — [Animate a directional light around a sphere](viz/sdf/light_animation.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
 - **lighting** — [Switch between standard and custom surface texture mapping](viz/surface/texture_mapping.md)
 
@@ -550,9 +552,9 @@ uv run python py/examples/<path>.py
 
 - **Markdown** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
 
-- **markdown** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
+- **markdown** — [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
-- **menu** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
+- **menu** — [Label images in the labelme JSON format](apps/image_labeling_app.md), [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
 - **menu bar** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A menu bar with a File → Open… file dialog](viz/ui/menus/file_open_menu.md)
 
@@ -593,6 +595,8 @@ uv run python py/examples/<path>.py
 - **navigation** — [repro a calibrated 2d pane falling back to a free 3D orbit view](viz/camera/calibrated_orbit_fallback_repro.md), [zoom/pan a large tiled pane background](viz/image/huge_image_background.md)
 
 - **nested** — [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
+
+- **nested group** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md)
 
 - **nested loops** — [Nested animation loops honoring Ctrl+C](viz/animation/nested_sweep.md)
 
@@ -636,7 +640,7 @@ uv run python py/examples/<path>.py
 
 - **overlay** — [fixed screen-space axes + grid overlay in 2D](viz/camera/axes_overlay_2d.md), [Display a numpy image and draw pixel-coordinate overlays](viz/image/image_canvas.md), [2D plots across a split view, one stretch mode per pane](viz/plotting/multi_plot.md), [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md), [Group view chrome: leading icon, icon-only, borderless fold](viz/ui/controls/group_view_icons.md), [Menus: per-pane overlay, sub-menus, and sub-sub-menus](viz/ui/menus/menu_demo.md)
 
-- **override** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
+- **override** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md)
 
 - **overrides** — [Global default styles and per-call overrides](viz/styling/custom_defaults.md)
 
@@ -654,7 +658,7 @@ uv run python py/examples/<path>.py
 
 - **param_ui** — [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
 
-- **params view** — [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
+- **params view** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Map a dict/dataclass to a two-column table of controls](viz/ui/controls/params_view.md), [ParamsView: a tour of the advanced features](viz/ui/controls/params_view_features.md)
 
 - **parent_id** — [Declarative control groups: overlay + 3D-anchored](viz/ui/controls/control_group_overlay.md), [Declarative control groups on a single-scene page](viz/ui/controls/control_group_single.md)
 
@@ -840,7 +844,7 @@ uv run python py/examples/<path>.py
 
 - **sizing** — [A tour of StackView/SplitView spacing, alignment, and flex](viz/ui/layout/layout_sizing.md)
 
-- **slider** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md)
+- **slider** — [reconstruct a conic from 5 points and rotate it with a slider](ga/quadric/conic_demo.md), [reconstruct a quadric from 9 points and rotate it](ga/quadric/quadric3d_demo.md), [a calibrated depth surface with a grazing-angle filter](viz/image/pinhole_depth.md), [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md), [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md), [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md)
 
 - **SliderView** — [Declarative controls drive a sphere](viz/ui/controls/controls_add_and_view.md)
 
@@ -863,6 +867,8 @@ uv run python py/examples/<path>.py
 - **sp** — [Named GA product functions over variables](ga/expression/named_products.md)
 
 - **space_dim** — [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md)
+
+- **spacing** — [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
 - **Sphere** — [Full conformal (N3) entities: Spheres, Circles, Point Pairs](ga/geometry/n3_entities.md), [All geometric entity types in one scene](viz/entities/all_entities.md)
 
@@ -904,7 +910,7 @@ uv run python py/examples/<path>.py
 
 - **switch view** — [Toggle one scene between a 2D and 3D view with a checkbox](viz/camera/switch_2d_3d.md)
 
-- **table** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
+- **table** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
 - **TableView** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
 
@@ -918,9 +924,7 @@ uv run python py/examples/<path>.py
 
 - **texture mapping** — [Switch between standard and custom surface texture mapping](viz/surface/texture_mapping.md)
 
-- **theme** — [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
-
-- **theme switching** — [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
+- **theme** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [One of every control, themed live via a theme dropdown](viz/ui/controls/control_theming.md), [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md), [Switch the viewer theme at runtime without a reload](viz/ui/themes/theme_switching.md)
 
 - **themes** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md)
 
@@ -934,7 +938,7 @@ uv run python py/examples/<path>.py
 
 - **title** — [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md)
 
-- **tokens** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md)
+- **tokens** — [Load a custom theme and edit it live](viz/ui/themes/custom_theme_autoreload.md), [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
 - **tolerance** — [classify a noisy quadric within a tolerance](ga/quadric/tolerant_classification.md)
 
@@ -964,6 +968,8 @@ uv run python py/examples/<path>.py
 
 - **two-body** — [Gravitational two-body simulation using only](viz/animation/two_body_gravity.md)
 
+- **typography** — [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
+
 - **uint16** — [Display a 16-bit image over the lossless (zlib) transport](viz/image/raw_image.md)
 
 - **uint8** — [Display an 8-bit image over the default (JPEG) transport](viz/image/standard_image.md)
@@ -988,6 +994,8 @@ uv run python py/examples/<path>.py
 
 - **variables** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md)
 
+- **variant** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md)
+
 - **View2DConfig** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md)
 
 - **View3dConfig** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md)
@@ -1002,7 +1010,7 @@ uv run python py/examples/<path>.py
 
 - **Visualizer** — [Demonstrates every banner/dialog kind](viz/ui/banners/banner_types.md)
 
-- **VisualizerApp** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [Determinate and indeterminate progress bars with a status line](viz/ui/controls/progress_bar.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md)
+- **VisualizerApp** — [Two Spheres Intersection — Interactive Controls Demo (IPNS)](viz/interaction/two_spheres_interact.md), [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md), [A file chooser with a backend-driven file browser](viz/ui/controls/file_chooser.md), [Determinate and indeterminate progress bars with a status line](viz/ui/controls/progress_bar.md), [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md)
 
 - **VizGroup** — [A chaotic double pendulum from nested VizGroups](viz/animation/double_pendulum.md), [Compose a detached scene subtree, then insert it](viz/scenes/compose_detached.md), [Drive a VizGroup transform from a BasisN3 Motor](viz/scenes/motor_group_transform.md), [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md), [Demonstrate VizGroup + direct transforms](viz/scenes/scene_graph.md)
 
@@ -1013,8 +1021,6 @@ uv run python py/examples/<path>.py
 - **vp** — [Named GA product functions over variables](ga/expression/named_products.md)
 
 - **weighted sum** — [Sum an AffineExpression over a batched variable](ga/expression/affine_counting_reduction.md)
-
-- **wireframe** — [A custom theme with a full button/checkbox override](viz/ui/themes/custom_theme_override.md)
 
 - **with_basis** — [BladeMask named bases (auto display basis, composed names, with_basis)](ga/blade_mask/named_basis.md)
 

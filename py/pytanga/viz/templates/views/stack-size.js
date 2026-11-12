@@ -3,6 +3,17 @@
 
 export const GAP = 4; // px; must match the flex gap set in stack-view.js
 
+/**
+ * Resolve a CSS gap value (as returned by `getComputedStyle(el).rowGap`)
+ * to a px number.  Browsers report `"normal"` for `gap: normal`, and an
+ * element outside the document reports `""`; both fall back.
+ */
+export function resolveGapPx(value, fallback = GAP) {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : fallback;
+    const px = parseFloat(value);
+    return Number.isFinite(px) ? px : fallback;
+}
+
 export function stackMainAxis(direction) {
     return direction === 'vertical' ? 'y' : 'x';
 }

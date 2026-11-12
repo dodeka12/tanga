@@ -12,6 +12,7 @@ from enum import Enum
 from typing import Any, Callable, cast
 
 from ._base import View
+from ._enums import EGroupVariant
 from .._controls import ControlEvent, ControlHandler
 from .._params_ui import (
     ControlUI,
@@ -102,6 +103,7 @@ class ParamsView(View):
         title_from_name: bool = False,
         dense: bool = False,
         key_prefix: str = "",
+        _group_depth: int = 0,
         **view_kwargs: Any,
     ) -> None:
         super().__init__(id=id, **view_kwargs)
@@ -112,6 +114,9 @@ class ParamsView(View):
         self.title_from_name = title_from_name
         self.dense = dense
         self.key_prefix = key_prefix
+        # Nesting depth of the ParamsViews this view creates; the top-level view
+        # is 0.  Used only to pick the default GroupView variant.
+        self._group_depth = int(_group_depth)
         self.instance: Any = None
         self._field_types: dict[str, Any] = {}
         self.values = self._initial_values(source)
@@ -220,18 +225,23 @@ class ParamsView(View):
     def _build_group(self, key: str, value: Any, ui: GroupUI) -> GroupView:
         """Build a nested ``GroupView`` wrapping a nested ``ParamsView``."""
         title = ui.title if ui.title else key
+        variant = ui.variant or (
+            EGroupVariant.SMALL if self._group_depth == 0 else EGroupVariant.TINY
+        )
         nested = ParamsView(
             value,
             id=f"{self.id}.{key}",
             key_prefix=f"{self.key_prefix}{key}.",
             on_change=self._make_group_handler(),
             extra_rows=ui.extra_rows,
+            _group_depth=self._group_depth + 1,
         )
         return GroupView(
             title=title,
             children=[nested],
             collapsed=ui.collapsed,
             tooltip=ui.tooltip or "",
+            variant=variant,
         )
 
     def _make_group_handler(self) -> ControlHandler:

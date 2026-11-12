@@ -12,16 +12,25 @@ Two synced radius sliders, a stepper value-edit, and a live readout text field
 demonstrate programmatic value updates (`*View.set_value`).
 
 Every control, group, and menu carries a ``tooltip=`` text.  A permanent menu
-bar on top holds a single **Help → Show tooltips** option that calls
+bar on top holds a **Help → Show tooltips** option that calls
 ``Visualizer.set_tooltips_enabled`` to hide/show every framework tooltip
-page-wide (the label stays visible, so the option can always be found again).
+page-wide (the label stays visible, so the option can always be found again),
+plus a **Theme** menu that switches the whole UI between the ``dark`` and
+``compact`` themes.
+
+A ``ParamsView`` in the bottom-left panel demonstrates nested field groups and
+the group variants: its ``Shape`` sub-group is explicitly ``tiny``, while the
+other field groups would default to ``small``.  Hovering a value row's label
+shows the control's tooltip, and clicking any group header folds it.
 
 Run with:  uv run python py/examples/viz/ui/controls/all_controls.py
 
-Keywords: controls, slider, dropdown, button, tooltip, menu, VisualizerApp
+Keywords: params view, nested group, theme, variant, header, tooltip
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from pytanga.geometry import Point, Sphere
 from pytanga.viz import (
@@ -29,13 +38,18 @@ from pytanga.viz import (
     CheckboxView,
     ColorPickerView,
     ControlEvent,
+    DropdownUI,
     DropdownView,
+    EGroupVariant,
     EIconMaterial,
     EIconUC,
     FileChooserView,
+    GroupUI,
     GroupView,
     MenuView,
+    ParamsView,
     SceneView,
+    SliderUI,
     SliderView,
     StackView,
     TextAreaView,
@@ -104,6 +118,23 @@ class AllControlsApp(VisualizerApp):
         opacity = {"Solid": 0.9, "Translucent": 0.35, "Hidden": 0.0}[value]
         self.viz.update("ball", opacity=opacity)
         self.viz.flush()
+
+    async def on_params(self, _state: Any, event: ControlEvent) -> None:
+        if event.key == "radius":
+            self._apply_radius(float(event.value))
+        elif event.key == "mode":
+            opacity = {"Solid": 0.9, "Translucent": 0.35, "Hidden": 0.0}
+            self.viz.update("ball", opacity=opacity[str(event.value)])
+            self.viz.flush()
+        self._set_annotation(f"ParamsView: {event.key} = {event.value}")
+
+    async def on_theme_dark(self, _value: None, _event: ControlEvent) -> None:
+        self.viz.set_theme("dark")
+        self._set_annotation("Theme: Dark")
+
+    async def on_theme_compact(self, _value: None, _event: ControlEvent) -> None:
+        self.viz.set_theme("compact")
+        self._set_annotation("Theme: Compact")
 
     async def on_name(self, value: str, _event: ControlEvent) -> None:
         self._set_annotation(f"Name: {value}")
@@ -253,6 +284,30 @@ class AllControlsApp(VisualizerApp):
             tooltip="Pick a file",
             on_change=self.on_file,
         )
+        # A ParamsView with a nested sub-group; the ``shape`` GroupUI is
+        # explicitly tiny (the depth-0 default would be small).
+        params_view = ParamsView(
+            {
+                "radius": self._radius,
+                "mode": "Solid",
+                "shape": {"detail": 24, "smooth": True},
+            },
+            styles={
+                "radius": SliderUI(
+                    min=0.3, max=3.0, step=0.05, tooltip="Scale the sphere"
+                ),
+                "mode": DropdownUI(
+                    options=["Solid", "Translucent", "Hidden"],
+                    tooltip="Switch the material",
+                ),
+                "shape": GroupUI(
+                    title="Shape",
+                    variant=EGroupVariant.TINY,
+                    tooltip="Nested shape settings",
+                ),
+            },
+            on_change=self.on_params,
+        )
         # A permanent menu bar with one "Help" menu whose single option toggles
         # every tooltip on the page (no layout re-push: ``ui_options`` message).
         help_bar = MenuView(
@@ -271,6 +326,25 @@ class AllControlsApp(VisualizerApp):
                     ],
                     trigger_icon=EIconMaterial.HELP,
                     tooltip="Help topics",
+                ),
+                MenuView(
+                    "Theme",
+                    [
+                        ButtonView(
+                            "theme_dark",
+                            label="Dark",
+                            tooltip="Dark theme",
+                            on_click=self.on_theme_dark,
+                        ),
+                        ButtonView(
+                            "theme_compact",
+                            label="Compact",
+                            tooltip="Compact dense theme",
+                            on_click=self.on_theme_compact,
+                        ),
+                    ],
+                    trigger_icon=EIconMaterial.PALETTE,
+                    tooltip="Switch the whole UI theme",
                 ),
             ],
         )
@@ -340,6 +414,13 @@ class AllControlsApp(VisualizerApp):
                                 icon=EIconMaterial.SETTINGS,
                                 tooltip="Actions on the sphere and the annotation",
                                 position="top-left",
+                            ),
+                            GroupView(
+                                "Parameters",
+                                [params_view],
+                                icon=EIconMaterial.TUNE,
+                                tooltip="A ParamsView with a nested group (variant=TINY)",
+                                position="bottom-left",
                             ),
                         ],
                     ),

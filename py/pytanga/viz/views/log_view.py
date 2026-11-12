@@ -31,6 +31,8 @@ class LogView(View):
     converted to the browser's local timezone.  By default only the time-of-day
     with microseconds is shown; ``show_date`` adds the date and
     ``show_utc_offset`` adds the local offset to UTC (e.g. ``+02:00``).
+    ``font_size`` overrides the theme's ``--tanga-font-size-log`` for this pane
+    only (``None`` follows the theme).
     """
 
     _node_type = "log_view"
@@ -42,6 +44,7 @@ class LogView(View):
         max_history: int | None = None,
         show_date: bool = False,
         show_utc_offset: bool = False,
+        font_size: float | None = None,
         size: SizeSpec = None,
         preferred_width: SizeSpec = None,
         preferred_height: SizeSpec = None,
@@ -64,9 +67,12 @@ class LogView(View):
             not isinstance(max_history, int) or max_history < 0
         ):
             raise ValueError("max_history must be None or a non-negative integer")
+        if font_size is not None and font_size <= 0:
+            raise ValueError("font_size must be None or > 0")
         self.max_history = max_history
         self.show_date = show_date
         self.show_utc_offset = show_utc_offset
+        self.font_size = font_size
         self.lines: list[dict[str, Any]] = []
         self._push = None  # callback slot injected by the Visualizer
 
@@ -116,5 +122,7 @@ class LogView(View):
         result["max_history"] = self.max_history
         result["show_date"] = self.show_date
         result["show_utc_offset"] = self.show_utc_offset
+        if self.font_size is not None:
+            result["font_size"] = self.font_size
         result["lines"] = [dict(line) for line in self.lines]
         return result

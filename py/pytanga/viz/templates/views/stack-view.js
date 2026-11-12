@@ -3,7 +3,13 @@
 
 import { View } from './view.js';
 import { flowFlex, flexCss } from './flow-size.js';
-import { GAP, stackMainAxis, stackMinSize, stackPreferredSize } from './stack-size.js';
+import {
+    GAP,
+    resolveGapPx,
+    stackMainAxis,
+    stackMinSize,
+    stackPreferredSize,
+} from './stack-size.js';
 
 const DIRECTIONS = ['vertical', 'horizontal', 'wrap'];
 
@@ -35,6 +41,14 @@ export class StackView extends View {
         this.children = [];
         this._childSubs = new Map(); // view -> AbortController
         this._content = this.el; // children mount here (GroupView retargets this)
+        this._gapCache = null; // measured computed gap (px)
+        this._onThemeChange = () => {
+            this._gapCache = null;
+            this._relayout();
+        };
+        if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+            document.addEventListener('tanga:themechange', this._onThemeChange);
+        }
 
         this.el.classList.add('tanga-stack', `tanga-stack-${direction}`);
         this._applyFlex();
@@ -47,11 +61,33 @@ export class StackView extends View {
         const s = this._content.style;
         s.display = 'flex';
         s.position = 'relative';
-        s.gap = `${this.gap == null ? GAP : this.gap}px`;
+        s.gap = this.gap == null ? `var(--tanga-stack-gap, ${GAP}px)` : `${this.gap}px`;
+        this._gapCache = null;
         s.alignItems = this.align;
         s.justifyContent = this.justify;
         s.flexDirection = this.direction === 'vertical' ? 'column' : 'row';
         s.flexWrap = this.direction === 'wrap' ? 'wrap' : 'nowrap';
+    }
+
+    // The used gap: an explicit Python `gap` wins, otherwise the computed CSS
+    // gap (`var(--tanga-stack-gap)`), so a theme moves the layout *and* the
+    // size maths.  A detached element reports no gap — never cache that.
+    _gapPx() {
+        if (this.gap != null) return this.gap;
+        if (this._gapCache != null) return this._gapCache;
+        if (typeof getComputedStyle !== 'function') return GAP;
+        const cs = getComputedStyle(this._content);
+        const raw = (this.direction === 'vertical' ? cs.rowGap : cs.columnGap) || cs.gap;
+        const px = resolveGapPx(raw, null);
+        if (px === null) return GAP;
+        this._gapCache = px;
+        return px;
+    }
+
+    // A (re)mounted element has a new computed style — drop a stale gap.
+    mount(host) {
+        this._gapCache = null;
+        super.mount(host);
     }
 
     _applyScroll() {
@@ -110,7 +146,10 @@ export class StackView extends View {
         if (this.scrollable && axis === stackMainAxis(this.direction)) {
             return explicit;
         }
-        return Math.max(explicit, stackMinSize(axis, this.direction, this.children, available));
+        return Math.max(
+            explicit,
+            stackMinSize(axis, this.direction, this.children, available, this._gapPx())
+        );
     }
 
     preferredPx(axis, available) {
@@ -119,7 +158,9 @@ export class StackView extends View {
         if (this.scrollable && axis === stackMainAxis(this.direction)) {
             return null;
         }
-        return stackPreferredSize(axis, this.direction, this.children, available);
+        return stackPreferredSize(
+            axis, this.direction, this.children, available, this._gapPx()
+        );
     }
 
     _relayout() {
@@ -128,6 +169,9 @@ export class StackView extends View {
     }
 
     destroy() {
+        if (typeof document !== 'undefined' && typeof document.removeEventListener === 'function') {
+            document.removeEventListener('tanga:themechange', this._onThemeChange);
+        }
         for (const ac of this._childSubs.values()) ac.abort();
         this._childSubs.clear();
         super.destroy();

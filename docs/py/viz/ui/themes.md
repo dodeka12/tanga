@@ -32,8 +32,8 @@ theme_css_files("light")      # the ordered CSS file list
 ```
 
 The built-in themes are `dark` (default), `light`, `pastel`, and `compact` — the
-last is a dark-based **density variant**: smaller fonts, tighter control spacing,
-and a stacked/borderless numeric stepper.
+last is a dark-based **density variant**: smaller fonts, tighter control padding
+and icon sizes, and a stacked/borderless numeric stepper.
 
 ## Themed exports
 

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 
@@ -37,6 +38,11 @@ _COMPONENTS = [
     "views/stack-view.css",
     "views/toolbar-view.css",
 ]
+
+
+def _theme_css(rel: str) -> str:
+    """Return the source of a stylesheet under ``themes/`` (posix relative path)."""
+    return (_THEMES_DIR / rel).read_text(encoding="utf-8")
 
 
 def test_list_themes() -> None:
@@ -304,3 +310,192 @@ def test_set_theme_and_refresh_emit_version(monkeypatch):  # noqa: ANN001, ANN20
     viz.refresh_theme()
     assert pushed[-1]["theme"] == "light"
     assert pushed[-1]["version"] == 2
+
+
+@pytest.mark.parametrize(
+    ("token", "sheet"),
+    [
+        ("--tanga-group-title-font-size", "views/group-view.css"),
+        ("--tanga-group-title-bg", "views/group-view.css"),
+        ("--tanga-group-title-padding", "views/group-view.css"),
+        ("--tanga-group-title-radius", "views/group-view.css"),
+        ("--tanga-group-body-font-size", "views/group-view.css"),
+        ("--tanga-group-toggle-font-size", "views/group-view.css"),
+        ("--tanga-group-toggle-size", "views/group-view.css"),
+        ("--tanga-group-padding", "views/group-view.css"),
+        ("--tanga-group-header-padding", "views/group-view.css"),
+        ("--tanga-group-header-margin-bottom", "views/group-view.css"),
+        ("--tanga-group-header-gap", "views/group-view.css"),
+        ("--tanga-group-small-padding", "views/group-view.css"),
+        ("--tanga-group-small-title-font-size", "views/group-view.css"),
+        ("--tanga-group-small-title-bg", "views/group-view.css"),
+        ("--tanga-group-small-header-padding", "views/group-view.css"),
+        ("--tanga-group-small-header-margin-bottom", "views/group-view.css"),
+        ("--tanga-group-small-header-gap", "views/group-view.css"),
+        ("--tanga-group-tiny-padding", "views/group-view.css"),
+        ("--tanga-group-tiny-title-font-size", "views/group-view.css"),
+        ("--tanga-group-tiny-title-bg", "views/group-view.css"),
+        ("--tanga-group-tiny-header-padding", "views/group-view.css"),
+        ("--tanga-group-tiny-header-margin-bottom", "views/group-view.css"),
+        ("--tanga-group-tiny-header-gap", "views/group-view.css"),
+        ("--tanga-font-size-log", "views/message-view.css"),
+        ("--tanga-log-row-padding", "views/message-view.css"),
+        ("--tanga-log-row-gap", "views/message-view.css"),
+        ("--tanga-font-size-markdown", "views/markdown-view.css"),
+        ("--tanga-markdown-table-cell-padding", "views/markdown-view.css"),
+        ("--tanga-icon-size", "base.css"),
+        ("--tanga-icon-button-icon-size", "controls/button.css"),
+        ("--tanga-control-font-size", "controls/text-field.css"),
+        ("--tanga-control-padding", "controls/text-field.css"),
+        ("--tanga-control-label-margin-bottom", "base.css"),
+        ("--tanga-button-font-size", "controls/button.css"),
+        ("--tanga-button-padding", "controls/button.css"),
+        ("--tanga-color-picker-height", "controls/color-picker.css"),
+        ("--tanga-color-picker-padding", "controls/color-picker.css"),
+        ("--tanga-step-button-icon-size", "controls/value-edit.css"),
+    ],
+)
+def test_component_token_declared_and_consumed(token: str, sheet: str) -> None:
+    assert re.search(re.escape(token) + r"\s*:", _theme_css("base.css")), (
+        f"{token} is not declared in base.css"
+    )
+    assert re.search(re.escape(token) + r"\s*[,)]", _theme_css(sheet)), (
+        f"{token} is not consumed by {sheet}"
+    )
+
+
+def test_group_variant_rules_rescope_tokens() -> None:
+    css = _theme_css("views/group-view.css")
+    for variant in ("small", "tiny"):
+        selector = f".tanga-group.tanga-group-{variant}"
+        start = css.index(selector)
+        block = css[start : css.index("}", start)]
+        for token in (
+            "--tanga-group-padding",
+            "--tanga-group-title-font-size",
+            "--tanga-group-title-bg",
+            "--tanga-group-header-padding",
+        ):
+            assert token in block, f"{selector} does not re-scope {token}"
+
+    nested_start = css.index(".tanga-group.tanga-group-nested")
+    nested_block = css[nested_start : css.index("}", nested_start)]
+    assert "--tanga-group-small-padding" in nested_block
+    assert "--tanga-group-small-title-font-size" in nested_block
+
+
+def test_group_generic_consumers_use_base_tokens() -> None:
+    css = _theme_css("base.css")
+    consumers = {
+        "--tanga-group-padding": "--tanga-group-padding-base",
+        "--tanga-group-header-padding": "--tanga-group-header-padding-base",
+        "--tanga-group-header-margin-bottom": "--tanga-group-header-margin-bottom-base",
+        "--tanga-group-header-gap": "--tanga-group-header-gap-base",
+    }
+    for token, base in consumers.items():
+        assert re.search(
+            re.escape(token) + r"\s*:\s*var\(" + re.escape(base) + r"\)", css
+        ), f"{token} does not default to {base}"
+
+
+def test_compact_theme_targets_variant_titles() -> None:
+    css = _theme_css("compact/tokens.css")
+    assert "--tanga-group-title-font-size:" in css
+    assert "--tanga-group-small-title-font-size:" in css
+    assert "--tanga-group-tiny-title-font-size:" in css
+
+
+def test_compact_theme_overrides_group_spacing() -> None:
+    css = _theme_css("compact/tokens.css")
+    for token in (
+        "--tanga-stack-gap",
+        "--tanga-group-padding-base",
+        "--tanga-group-small-padding",
+        "--tanga-group-tiny-padding",
+    ):
+        assert f"{token}:" in css
+
+
+def test_compact_theme_tightens_control_chrome() -> None:
+    css = _theme_css("compact/tokens.css")
+    for token in (
+        "--tanga-icon-control-size",
+        "--tanga-icon-size",
+        "--tanga-icon-button-icon-size",
+        "--tanga-control-font-size",
+        "--tanga-control-padding",
+        "--tanga-control-label-margin-bottom",
+        "--tanga-button-padding",
+        "--tanga-color-picker-height",
+        "--tanga-color-picker-padding",
+        "--tanga-step-button-icon-size",
+    ):
+        assert f"{token}:" in css
+
+
+def test_control_chrome_defaults_alias_type_scale() -> None:
+    css = _theme_css("base.css")
+    assert re.search(
+        r"--tanga-control-font-size\s*:\s*var\(--tanga-font-size-body\)", css
+    )
+    assert re.search(
+        r"--tanga-button-font-size\s*:\s*var\(--tanga-control-font-size\)", css
+    )
+
+
+def test_group_base_tokens_feed_all_variants() -> None:
+    css = _theme_css("base.css")
+    base_tokens = (
+        "--tanga-group-padding-base",
+        "--tanga-group-title-bg-base",
+        "--tanga-group-header-padding-base",
+        "--tanga-group-header-margin-bottom-base",
+        "--tanga-group-header-gap-base",
+    )
+    for token in base_tokens:
+        assert re.search(re.escape(token) + r"\s*:", css), f"{token} not declared"
+
+    for variant in ("small", "tiny"):
+        for suffix in (
+            "padding",
+            "title-bg",
+            "header-padding",
+            "header-margin-bottom",
+            "header-gap",
+        ):
+            knob = f"--tanga-group-{variant}-{suffix}"
+            base = f"--tanga-group-{suffix}-base"
+            assert re.search(
+                re.escape(knob) + r"\s*:\s*var\(" + re.escape(base) + r"\)", css
+            ), f"{knob} does not default to {base}"
+
+
+def test_every_used_token_is_declared() -> None:
+    declared: set[str] = set()
+    declaration = re.compile(r"(--tanga-[a-z0-9-]+)\s*:")
+    for rel in (
+        "base.css",
+        "tokens.css",
+        *(p.as_posix() for p in _THEMES_DIR.glob("*/tokens.css")),
+    ):
+        declared.update(declaration.findall(_theme_css(rel)))
+
+    used: set[str] = set()
+    usage = re.compile(r"var\((--tanga-[a-z0-9-]+)")
+    for rel in ("base.css", *_COMPONENTS):
+        used.update(usage.findall(_theme_css(rel)))
+
+    missing = sorted(used - declared)
+    assert not missing, f"tokens used but never declared: {missing}"
+
+
+def test_type_scale_is_consumed() -> None:
+    sources = [_theme_css(rel) for rel in ("base.css", *_COMPONENTS)]
+    for token in ("--tanga-font-size-title", "--tanga-font-size-body"):
+        assert any(f"var({token})" in css for css in sources), (
+            f"{token} is declared but never consumed"
+        )
+
+
+def test_markdown_styles_tables() -> None:
+    assert ".tanga-markdown-body table" in _theme_css("views/markdown-view.css")

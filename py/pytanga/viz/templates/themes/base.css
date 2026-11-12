@@ -68,6 +68,7 @@
     --tanga-control-margin-y: 6px;
     --tanga-range-margin-y: 4px;
     --tanga-params-row-gap: 4px;
+    --tanga-stack-gap: 4px;
     --tanga-params-key-gap: 8px;
     --tanga-params-title-margin: 2px;
     --tanga-params-min-width: 220px;
@@ -77,6 +78,69 @@
     --tanga-font-size-label: 12px;
     --tanga-font-size-value: 12px;
     --tanga-group-nested-title-size: var(--tanga-font-size-body);
+
+    /* Control chrome (theme-able).  These isolate control density from the
+       global type scale: the control font aliases the body size by default,
+       so existing themes keep their rendering.  --tanga-icon-size matches the
+       Material Symbols stylesheet's effective default; compact lowers it. */
+    --tanga-icon-size: 24px;
+    --tanga-icon-button-icon-size: 18px;
+    --tanga-control-font-size: var(--tanga-font-size-body);
+    --tanga-control-padding: 4px 6px;
+    --tanga-control-label-margin-bottom: 2px;
+    --tanga-button-font-size: var(--tanga-control-font-size);
+    --tanga-button-padding: 5px 12px;
+    --tanga-color-picker-height: 28px;
+    --tanga-color-picker-padding: 2px;
+    --tanga-step-button-icon-size: 10px;
+
+    /* Component typography + title surface (theme-able; the font sizes alias
+       the type scale above, so setting --tanga-font-size-title / -body still
+       scales them).  --tanga-group-nested-title-size is the deprecated alias
+       feeding the `small` variant. */
+    --tanga-group-title-font-size: var(--tanga-font-size-title);
+    --tanga-group-title-bg: var(--tanga-group-title-bg-base);
+    --tanga-group-title-padding: 0;
+    --tanga-group-title-radius: 0;
+    --tanga-group-body-font-size: var(--tanga-font-size-body);
+    --tanga-group-toggle-font-size: 14px;
+    --tanga-group-toggle-size: 22px;
+    --tanga-font-size-log: var(--tanga-font-size-body);
+    --tanga-log-row-padding: 3px 8px;
+    --tanga-log-row-gap: 8px;
+    --tanga-font-size-markdown: var(--tanga-font-size-body);
+    --tanga-markdown-table-cell-padding: 2px 8px;
+
+    /* Default-variant group consumers (the `*-base` values are declared with
+       the variant knobs below). */
+    --tanga-group-padding: var(--tanga-group-padding-base);
+    --tanga-group-header-padding: var(--tanga-group-header-padding-base);
+    --tanga-group-header-margin-bottom: var(--tanga-group-header-margin-bottom-base);
+    --tanga-group-header-gap: var(--tanga-group-header-gap-base);
+
+    /* Group styling variants.  The `*-base` values are the all-variants knobs;
+       each variant token defaults to its base, so a theme can move every group
+       with one declaration or one level with a variant token.  group-view.css
+       re-scopes the generic --tanga-group-* consumers to these knobs. */
+    --tanga-group-padding-base: 8px 12px;
+    --tanga-group-title-bg-base: transparent;
+    --tanga-group-header-padding-base: 0 0 6px;
+    --tanga-group-header-margin-bottom-base: 6px;
+    --tanga-group-header-gap-base: 6px;
+
+    --tanga-group-small-padding: var(--tanga-group-padding-base);
+    --tanga-group-small-title-font-size: var(--tanga-group-nested-title-size);
+    --tanga-group-small-title-bg: var(--tanga-group-title-bg-base);
+    --tanga-group-small-header-padding: var(--tanga-group-header-padding-base);
+    --tanga-group-small-header-margin-bottom: var(--tanga-group-header-margin-bottom-base);
+    --tanga-group-small-header-gap: var(--tanga-group-header-gap-base);
+
+    --tanga-group-tiny-padding: var(--tanga-group-padding-base);
+    --tanga-group-tiny-title-font-size: var(--tanga-font-size-label);
+    --tanga-group-tiny-title-bg: var(--tanga-group-title-bg-base);
+    --tanga-group-tiny-header-padding: var(--tanga-group-header-padding-base);
+    --tanga-group-tiny-header-margin-bottom: var(--tanga-group-header-margin-bottom-base);
+    --tanga-group-tiny-header-gap: var(--tanga-group-header-gap-base);
 
     /* Status + loading. */
     --tanga-status-ok: #4f4;
@@ -196,9 +260,11 @@ canvas {
     background: none;
 }
 
-/* Shared icon rendering (material + unicode codepoint icons). */
-.material-symbols-outlined {
-    font-size: 16px;
+/* Shared icon rendering (material + unicode codepoint icons).  The `span`
+ * qualifier outranks the Google Material Symbols stylesheet's own 24px rule,
+ * so `--tanga-icon-size` actually controls the rendered glyphs. */
+span.material-symbols-outlined {
+    font-size: var(--tanga-icon-size);
     line-height: 1;
     vertical-align: middle;
 }
@@ -239,7 +305,7 @@ canvas {
     display: block;
     font-size: var(--tanga-font-size-label);
     color: var(--tanga-fg-muted);
-    margin-bottom: 2px;
+    margin-bottom: var(--tanga-control-label-margin-bottom);
 }
 
 .tanga-control-label-row {

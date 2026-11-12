@@ -105,6 +105,10 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
                 direction: node.direction,
                 position: node.position,
                 collapsed: node.collapsed,
+                show_header: node.show_header,
+                collapsible: node.collapsible,
+                title_size: node.title_size,
+                variant: node.variant,
                 enabled: node.enabled,
                 scrollable: node.scrollable,
                 gap: node.gap,
@@ -169,7 +173,11 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
         for (const row of node.rows || []) {
             const child = buildViewTree(row.control, ws, reuse, registry, newScenes);
             paramsView.addRow({
-                key: row.key, title: row.title, control: child, full_width: row.full_width,
+                key: row.key,
+                title: row.title,
+                control: child,
+                full_width: row.full_width,
+                tooltip: child.tooltip,
             });
         }
         return registerView(registry, paramsView, node);
@@ -218,6 +226,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
                 lines: node.lines || [],
                 show_date: node.show_date ?? false,
                 show_utc_offset: node.show_utc_offset ?? false,
+                font_size: node.font_size ?? null,
             });
             registerMessageView(view.messageId, view);
         }
@@ -294,7 +303,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             view = existing;
         } else {
             view = new MarkdownView({
-                id: node.id, value: node.value,
+                id: node.id, value: node.value, font_size: node.font_size,
             });
         }
     } else if (node.type === 'progress_bar_view') {

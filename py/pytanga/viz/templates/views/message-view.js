@@ -35,6 +35,7 @@ export class MessageView extends View {
         lines = [],
         show_date = false,
         show_utc_offset = false,
+        font_size = null,
     } = {}) {
         super();
         this.messageId = id;
@@ -42,9 +43,21 @@ export class MessageView extends View {
         this.initialLines = lines || [];
         this.showDate = show_date;
         this.showUtcOffset = show_utc_offset;
+        this.fontSize = font_size;
         this._initialized = false;
         this.el.classList.add('tanga-message-view');
         this.el.style.overflow = 'auto';
+        this._applyFontSize();
+    }
+
+    // Instance override: set only the scoped custom property, so the theme's
+    // `--tanga-font-size-log` still governs every other log pane.
+    _applyFontSize() {
+        if (this.fontSize == null) {
+            this.el.style.removeProperty('--tanga-font-size-log');
+        } else {
+            this.el.style.setProperty('--tanga-font-size-log', `${this.fontSize}px`);
+        }
     }
 
     _onMounted() {
@@ -58,6 +71,8 @@ export class MessageView extends View {
         this.maxHistory = node.max_history ?? this.maxHistory;
         this.showDate = node.show_date ?? this.showDate;
         this.showUtcOffset = node.show_utc_offset ?? this.showUtcOffset;
+        if ('font_size' in node) this.fontSize = node.font_size ?? null;
+        this._applyFontSize();
         if (this.maxHistory != null) {
             while (this.el.children.length > this.maxHistory) {
                 this.el.removeChild(this.el.children[0]);

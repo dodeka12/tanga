@@ -3,6 +3,7 @@
 .tanga-markdown-body {
     color: var(--tanga-fg);
     font-family: var(--tanga-font);
+    font-size: var(--tanga-font-size-markdown);
     line-height: 1.5;
     overflow-wrap: anywhere;
     overflow-y: auto;
@@ -56,4 +57,21 @@
     margin: 0.4em 0;
     padding-left: 0.8em;
     color: var(--tanga-fg-muted);
+}
+
+.tanga-markdown-body table {
+    border-collapse: collapse;
+    margin: 0.4em 0;
+}
+
+.tanga-markdown-body th,
+.tanga-markdown-body td {
+    border: 1px solid var(--tanga-border-subtle);
+    padding: var(--tanga-markdown-table-cell-padding);
+    text-align: left;
+}
+
+.tanga-markdown-body th {
+    background: var(--tanga-surface);
+    color: var(--tanga-fg-strong);
 }

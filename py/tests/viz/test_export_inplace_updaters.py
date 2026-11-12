@@ -108,4 +108,3 @@ def test_axis_grid_updaters_are_dispatched_and_bundled():  # noqa: ANN201
         "function updateGrid(",
     ):
         assert fn in lib
-

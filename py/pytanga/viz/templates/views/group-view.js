@@ -7,6 +7,7 @@ import { View } from './view.js';
 import { StackView } from './stack-view.js';
 import { stackMainAxis, stackMinSize, stackPreferredSize } from './stack-size.js';
 import { applyTooltip, createIconElement, sendControlEvent } from '../controls-panel.js';
+import { isGroupHeaderInteractiveEvent } from './group-header.js';
 
 // Fallback vertical chrome (border-box px) used when the rendered DOM can't be
 // measured (fake DOM in tests, or before the first layout).  Derived from
@@ -16,8 +17,10 @@ import { applyTooltip, createIconElement, sendControlEvent } from '../controls-p
 //                         + 1px border-bottom + 6px margin-bottom (35px total)
 // folded = 1 + 8 + (22 + 6 + 1) = 38   (pane ends at the title bar's bottom border)
 // chrome = 2 + 16 + 29 + 6      = 53   (full shell + header + its margin)
+// A headerless group has folded = 0 and only the shell around its content.
 const FOLDED_FALLBACK = 38;
 const CHROME_FALLBACK = 53;
+const SHELL_FALLBACK = 18; // .tanga-group border 1px + padding 8px ×2
 
 export class GroupView extends StackView {
     constructor({
@@ -25,6 +28,10 @@ export class GroupView extends StackView {
         direction = 'vertical',
         position = null,
         collapsed = false,
+        show_header = true,
+        collapsible = true,
+        title_size = null,
+        variant = 'default',
         enabled = true,
         scrollable = false,
         gap = null,
@@ -38,9 +45,15 @@ export class GroupView extends StackView {
         children = [],
     } = {}) {
         super({ direction, children: [], gap, align, justify });
-        this.title = title;
+        this.title = title ?? '';
         this.position = position;
         this.collapsed = collapsed;
+        this.show_header = show_header !== false;
+        this.collapsible = this.show_header && collapsible !== false;
+        this.title_size = title_size == null ? null : Number(title_size);
+        this.variant = ['default', 'small', 'tiny'].includes(variant)
+            ? variant : 'default';
+        if (this.collapsed && !this.collapsible) this.collapsed = false;
         this.enabled = enabled;
         this.scrollable = scrollable;
         this._collapseMin = null;   // stashed explicit main-axis min (Size|null)
@@ -60,10 +73,20 @@ export class GroupView extends StackView {
         this.groupId = id;
 
         this.el.classList.add('tanga-group');
+        this._syncChromeClasses();
         this._setupChrome();
         if (!this.enabled) this.setEnabled(false);
 
         for (const child of children) this.addChild(child);
+    }
+
+    _syncChromeClasses() {
+        this.el.classList.toggle('tanga-group-no-header', !this.show_header);
+        this.el.classList.toggle('tanga-group-static', !this.collapsible);
+        this.el.classList.toggle('tanga-group-small', this.variant === 'small');
+        this.el.classList.toggle('tanga-group-tiny', this.variant === 'tiny');
+        // Deprecated alias kept for one release (see phase 1 CSS).
+        this.el.classList.toggle('tanga-group-nested', this.variant === 'small');
     }
 
     _setupChrome() {
@@ -77,14 +100,36 @@ export class GroupView extends StackView {
             this.el.style.overflow = 'hidden';
         }
 
+        this._content = document.createElement('div');
+        this._content.className = 'tanga-group-content';
+        this.el.appendChild(this._content);
+
+        this._ensureHeader();
+        this._applyFlex(); // retarget flex onto the content div
+        this._applyScroll(); // scroll the content region below the title bar
+        this._applyCollapsed();
+    }
+
+    // Create the header bar once, or drop it when the group has no title,
+    // icon or fold toggle to show.  A late header is inserted *before* the
+    // content so it always stays above it.
+    _ensureHeader() {
+        if (!this.show_header || !(this.collapsible || this.title || this.icon)) {
+            this._teardownHeader();
+            return;
+        }
+        if (this._header) {
+            // A layout re-push can flip `collapsible`; the toggle presence is
+            // part of the header structure, so rebuild when it disagrees.
+            if (!!this._toggleBtn === this.collapsible) {
+                this._applyTitleSize();
+                return;
+            }
+            this._teardownHeader();
+        }
+
         this._header = document.createElement('div');
         this._header.className = 'tanga-group-header';
-        Object.assign(this._header.style, {
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '6px',
-        });
 
         if (this.scrollable) {
             this._header.style.flexShrink = '0';
@@ -92,34 +137,38 @@ export class GroupView extends StackView {
 
         const titleWrap = document.createElement('div');
         titleWrap.className = 'tanga-group-title-wrap';
-        Object.assign(titleWrap.style, {
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-        });
         this._titleWrap = titleWrap;
         this._renderTitle();
         this._header.appendChild(titleWrap);
 
-        const toggleBtn = document.createElement('button');
-        toggleBtn.className = 'tanga-group-toggle';
-        applyTooltip(toggleBtn, 'Collapse / Expand');
-        this._toggleBtn = toggleBtn;
-        this._updateFoldIcon();
+        if (this.collapsible) {
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'tanga-group-toggle';
+            applyTooltip(toggleBtn, 'Collapse / Expand');
+            this._toggleBtn = toggleBtn;
+            this._updateFoldIcon();
+            toggleBtn.addEventListener('click', () => {
+                this.setCollapsed(!this.collapsed);
+                sendControlEvent('control:group_toggle', this.groupId, this.collapsed);
+            });
+            this._header.appendChild(toggleBtn);
+        }
 
-        toggleBtn.addEventListener('click', () => {
+        // Clicking anywhere on a collapsible header folds it.  The toggle has
+        // its own handler, and `setCollapsed()` remains the only state path.
+        // Resolve interactive descendants from the event path: the toggle
+        // redraws its icon before this listener runs, detaching the click
+        // target, so `event.target.closest(...)` would no longer find it.
+        this._header.addEventListener('click', (event) => {
+            if (!this.collapsible || !this.enabled) return;
+            if (isGroupHeaderInteractiveEvent(event)) return;
             this.setCollapsed(!this.collapsed);
             sendControlEvent('control:group_toggle', this.groupId, this.collapsed);
         });
-        this._header.appendChild(toggleBtn);
-        this.el.appendChild(this._header);
 
-        this._content = document.createElement('div');
-        this._content.className = 'tanga-group-content';
-        this.el.appendChild(this._content);
-        this._applyFlex(); // retarget flex onto the content div
-        this._applyScroll(); // scroll the content region below the title bar
-        this._applyCollapsed();
+        this.el.insertBefore(this._header, this._content);
+        this._applyTitleSize();
+        this._invalidateChrome();
 
         if (typeof ResizeObserver !== 'undefined') {
             this._headerResizeObserver = new ResizeObserver((entries) => {
@@ -132,6 +181,20 @@ export class GroupView extends StackView {
         }
     }
 
+    _teardownHeader() {
+        if (!this._header && !this._headerResizeObserver) return;
+        if (this._headerResizeObserver) {
+            this._headerResizeObserver.disconnect();
+            this._headerResizeObserver = null;
+        }
+        if (this._header && this._header.parentNode) this._header.remove();
+        this._header = null;
+        this._titleWrap = null;
+        this._toggleBtn = null;
+        this._lastHeaderHeight = null;
+        this._invalidateChrome();
+    }
+
     _renderTitle() {
         const wrap = this._titleWrap;
         if (!wrap) return;
@@ -141,17 +204,32 @@ export class GroupView extends StackView {
             icon.classList.add('tanga-group-icon');
             wrap.appendChild(icon);
         }
-        if (!this.icon_only) {
+        if (!this.icon_only && this.title) {
             const span = document.createElement('span');
             span.className = 'tanga-group-title';
-            span.textContent = this.title || 'Controls';
+            span.textContent = this.title;
             wrap.appendChild(span);
         }
+        // Keep the toggle button flush right when there is no title/icon.
+        wrap.style.display = wrap.childElementCount ? '' : 'none';
         applyTooltip(wrap, this.tooltip);
     }
 
+    // Instance override (scoped custom property only — never a resolved
+    // appearance value), so every theme rule for `.tanga-group-title` still
+    // applies except the font size.
+    _applyTitleSize() {
+        if (this.title_size == null) {
+            this.el.style.removeProperty('--tanga-group-title-font-size');
+        } else {
+            this.el.style.setProperty(
+                '--tanga-group-title-font-size', `${this.title_size}px`
+            );
+        }
+    }
+
     update(node) {
-        this.title = node.title ?? this.title;
+        if ('title' in node) this.title = node.title ?? '';
         this.position = node.position ?? this.position;
         this.direction = node.direction ?? this.direction;
         this.scrollable = node.scrollable ?? this.scrollable;
@@ -163,6 +241,20 @@ export class GroupView extends StackView {
         this.tooltip = node.tooltip ?? this.tooltip;
         this.parent_id = node.parent_id ?? this.parent_id;
         this.groupId = node.id ?? this.groupId;
+        if ('show_header' in node) this.show_header = node.show_header !== false;
+        if ('collapsible' in node) this.collapsible = node.collapsible !== false;
+        if ('title_size' in node) {
+            this.title_size = node.title_size == null ? null : Number(node.title_size);
+        }
+        if ('variant' in node) {
+            this.variant = ['default', 'small', 'tiny'].includes(node.variant)
+                ? node.variant : 'default';
+        }
+        this.collapsible = this.show_header && this.collapsible;
+        if (this.collapsed && !this.collapsible) this.collapsed = false;
+        this._syncChromeClasses();
+        this._ensureHeader();
+        this._applyTitleSize();
         this._applyFlex();
         this._applyScroll();
         this._renderTitle();
@@ -172,6 +264,7 @@ export class GroupView extends StackView {
         if (node.enabled !== undefined) {
             this.setEnabled(!!node.enabled);
         }
+        this._applyCollapsed();
     }
 
     _applyCollapsed() {
@@ -193,17 +286,20 @@ export class GroupView extends StackView {
         this.enabled = !!enabled;
         this.el.classList.toggle('tanga-group-disabled', !this.enabled);
         if (this._toggleBtn) this._toggleBtn.disabled = !this.enabled;
-        if (!this.enabled) this.setCollapsed(true);
+        // A static group cannot fold, so dim its content instead.
+        if (!this.enabled && this.collapsible) this.setCollapsed(true);
     }
 
     setTitle(title) {
-        this.title = title;
+        this.title = title ?? '';
+        // A rename can create or drop the header bar.
+        this._ensureHeader();
         this._renderTitle();
     }
 
     setTooltip(tooltip) {
         this.tooltip = tooltip || '';
-        applyTooltip(this._titleWrap, this.tooltip);
+        applyTooltip(this._titleWrap || this.el, this.tooltip);
     }
 
     // Collapse/expand.  When collapsed the pane is reduced to its title bar, so
@@ -211,6 +307,7 @@ export class GroupView extends StackView {
     // which broadcast `constraintschange` so any subscribed container re-lays
     // out (no special SplitView knowledge needed).
     setCollapsed(collapsed) {
+        if (!this.collapsible) return;
         if (this.collapsed === collapsed) return;
         this.collapsed = collapsed;
         if (this.direction !== 'wrap') {
@@ -276,7 +373,25 @@ export class GroupView extends StackView {
     _chromeY() {
         if (this._chromeYCache) return this._chromeYCache;
         const header = this._header;
-        if (!header || typeof header.getBoundingClientRect !== 'function') {
+        if (!header) {
+            // No header bar: only the panel shell surrounds the content.
+            if (typeof getComputedStyle !== 'function') {
+                return { folded: 0, chrome: SHELL_FALLBACK };
+            }
+            const cs = getComputedStyle(this.el);
+            if (!cs || (!cs.paddingTop && !cs.paddingBottom
+                && !cs.borderTopWidth && !cs.borderBottomWidth)) {
+                return { folded: 0, chrome: SHELL_FALLBACK };
+            }
+            const shell = (parseFloat(cs.paddingTop) || 0)
+                + (parseFloat(cs.paddingBottom) || 0)
+                + (parseFloat(cs.borderTopWidth) || 0)
+                + (parseFloat(cs.borderBottomWidth) || 0);
+            const result = { folded: 0, chrome: Math.round(shell) };
+            this._chromeYCache = result;
+            return result;
+        }
+        if (typeof header.getBoundingClientRect !== 'function') {
             return { folded: FOLDED_FALLBACK, chrome: CHROME_FALLBACK };
         }
         const elRect = this.el.getBoundingClientRect();
@@ -320,7 +435,7 @@ export class GroupView extends StackView {
         const explicit = View.prototype.minSizePx.call(this, axis, available);
         const contentMin = this.scrollable
             ? 0
-            : stackMinSize(axis, this.direction, this.children, available);
+            : stackMinSize(axis, this.direction, this.children, available, this._gapPx());
         return Math.max(explicit, contentMin + chrome);
     }
 
@@ -341,14 +456,16 @@ export class GroupView extends StackView {
         const explicit = View.prototype.preferredPx.call(this, axis, available);
         if (explicit !== null && explicit !== undefined) return explicit;
         if (this.scrollable) return null;
-        const contentPref = stackPreferredSize(axis, this.direction, this.children, available);
+        const contentPref = stackPreferredSize(
+            axis, this.direction, this.children, available, this._gapPx()
+        );
         return contentPref === null || contentPref === undefined
             ? null
             : contentPref + chrome;
     }
 
     destroy() {
-        if (this._headerResizeObserver) this._headerResizeObserver.disconnect();
+        this._teardownHeader();
         if (typeof document !== 'undefined' && typeof document.removeEventListener === 'function') {
             document.removeEventListener('tanga:themechange', this._onThemeChange);
         }
