@@ -834,8 +834,31 @@ class VizServer:
 
     # ── Internals ─────────────────────────────────────────
 
+    @web.middleware
+    async def _theme_cache_middleware(
+        self,
+        request: web.Request,
+        handler: Callable[[web.Request], Awaitable[web.StreamResponse]],
+    ) -> web.StreamResponse:
+        """Make runtime-registered theme assets revalidate on every load.
+
+        Bundled theme files go through :meth:`_catch_all_handler`, which already
+        sends ``Cache-Control: no-cache``.  External themes are registered as
+        aiohttp static routes (which run before the catch-all), so add the same
+        header here.  They live outside the bundled templates and are edited in
+        place; without revalidation a browser may keep serving stale CSS after a
+        restart.
+        """
+        response = await handler(request)
+        if any(
+            request.path.startswith(f"/themes/{prefix}/")
+            for prefix in self._theme_static_dirs
+        ):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
     def _build_app(self) -> web.Application:
-        app = web.Application()
+        app = web.Application(middlewares=[self._theme_cache_middleware])
         app.router.add_get("/ws", self._ws_handler)
         # External themes are served under /themes/user/<id>/ (more
         # specific than the catch-all below, so they win for those paths).
