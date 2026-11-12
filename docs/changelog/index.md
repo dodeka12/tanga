@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.26.1 (2.27.0-rc1)] — 2026-11-12
+- Expanded `GroupView` keeps its flex gap and layout across fold redraws and re-pushes · runtime-registered theme CSS is served with `Cache-Control: no-cache`
+→ [Details](2026/11/12_0a4e4fed1.md)
+
 ## [Since 2.26.1] — 2026-11-12
 - Themeable spacing/typography/control-chrome tokens · GroupView variants and header controls · click-to-fold headers · per-instance log/markdown font sizes · styled markdown tables · compact control density
 - Bug fixes: group fold arrow folds exactly once · fully clickable menu rows · ParamsView row-title tooltips · explicit stack gaps

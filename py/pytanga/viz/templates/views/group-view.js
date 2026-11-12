@@ -268,7 +268,10 @@ export class GroupView extends StackView {
     }
 
     _applyCollapsed() {
-        if (this._content) this._content.style.display = this.collapsed ? 'none' : '';
+        if (!this._content) return;
+        // `_applyFlex()` owns the content display; clearing it would fall back
+        // to `display: block` and silently drop the gap/flex layout.
+        this._content.style.display = this.collapsed ? 'none' : 'flex';
     }
 
     _updateFoldIcon() {
