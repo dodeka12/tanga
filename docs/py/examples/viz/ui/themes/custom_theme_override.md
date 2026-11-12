@@ -1,6 +1,6 @@
 # A custom theme with a full button/checkbox override
 
-**Keywords:** theme · custom theme · override · theme switching · button · checkbox · wireframe · light
+**Keywords:** theme · custom theme · tokens · spacing · typography · markdown · table
 
 Adds a `pastel` theme whose token sheet re-themes the palette and whose
 `overrides` fully re-style the button (a pill) and checkbox (a switch).
@@ -8,6 +8,11 @@ Buttons switch live between the custom `pastel`, `light`, and standard
 `dark` themes via `viz.set_theme(...)`, the checkbox toggles the sphere's
 wireframe, and `viz.export_snapshot(..., theme="pastel")` packs the override
 into a self-contained HTML export.
+
+The same panel also shows the group/markdown chrome tokens: its title uses a
+per-instance `title_size`, a nested `tiny` `GroupView` holds a
+`MarkdownView` with a per-instance `font_size`, a heading, a bullet list and
+a small table (so the new table rules are visible).
 
 ## Run
 
@@ -34,9 +39,14 @@ Buttons switch live between the custom ``pastel``, ``light``, and standard
 wireframe, and ``viz.export_snapshot(..., theme="pastel")`` packs the override
 into a self-contained HTML export.
 
+The same panel also shows the group/markdown chrome tokens: its title uses a
+per-instance ``title_size``, a nested ``tiny`` ``GroupView`` holds a
+``MarkdownView`` with a per-instance ``font_size``, a heading, a bullet list and
+a small table (so the new table rules are visible).
+
 Run with:  uv run python py/examples/viz/ui/themes/custom_theme_override.py
 
-Keywords: theme, custom theme, override, theme switching, button, checkbox, wireframe, light
+Keywords: theme, custom theme, tokens, spacing, typography, markdown, table
 """
 
 from typing import Any
@@ -47,7 +57,9 @@ from pytanga.viz import (
     CheckboxView,
     ControlEvent,
     EAnchor,
+    EGroupVariant,
     GroupView,
+    MarkdownView,
     SceneView,
     SliderView,
     Visualizer,
@@ -105,8 +117,28 @@ layout = SceneView(
                 ButtonView(
                     "btn_standard", label="Apply Standard", on_click=_apply_standard
                 ),
+                GroupView(
+                    "Nested",
+                    [
+                        MarkdownView(
+                            "notes",
+                            value=(
+                                "### Notes\n\n"
+                                "- Theme tokens re-scope every panel\n"
+                                "- Nested groups use the `tiny` variant\n\n"
+                                "| Token | Value |\n"
+                                "|-------|-------|\n"
+                                "| padding | 3px 5px |\n"
+                                "| title | 11px |\n"
+                            ),
+                            font_size=14,
+                        )
+                    ],
+                    variant=EGroupVariant.TINY,
+                ),
             ],
             position=EAnchor.TOP_LEFT,
+            title_size=14,
         ),
     ],
 )

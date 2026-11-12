@@ -99,6 +99,7 @@ _FEATURES = {
     "function clearGroupChildren(": "in-place group refill helper",
 }
 
+
 def main() -> None:
     viz = Visualizer(
         title="Tanga — In-place update check",
@@ -108,9 +109,7 @@ def main() -> None:
 
     # ── Static entities (must never be rebuilt after frame 0) ──
     viz.new(Axes2D((0, 0), range_u=(-5, 5), range_v=(-5, 5)))
-    viz.new(
-        Grid(dir_u=(1, 0, 0), dir_v=(0, 1, 0), range_u=(-5, 5), range_v=(-5, 5))
-    )
+    viz.new(Grid(dir_u=(1, 0, 0), dir_v=(0, 1, 0), range_u=(-5, 5), range_v=(-5, 5)))
     viz.new(Axis(start=(0, 0, 0), end=(5, 0, 0), major_interval=1.0, label="X"))
 
     orbit = PointPath(max_points=64)

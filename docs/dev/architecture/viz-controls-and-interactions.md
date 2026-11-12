@@ -199,7 +199,9 @@ The layout tree is the single render path for **every** page:
 - `GroupView` is a titled `StackView` with an optional leading `icon`,
   `icon_only` mode, and a borderless fold button — the control-group container.
 - `MenuView` is a hamburger `dropdown` or a permanent `bar` of options
-  (`EControlVariant.MENU` flattens its control children).  Choosing an option
+  (`EControlVariant.MENU` flattens its control children).  A whole option row is
+  a hit target: a click on blank row space activates its button/checkbox (via a
+  delegated handler that leaves interactive children alone).  Choosing an option
   auto-closes the menu tree: a button `click` or a dropdown `change` closes it
   (walking `_parentMenu` up to the root), while checkboxes and sliders stay
   open.
@@ -371,9 +373,12 @@ and event routing reuse the existing `(id, event)` registry unchanged.
   a nested group).  It defaults `True` on `ButtonUI`/`MarkdownUI`/`ProgressBarUI`;
   `ButtonUI.label` is the button's own caption (rendered instead of the key title).
 - **Nested dataclasses** render as a nested `GroupView` (tagged
-  `tanga-group-nested` in the frontend) wrapping a nested `ParamsView` whose id
-  is `f"{view.id}.{key}"`; `GroupUI(title=…, collapsed=…, extra_rows=[…])`
-  customizes it.  The nested view inherits the parent's `on_change` and carries a
+  `tanga-group-small` at depth 0 and `tanga-group-tiny` deeper; the old
+  `tanga-group-nested` class is a deprecated alias for `small`) wrapping a
+  nested `ParamsView` whose id is `f"{view.id}.{key}"`;
+  `GroupUI(title=…, collapsed=…, variant=…, extra_rows=[…])` customizes it.  A
+  value row's key label carries its control's tooltip (the label is a sibling of
+  the control).  The nested view inherits the parent's `on_change` and carries a
   `key_prefix`, so a nested change fires the shared handler with a dotted
   `event.key` like `"surface.scale"` (the handler still receives the top-level
   state).
@@ -593,7 +598,11 @@ existing `control:group_toggle` route: the frontend click handler sends
 `sendControlEvent('control:group_toggle', groupId, collapsed)`, and
 `dispatch_control_event` sets `group.collapsed` (via `resolve_group`) then fires
 `on_toggle` (`(id, "toggle")`), registered by `LayoutHost.register` when
-`GroupView.on_toggle` is set.
+`GroupView.on_toggle` is set.  A click anywhere on a collapsible header uses the
+same route (the toggle and interactive children are ignored); a
+`collapsible=False` header ignores clicks, and `set_collapsed` raises on a
+non-collapsible group.  Python serializes the presentational `variant` only when
+it is non-default, so the wire is unchanged for existing groups.
 
 ## Tooltips (`applyTooltip` + `ui_options`)
 

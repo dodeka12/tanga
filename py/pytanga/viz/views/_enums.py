@@ -8,6 +8,18 @@ from __future__ import annotations
 from enum import StrEnum
 
 
+class EGroupVariant(StrEnum):
+    """Presentational size variant of a :class:`GroupView`.
+
+    ``SMALL``/``TINY`` only re-scope ``--tanga-group-*`` tokens; they do not
+    change the layout semantics of the group.
+    """
+
+    DEFAULT = "default"
+    SMALL = "small"
+    TINY = "tiny"
+
+
 class EOrientation(StrEnum):
     HORIZONTAL = "horizontal"
     VERTICAL = "vertical"

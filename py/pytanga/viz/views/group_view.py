@@ -10,7 +10,7 @@ from typing import Any
 from .._anchor import EAnchor
 from .._controls import ControlHandler
 from ._base import View
-from ._enums import EStackAlign, EStackDirection, EStackJustify
+from ._enums import EGroupVariant, EStackAlign, EStackDirection, EStackJustify
 from .._icons import Icon
 from .._size import SizeSpec
 from .stack_view import StackView
@@ -22,18 +22,30 @@ class GroupView(StackView):
     Holds control views (or any views) and can be used as a split pane or as an
     overlay child of a :class:`SceneView`, where ``position`` anchors it over the
     canvas.
+
+    ``title=None`` and ``title=""`` both render **no** title (there is no
+    implicit ``"Controls"`` label).  ``show_header=False`` removes the whole
+    header bar, ``collapsible=False`` renders a static group without a fold
+    toggle, ``title_size`` overrides the title font size for this instance only,
+    and ``variant`` selects a presentational size variant (``default`` /
+    ``small`` / ``tiny``).  The last four options are construction-time; a layout
+    re-push is what refreshes them.
     """
 
     _node_type = "group"
 
     def __init__(
         self,
-        title: str = "",
+        title: str | None = "",
         children: list[View] | None = None,
         *,
         direction: EStackDirection | str = EStackDirection.VERTICAL,
         position: EAnchor | str | None = None,
         collapsed: bool = False,
+        show_header: bool = True,
+        collapsible: bool = True,
+        title_size: float | None = None,
+        variant: EGroupVariant | str = EGroupVariant.DEFAULT,
         visible: bool = True,
         enabled: bool = True,
         scrollable: bool = False,
@@ -75,6 +87,11 @@ class GroupView(StackView):
         self.collapsed = collapsed
         self.visible = visible
         self.enabled = enabled
+        # show_header / collapsible / title_size / variant are construction-time
+        # options; a layout re-push is the only way to refresh them.
+        self.show_header = show_header
+        self.collapsible = collapsible
+        self.title_size = title_size
         self.icon = icon
         self.icon_only = icon_only
         self.tooltip = tooltip
@@ -82,8 +99,27 @@ class GroupView(StackView):
         self.on_toggle = on_toggle
         self._push_state = None  # callback slot injected at mount
 
+        if not self.show_header:
+            self.collapsible = False
+        if self.collapsed and not self.collapsible:
+            raise ValueError(
+                "GroupView(collapsed=True) requires collapsible=True and "
+                "show_header=True"
+            )
+        if self.title_size is not None and self.title_size <= 0:
+            raise ValueError("GroupView(title_size=…) must be > 0")
+        try:
+            self.variant: EGroupVariant = EGroupVariant(variant)
+        except ValueError as exc:
+            raise ValueError(
+                f"GroupView(variant=…): unknown variant {variant!r}; "
+                f"expected one of {[v.value for v in EGroupVariant]}"
+            ) from exc
+
     def set_collapsed(self, collapsed: bool) -> None:
         """Collapse/expand this group and push ``control_state`` (if mounted)."""
+        if not self.collapsible:
+            raise ValueError("GroupView is not collapsible")
         self.collapsed = bool(collapsed)
         if self._push_state is not None:
             self._push_state(self.id, {"collapsed": self.collapsed})
@@ -100,7 +136,7 @@ class GroupView(StackView):
         if self._push_state is not None:
             self._push_state(self.id, {"enabled": self.enabled})
 
-    def set_title(self, title: str) -> None:
+    def set_title(self, title: str | None) -> None:
         """Rename this group's header and push ``control_state`` (if mounted)."""
         self.title = title
         if self._push_state is not None:
@@ -119,6 +155,12 @@ class GroupView(StackView):
     def _serialize(self) -> dict[str, Any]:
         result = super()._serialize()
         result["title"] = self.title
+        result["show_header"] = self.show_header
+        result["collapsible"] = self.collapsible
+        if self.title_size is not None:
+            result["title_size"] = self.title_size
+        if self.variant is not EGroupVariant.DEFAULT:
+            result["variant"] = self.variant.value
         result["position"] = self.position
         result["collapsed"] = self.collapsed
         if not self.visible:

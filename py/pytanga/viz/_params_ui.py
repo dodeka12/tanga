@@ -17,9 +17,21 @@ import types
 from collections.abc import Sequence
 from dataclasses import dataclass, field, fields
 from enum import Enum
-from typing import Any, Callable, ClassVar, Literal, Union, get_args, get_origin
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Literal,
+    Union,
+    get_args,
+    get_origin,
+)
 
 from ._controls import ControlHandler
+
+if TYPE_CHECKING:
+    from .views._enums import EGroupVariant
 
 
 @dataclass
@@ -65,10 +77,16 @@ class ValueEditUI(ControlUI):
 
 @dataclass
 class GroupUI(ControlUI):
-    """UI spec for a nested group (a dataclass field rendered as a sub-panel)."""
+    """UI spec for a nested group (a dataclass field rendered as a sub-panel).
+
+    ``variant`` is the styling variant of the created sub-panel; ``None`` uses
+    the owning :class:`~pytanga.viz.ParamsView`'s depth default (``SMALL`` at
+    depth 0, ``TINY`` deeper).
+    """
 
     kind: ClassVar[str] = "group"
     collapsed: bool = False
+    variant: EGroupVariant | str | None = None
     extra_rows: list[RowSpec] | None = None
 
 

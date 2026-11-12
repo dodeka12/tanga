@@ -6,8 +6,8 @@ layout (no scene required):
 | Class | Purpose |
 |-------|---------|
 | `LabelView` | A single line of text with a configurable `font_size` (default `14` px). |
-| `MarkdownView` | A multi-line block of rendered markdown with KaTeX math (`$…$` / `$$…$$`). |
-| `LogView` | A live, auto-scrolling two-column (time \| message) log. |
+| `MarkdownView` | A multi-line block of rendered markdown with KaTeX math (`$…$` / `$$…$$`), plus an optional `font_size`. |
+| `LogView` | A live, auto-scrolling two-column (time \| message) log, plus an optional `font_size`. |
 
 `LabelView` and `MarkdownView` are **display-only controls**: they carry a
 `value` and can be updated in place after creation via `view.set_value(value)`,
@@ -15,8 +15,11 @@ which pushes the same `control_update` message used by every other control:
 
 ```python
 label = LabelView("label", value="hello", font_size=20)
-markdown = MarkdownView("md", value="# Title\n\n$E = mc^2$")
+markdown = MarkdownView("md", value="# Title\n\n$E = mc^2$", font_size=14)
 ```
+
+`MarkdownView(font_size=…)` is a per-instance override; `None` (default)
+follows the theme's `--tanga-font-size-markdown`.
 
 `LogView` is not a control — its lines are appended from the backend, so it has
 its own `log_update` push.  `log()` captures a UTC timestamp and accepts either
@@ -24,10 +27,17 @@ a string (stored as `message`) or a dict (whose keys are folded into the line);
 the frontend shows `message`, falling back to JSON of the other keys.  The
 first column shows the timestamp in the browser's local timezone — by default
 just the time with microseconds; `show_date=True` adds the date and
-`show_utc_offset=True` adds the local offset to UTC:
+`show_utc_offset=True` adds the local offset to UTC.  `font_size=` overrides
+the theme's `--tanga-font-size-log` for this pane only:
 
 ```python
-log = LogView(id="log", max_history=1000, show_date=True, show_utc_offset=True)   # None = unlimited
+log = LogView(
+    id="log",
+    max_history=1000,
+    show_date=True,
+    show_utc_offset=True,
+    font_size=12,        # None (default) follows --tanga-font-size-log
+)   # max_history None = unlimited
 log.log("plain line")
 log.log({"message": "structured", "level": "info"})
 log.get_log()          # -> list[dict] (copies)

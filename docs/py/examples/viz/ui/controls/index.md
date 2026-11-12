@@ -2,7 +2,7 @@
 
 | Example | Keywords | Description |
 |---------|----------|-------------|
-| [All Controls](all_controls.md) | controls, slider, dropdown, button, tooltip, menu, VisualizerApp | Showcase every interactive control in one app |
+| [All Controls](all_controls.md) | params view, nested group, theme, variant, header, tooltip | Showcase every interactive control in one app |
 | [Control Group Overlay](control_group_overlay.md) | control group, GroupView, overlay, anchor, parent_id, layout | Declarative control groups: overlay + 3D-anchored |
 | [Control Group Single](control_group_single.md) | control group, GroupView, overlay, anchor, parent_id, single scene | Declarative control groups on a single-scene page |
 | [Control Theming](control_theming.md) | controls, theme, set_theme, list_themes, split view, slider, checkbox | One of every control, themed live via a theme dropdown |
@@ -23,4 +23,4 @@
 
 ## Keywords
 
-ButtonView · CSV · CheckboxView · GroupView · JSON · SliderView · TableView · VisualizerApp · alignment · anchor · auto-save · button · cell editing · checkbox · column types · control · control group · controls · custom enum · dataclass · determinate · dict · disable · dotted · dropdown · enable · enum · extra_rows · file browser · file chooser · fold · full_width · group · group view · help · hide · icon · icon_only · indeterminate · keyboard navigation · layout · list_themes · menu · nested · overlay · param_ui · params view · parent_id · persistence · progress bar · redo · scene · separator · set_theme · show · single scene · slider · sphere · split view · table · tabular data · theme · toolbar · tooltip · tooltips · undo · visible
+ButtonView · CSV · CheckboxView · GroupView · JSON · SliderView · TableView · VisualizerApp · alignment · anchor · auto-save · button · cell editing · checkbox · column types · control · control group · controls · custom enum · dataclass · determinate · dict · disable · dotted · dropdown · enable · enum · extra_rows · file browser · file chooser · fold · full_width · group · group view · header · help · hide · icon · icon_only · indeterminate · keyboard navigation · layout · list_themes · menu · nested · nested group · overlay · param_ui · params view · parent_id · persistence · progress bar · redo · scene · separator · set_theme · show · single scene · slider · sphere · split view · table · tabular data · theme · toolbar · tooltip · tooltips · undo · variant · visible

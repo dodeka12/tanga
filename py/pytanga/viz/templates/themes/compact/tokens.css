@@ -6,6 +6,7 @@
     /* Tighter control density. */
     --tanga-control-min-width: 96px;
     --tanga-control-min-height: 22px;
+    --tanga-icon-control-size: 22px;
     --tanga-control-min-width-narrow: 48px;
     --tanga-control-margin-y: 2px;
     --tanga-range-margin-y: 2px;
@@ -13,8 +14,38 @@
     --tanga-params-key-gap: 6px;
     --tanga-params-min-width: 200px;
 
+    /* Tighter control chrome: smaller control font/padding, shorter buttons and
+       color pickers, and smaller icons. */
+    --tanga-icon-size: 14px;
+    --tanga-icon-button-icon-size: 14px;
+    --tanga-control-font-size: 11px;
+    --tanga-control-padding: 2px 4px;
+    --tanga-control-label-margin-bottom: 1px;
+    --tanga-button-padding: 2px 8px;
+    --tanga-color-picker-height: 20px;
+    --tanga-color-picker-padding: 1px;
+    --tanga-step-button-icon-size: 8px;
+
+    /* Tighter group chrome; the `*-base` values move every variant, then the
+       `small`/`tiny` knobs tighten the nested levels further. */
+    --tanga-stack-gap: 2px;
+    --tanga-group-padding-base: 6px 8px;
+    --tanga-group-header-padding-base: 0 0 4px;
+    --tanga-group-header-margin-bottom-base: 4px;
+    --tanga-group-header-gap-base: 4px;
+    --tanga-group-small-padding: 4px 6px;
+    --tanga-group-small-header-padding: 0 0 3px;
+    --tanga-group-small-header-margin-bottom: 3px;
+    --tanga-group-small-header-gap: 4px;
+    --tanga-group-tiny-padding: 3px 5px;
+    --tanga-group-tiny-header-padding: 0 0 2px;
+    --tanga-group-tiny-header-margin-bottom: 2px;
+    --tanga-group-tiny-header-gap: 3px;
+
     /* Slightly smaller typography. */
-    --tanga-font-size-title: 13px;
+    --tanga-group-title-font-size: 13px;
+    --tanga-group-small-title-font-size: 12px;
+    --tanga-group-tiny-title-font-size: 11px;
     --tanga-font-size-body: 12px;
     --tanga-font-size-label: 11px;
     --tanga-font-size-value: 11px;

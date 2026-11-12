@@ -29,4 +29,22 @@
     --tanga-status-err: #e06c75;
     --tanga-loading-bg: rgba(13, 27, 38, 0.95);
     --tanga-spinner: #d8e8f2;
+
+    /* Spacing & typography — edit + save to see the reload. */
+    --tanga-stack-gap: 2px;
+    --tanga-group-padding-base: 6px 8px;
+    --tanga-group-header-padding-base: 0 0 4px;
+    --tanga-group-header-margin-bottom-base: 4px;
+    --tanga-group-title-font-size: 13px;
+    --tanga-group-title-bg-base: var(--tanga-surface);
+    --tanga-group-title-padding: 1px 6px;
+    --tanga-group-title-radius: 3px;
+    --tanga-group-small-padding: 4px 6px;
+    --tanga-group-small-title-font-size: 12px;
+    --tanga-group-tiny-padding: 3px 5px;
+    --tanga-group-tiny-title-font-size: 11px;
+    --tanga-group-body-font-size: 12px;
+    --tanga-font-size-log: 12px;
+    --tanga-log-row-padding: 1px 6px;
+    --tanga-markdown-table-cell-padding: 1px 6px;
 }

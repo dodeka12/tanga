@@ -5,6 +5,7 @@
 
 import { StackView } from './stack-view.js';
 import { applyTooltip, createIconElement } from '../controls-panel.js';
+import { isMenuRowInteractiveTarget, menuRowForTarget } from './menu-row.js';
 
 const MODES = ['dropdown', 'bar'];
 
@@ -56,20 +57,44 @@ export class MenuView extends StackView {
         document.addEventListener('keydown', this._onGlobalKeyDown);
 
         // Close the whole menu tree when an option is chosen (button click or
-        // dropdown change).  Sub-menu triggers and sliders stay open.
+        // dropdown change).  Sub-menu triggers and sliders stay open.  A click
+        // on the blank part of an option row is forwarded to its primary
+        // control, so the whole row is a hit target, not just the text.
         this._onOptionActivate = (e) => {
             const target = e.target;
             if (!target || typeof target.closest !== 'function') return;
             if (target.closest('.tanga-menu-trigger')) return;
             if (target.closest('input[type="range"]')) return;
-            if (e.type === 'click' && target.closest('.tanga-action-button')) {
-                this._closeTree();
+            if (e.type === 'click') {
+                if (this._activateRowFromBlankClick(target)) {
+                    // Handled by this (nearest) menu; stop so an ancestor
+                    // `MenuView` does not forward the same click again.
+                    e.stopPropagation();
+                    return;
+                }
+                if (target.closest('.tanga-action-button')) {
+                    this._closeTree();
+                }
             } else if (e.type === 'change' && target.closest('select')) {
                 this._closeTree();
             }
         };
         this.el.addEventListener('click', this._onOptionActivate);
         this.el.addEventListener('change', this._onOptionActivate);
+    }
+
+    // Activate a button/checkbox option when the click landed on its row but
+    // not on the control itself.  Returns true when the row handled the click.
+    _activateRowFromBlankClick(target) {
+        if (isMenuRowInteractiveTarget(target)) return false;
+        const row = menuRowForTarget(target);
+        if (!row || row.classList.contains('tanga-control-disabled')) return false;
+        const action = row.querySelector(
+            'button.tanga-action-button:not([disabled]), input[type="checkbox"]:not([disabled])'
+        );
+        if (!action) return false;
+        action.click();
+        return true;
     }
 
     _buildDropdown() {

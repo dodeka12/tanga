@@ -29,6 +29,8 @@ MenuView(
 - `override_variant=True` (default) forces every eligible control in the subtree
   to the `MENU` variant, so options render flat without setting `variant=` by
   hand.
+- Clicking anywhere on a button or checkbox option row activates it, not just
+  the label text.  Sliders keep their own track as the drag target.
 - `tooltip` is a static string shown when hovering the menu trigger (the
   hamburger button of a dropdown, the label of a bar menu).  Change it by
   re-pushing the layout with a new/existing `MenuView`; the per-control

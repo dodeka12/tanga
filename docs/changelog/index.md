@@ -1,5 +1,10 @@
 # Changelog
 
+## [Since 2.26.1] — 2026-11-12
+- Themeable spacing/typography/control-chrome tokens · GroupView variants and header controls · click-to-fold headers · per-instance log/markdown font sizes · styled markdown tables · compact control density
+- Bug fixes: group fold arrow folds exactly once · fully clickable menu rows · ParamsView row-title tooltips · explicit stack gaps
+→ [Details](2026/11/12_4082b7cd8.md)
+
 ## [Since 2.25.1 (2.26.0-rc1)] — 2026-11-10
 - Exported animations no longer rebuild unchanged entities (source-object identity skip) · frame application serialized through a frame pump · `PointPath`/`Axis`/`Axes2D`/`Axes3D`/`Grid` update in place · self-checking export example
 → [Details](2026/11/10_57fe1dc51.md)

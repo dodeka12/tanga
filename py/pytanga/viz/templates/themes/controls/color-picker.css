@@ -2,8 +2,8 @@
 
 .tanga-color-input {
     width: 100%;
-    height: 28px;
-    padding: 2px;
+    height: var(--tanga-color-picker-height);
+    padding: var(--tanga-color-picker-padding);
     background: var(--tanga-input-bg);
     border: 1px solid var(--tanga-border-strong);
     border-radius: 4px;
