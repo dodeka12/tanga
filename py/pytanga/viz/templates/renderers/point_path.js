@@ -14,6 +14,7 @@ import {
     tagEntity,
 } from './utils.js';
 import { styleNeedsRebuild } from './style-diff.js';
+import { rewriteFatLinePositions } from './fat-line-update.js';
 
 /**
  * Return true when any entry of ``ent.colors`` is a real colour (non-null).
@@ -121,7 +122,7 @@ export function updatePointPath(mesh, ent, prev) {
         ent.colors || [],
         parseColor(ent, '#ffffff')
     );
-    mesh.geometry.setPositions(positions);
+    rewriteFatLinePositions(mesh.geometry, positions);
     if (colored && vertexColors) mesh.geometry.setColors(vertexColors);
     mesh.geometry.computeBoundingBox();
     mesh.geometry.computeBoundingSphere();

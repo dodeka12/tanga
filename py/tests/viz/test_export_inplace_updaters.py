@@ -32,7 +32,7 @@ def test_point_path_has_in_place_updater_and_helpers():  # noqa: ANN201
     src = _source("point_path.js")
     assert "export function updatePointPath" in src
     updater = src.split("export function updatePointPath", 1)[1]
-    assert "setPositions(" in updater
+    assert "rewriteFatLinePositions(mesh.geometry, positions)" in updater
     assert "hasVertexColors" in updater
     assert "export function flattenPath" in src
     assert "export function hasVertexColors" in src
@@ -42,6 +42,13 @@ def test_point_path_has_in_place_updater_and_helpers():  # noqa: ANN201
     assert "flattenPath(" in create
     # The old updater was a bare `return false;` — the new one guards first.
     assert updater.index("if (") < updater.index("return false;")
+
+
+def test_fat_line_rewrite_disposes_before_growing():  # noqa: ANN201
+    helper = _source("fat-line-update.js")
+    assert "export function rewriteFatLinePositions" in helper
+    assert helper.index("geometry.dispose();") < helper.index("geometry.setPositions(")
+    assert "geometry.instanceCount = count;" in helper
 
 
 def test_apply_opacity_split_and_point_path_rebuild_short_circuit_removed():  # noqa: ANN201
@@ -57,6 +64,7 @@ def test_point_path_helpers_survive_bundling_and_dispatch():  # noqa: ANN201
     lib = generate_library_js()
     assert "function applyOpacityUpdate(" in lib
     assert "function flattenPath(" in lib
+    assert "function rewriteFatLinePositions(" in lib
     factory = _source("factory.js")
     assert "case 'PointPath':" in factory
     assert "return updatePointPath(mesh, ent, prev);" in factory

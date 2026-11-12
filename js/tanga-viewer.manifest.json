@@ -1,10 +1,14 @@
 {
   "schema": 1,
-  "generator_sha256": "3e9c150c49bb20f9731845af9fcad97c9de573a38a4a8c64f19017d15f40603c",
+  "generator_sha256": "b3c2661de4b79dfbc9265493cd4717920310beb63485766cb37554793dcf3926",
   "files": [
     {
       "path": "py/pytanga/viz/templates/renderers/style-diff.js",
       "sha256": "718852d2b147c333763e83396624e1aaa3dd8d13d08ed657f08248bb2f096deb"
+    },
+    {
+      "path": "py/pytanga/viz/templates/renderers/fat-line-update.js",
+      "sha256": "af930ee5c59e8434b55e7c4c1b75141c7c4bef6ddcca6dcbea8031e2ab523794"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/utils.js",
@@ -164,7 +168,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/point_path.js",
-      "sha256": "60f7eba01b99b11ccf234670a17e5e7e82a5bde579f9072ce13e9ab3a6872105"
+      "sha256": "66960a7343c6fdccbb52b3594cb5134cbd3c3104761a6fbac2905b88c1d15e5f"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/axis.js",
@@ -307,6 +311,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "97409db961cb828499f15461b45dc38b63bdea726e37a80e47286781748eaf72",
-  "bundle_sha256": "10b35db62928deebcadb5e38e9f8f003cc184f20d49f75ac566f6b2090ff0c08"
+  "fingerprint_sha256": "01a0f39f0eb72b5b0a75e16b84c8b562cf21b69d073ed1726b944df39cf0731e",
+  "bundle_sha256": "4e74a1588beeae97c974828937c9542d59d391a67072e023bb60b0d03c7935f3"
 }
