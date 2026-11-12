@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.26.1 (2.27.0-rc2)] — 2026-11-12
+- Growing `PointPath` renders every appended segment in animated/exported scenes (stale three.js instance bound reset) · unit and exported-animation smoke coverage
+→ [Details](2026/11/12_6b31b5ccc.md)
+
 ## [Since 2.26.1 (2.27.0-rc1)] — 2026-11-12
 - Expanded `GroupView` keeps its flex gap and layout across fold redraws and re-pushes · runtime-registered theme CSS is served with `Cache-Control: no-cache`
 → [Details](2026/11/12_0a4e4fed1.md)
