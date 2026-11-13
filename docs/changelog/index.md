@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.27.0 (2.28.0-rc1)] — 2026-11-13
+- PointPath segment colours now clear in the browser (a cleared update resets the path to its uniform colour)
+→ [Details](2026/11/13_561c393ef.md)
+
 ## [Since 2.27.0] — 2026-11-13
 - `ActPolygon` per-vertex tags, tag→color palette, and selected-vertex style · per-segment `PointPath`/`ActPolygon` colors (`segmentColors`) · labelme `vertex_tags`/`segment_colors` round-trip with `iter_shapes` · tagged-labeling examples (`1`/`2` keys, magenta segments)
 → [Details](2026/11/13_056e7dc68.md)

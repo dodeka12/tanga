@@ -2577,6 +2577,21 @@ function pathColorChangeNeedsColorUpdate(ent, prev) {
     return false;
 }
 
+/**
+ * Merge a content update into the previous entity dict.
+ *
+ * A `PointPath` whose update omits `segmentColors` is uniform again: the list is
+ * reset to `[]` so the stale, previously-coloured list is not inherited through
+ * the `{ ...prev, ...content }` merge.
+ */
+function mergeEntityContent(prev, content) {
+    const merged = { ...prev, ...content };
+    if (merged.kind === 'PointPath' && content.segmentColors == null) {
+        merged.segmentColors = [];
+    }
+    return merged;
+}
+
 // PointPath renderer — renders connected line segments from an ordered
 // list of 3D points with optional per-vertex colors.
 // Uses three.js Line2 (LineSegments2) fat lines so `line_thickness` is

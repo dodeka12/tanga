@@ -24,3 +24,18 @@ export function pathColorChangeNeedsColorUpdate(ent, prev) {
     if (JSON.stringify(ent.segmentColors || []) !== JSON.stringify(prev.segmentColors || [])) return true;
     return false;
 }
+
+/**
+ * Merge a content update into the previous entity dict.
+ *
+ * A `PointPath` whose update omits `segmentColors` is uniform again: the list is
+ * reset to `[]` so the stale, previously-coloured list is not inherited through
+ * the `{ ...prev, ...content }` merge.
+ */
+export function mergeEntityContent(prev, content) {
+    const merged = { ...prev, ...content };
+    if (merged.kind === 'PointPath' && content.segmentColors == null) {
+        merged.segmentColors = [];
+    }
+    return merged;
+}

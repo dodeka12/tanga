@@ -168,7 +168,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/path-colors.js",
-      "sha256": "c6782b5ad5c8ce1605d82000e7282c9ce1170dd9c759202b3723befbb6f9d278"
+      "sha256": "f4d4024ca73b895a7ab151e1987909873d1a8ad409fb9964935ecd57d2b51d91"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/point_path.js",
@@ -315,6 +315,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "45d43aa9fa04c7eab1b522d61d5031b1a3d1b16c066a3ee6a159217ac4f47bed",
-  "bundle_sha256": "f327e09f430017f817987b1cf2a8e784272d58b60b4bd706170e89f903b3ab84"
+  "fingerprint_sha256": "c6a3a81076fee4f1d1c28dd99dac45cded0ab291b5be496063ac48fab8adea00",
+  "bundle_sha256": "6dbe0bd5cc6e78cb107cfff6ee52ff78ac672ef7bfe2d129d5b6a85c91b4f33e"
 }
