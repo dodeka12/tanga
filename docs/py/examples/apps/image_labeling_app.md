@@ -1,6 +1,6 @@
 # Label images in the labelme JSON format
 
-**Keywords:** image · labeling · labelme · app · ActRectangle2D · ActCircle · ActLine · DragPreview · menu
+**Keywords:** image · labeling · labelme · app · tagging · vertex tags · segment colors · ActRectangle2D · ActCircle · ActLine · DragPreview · menu
 
 A `~pytanga.viz.VisualizerApp` that shows an image and a toolbar of
 drawing tools (rectangle, ellipse, circle, line, polygon, point).  Drag to
@@ -14,6 +14,11 @@ The reusable piece is `ImageLabeler` — a self-contained image-labeling
 pane (toolbar + canvas + shape state) that can be embedded in any layout or
 `SplitView` pane.  `ImageLabelingApp` is a thin shell that adds the File
 menu and the labelme file handling around it.
+
+A second toolbar exposes the per-vertex tagging controls: a "Tagging" checkbox
+colors polygon vertices by their tag, a text field sets the selected vertex's
+tag, and a color picker (plus "Clear") colors the segment leaving the selected
+vertex.  Tags and segment colors round-trip through labelme JSON.
 
 ## Run
 
@@ -46,9 +51,14 @@ pane (toolbar + canvas + shape state) that can be embedded in any layout or
 ``SplitView`` pane.  :class:`ImageLabelingApp` is a thin shell that adds the File
 menu and the labelme file handling around it.
 
+A second toolbar exposes the per-vertex tagging controls: a "Tagging" checkbox
+colors polygon vertices by their tag, a text field sets the selected vertex's
+tag, and a color picker (plus "Clear") colors the segment leaving the selected
+vertex.  Tags and segment colors round-trip through labelme JSON.
+
 Run with:  uv run python py/examples/apps/image_labeling_app.py [labels.json]
 
-Keywords: image, labeling, labelme, app, ActRectangle2D, ActCircle, ActLine, DragPreview, menu
+Keywords: image, labeling, labelme, app, tagging, vertex tags, segment colors, ActRectangle2D, ActCircle, ActLine, DragPreview, menu
 """
 
 from __future__ import annotations
@@ -56,7 +66,7 @@ from __future__ import annotations
 import argparse
 import math
 import os
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 import numpy as np
 from pytanga.geometry import Circle, Ellipse, Line, Point, Rectangle2D
@@ -69,9 +79,11 @@ from pytanga.viz import (
     ActPolygon,
     ActRectangle2D,
     ButtonView,
+    CheckboxView,
     CirclePointStyle,
     CircleStyle,
     Color,
+    ColorPickerView,
     ControlEvent,
     DragBinding,
     DragEvent,
@@ -92,6 +104,7 @@ from pytanga.viz import (
     Size,
     SquarePointStyle,
     StackView,
+    TextFieldView,
     ToolbarView,
     VisualizerApp,
 )
@@ -163,6 +176,7 @@ class ImageLabeler:
         self.mode: str | None = None
         self.shapes: list[LabelShape] = []
         self.selected: Any = None
+        self.tagging = False
         self._store = LabelMeStore()
 
         # Screen-space handle markers keep a constant on-screen size under zoom.
@@ -200,6 +214,7 @@ class ImageLabeler:
 
         self._tool_buttons = self._build_tool_buttons()
         self._previews = self._build_previews()
+        self._tag_toolbar = self._build_tag_toolbar()
 
         toolbar_view = (
             ToolbarView(list(self._tool_buttons.values()), border=False)
@@ -212,7 +227,11 @@ class ImageLabeler:
         # StackView here, or a SplitView pane).
         self.view = StackView(
             "vertical",
-            [v for v in (toolbar_view, canvas_view) if v is not None],
+            [
+                v
+                for v in (toolbar_view, self._tag_toolbar, canvas_view)
+                if v is not None
+            ],
             fill=True,
         )
 
@@ -299,9 +318,92 @@ class ImageLabeler:
                     "on_click": select,
                     "handle_style": self._vertex_style,
                     "end_handle_style": self._end_handle_style,
+                    "default_vertex_tag": "1",
+                    "on_vertex_click": self._on_vertex_click,
                 },
             ),
         }
+
+    # ── Tagging toolbar + handlers ───────────────────────────
+
+    def _build_tag_toolbar(self) -> ToolbarView:
+        """Controls for tagging the selected vertex and coloring its segment."""
+        self._tag_checkbox = CheckboxView(
+            "tagging",
+            label="Tagging",
+            value=False,
+            tooltip="Color polygon vertices by tag",
+            on_change=self._on_tagging_change,
+        )
+        self._tag_edit = TextFieldView(
+            "vertex_tag",
+            label="Tag",
+            value="",
+            placeholder="tag",
+            on_change=self._on_tag_edit,
+        )
+        self._segment_color = ColorPickerView(
+            "segment_color",
+            label="Segment",
+            value="#ff00ff",
+            on_change=self._on_segment_color,
+        )
+        clear = ButtonView(
+            "clear_segment", label="Clear", on_click=self._on_clear_segment
+        )
+        return ToolbarView(
+            [self._tag_checkbox, self._tag_edit, self._segment_color, clear],
+            border=False,
+        )
+
+    async def _on_tagging_change(self, value: Any, _event: ControlEvent) -> None:
+        self.tagging = bool(value)
+        for shape in self.shapes:
+            if isinstance(shape.act, ActPolygon):
+                shape.act.set_tagging(self.tagging)
+        self._canvas.handle.flush()
+
+    async def _on_tag_edit(self, value: Any, _event: ControlEvent) -> None:
+        act = self.selected
+        index = act.selected_vertex if isinstance(act, ActPolygon) else None
+        if index is not None:
+            act.set_vertex_tag(index, str(value) if value else None)
+            self._canvas.handle.flush()
+
+    async def _on_segment_color(self, value: Any, _event: ControlEvent) -> None:
+        act = self.selected
+        index = act.selected_vertex if isinstance(act, ActPolygon) else None
+        if index is not None and index < act.segment_count:
+            act.set_segment_color(index, str(value))
+            self._canvas.handle.flush()
+
+    async def _on_clear_segment(self, _value: Any, _event: ControlEvent) -> None:
+        act = self.selected
+        index = act.selected_vertex if isinstance(act, ActPolygon) else None
+        if index is not None and index < act.segment_count:
+            act.clear_segment_color(index)
+            self._canvas.handle.flush()
+
+    async def _on_vertex_click(self, index: int, _event: Any, _act: Any) -> None:
+        self._sync_tag_panel()
+
+    def _sync_tag_panel(self) -> None:
+        """Mirror the selected vertex's tag and segment color into the controls."""
+        act = self.selected
+        if isinstance(act, ActPolygon):
+            index = act.selected_vertex
+            if index is not None:
+                self._tag_edit.set_value(act.vertex_tags[index] or "")
+                if index < act.segment_count:
+                    color = act.segment_colors[index]
+                    if color:
+                        self._segment_color.set_value(color)
+                self._tag_edit.set_enabled(True)
+                self._segment_color.set_enabled(True)
+                return
+        self._tag_edit.set_value("")
+        self._tag_edit.set_enabled(False)
+        self._segment_color.set_enabled(False)
 
     # ── Mode + selection ────────────────────────────────────
 
@@ -336,11 +438,14 @@ class ImageLabeler:
                 break
         self._canvas.handle.flush()
         self._notify_select(act)
+        self._sync_tag_panel()
 
     def _deselect(self) -> None:
         if self.selected is None:
             return
         act = self.selected
+        if isinstance(act, ActPolygon):
+            act.set_selected_vertex(None)
         for shape in self.shapes:
             if shape.act is act:
                 self._canvas.handle.update(shape.act.entity_id, color=self.fill_color)
@@ -348,6 +453,7 @@ class ImageLabeler:
         self._canvas.handle.flush()
         self.selected = None
         self._notify_select(None)
+        self._sync_tag_panel()
 
     async def _on_delete(self, _event) -> None:  # noqa: ANN001
         if self.selected is None:
@@ -443,6 +549,8 @@ class ImageLabeler:
                 on_click=select,
                 handle_style=self._vertex_style,
                 end_handle_style=self._end_handle_style,
+                default_vertex_tag="1",
+                on_vertex_click=self._on_vertex_click,
             )
         if isinstance(entity, Point):
             return ActPoint(entity, on_click=select)
@@ -459,11 +567,24 @@ class ImageLabeler:
         elif isinstance(act, (ActCircle, ActEllipse)):
             act.set_radius_limits(self._min_half_px, self._max_half_px)
 
-    def add_shape(self, act: Any, label: str | None = None) -> None:
+    def add_shape(
+        self,
+        act: Any,
+        label: str | None = None,
+        *,
+        vertex_tags: Any = None,
+        segment_colors: Any = None,
+    ) -> None:
         """Register *act* as a labeled shape, styled for its type."""
         style = self._style_for_act(act)
         self._apply_size_limits(act)
         self._canvas.handle.add(act, style=style)
+        if isinstance(act, ActPolygon):
+            act.set_tagging(self.tagging)
+            if vertex_tags is not None:
+                act.set_vertex_tags(list(vertex_tags))
+            if segment_colors is not None:
+                act.set_segment_colors(list(segment_colors))
         self.shapes.append(
             LabelShape(
                 act=act,
@@ -495,17 +616,24 @@ class ImageLabeler:
         result = self._store.load(path)
         for message in result.errors:
             print(f"labelme: skipped {message}")
+        for message in result.warnings:
+            print(f"labelme: warning {message}")
         self.load_document(result.document, path)
 
     def load_document(self, doc: LabelMeDocument, json_path: str = "") -> None:
         """Replace the current shapes with those from *doc* (and its image)."""
         self.clear_shapes()
         self._load_document_image(doc, json_path)
-        objs, errors = self._store.iter_objects(doc)
+        objs, errors = self._store.iter_shapes(doc)
         for message in errors:
             print(f"labelme: skipped {message}")
-        for entity, label in objs:
-            self.add_shape(self._act_from_entity(entity), label=label)
+        for entity, shape in objs:
+            self.add_shape(
+                self._act_from_entity(entity),
+                label=shape.label,
+                vertex_tags=shape.vertex_tags,
+                segment_colors=shape.segment_colors,
+            )
 
     def save(self, path: str | os.PathLike[str]) -> None:
         """Write the current shapes to *path* as labelme JSON."""
@@ -513,10 +641,16 @@ class ImageLabeler:
 
     def to_document(self, *, image_path: str = "") -> LabelMeDocument:
         """Export the current shapes as a :class:`~pytanga.viz.LabelMeDocument`."""
+        objects: list[
+            tuple[object, str] | tuple[object, str, Sequence[str | None]]
+        ] = []
+        for s in self.shapes:
+            if isinstance(s.act, ActPolygon):
+                objects.append((s.act.entity, s.label, s.act.vertex_tags))
+            else:
+                objects.append((s.act.entity, s.label))
         return LabelMeDocument(
-            shapes=self._store.shapes_from_objects(
-                [(s.act.entity, s.label) for s in self.shapes]
-            ),
+            shapes=self._store.shapes_from_objects(objects),
             image_path=image_path,
         )
 

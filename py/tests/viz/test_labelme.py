@@ -586,3 +586,139 @@ def test_mixed_document_to_act() -> None:
     assert errors == []
     for entity, _ in objs:
         store.to_act(entity)  # must not raise
+
+
+class TestVertexTagsSegmentColors:
+    def test_round_trip(self) -> None:
+        store = LabelMeStore()
+        doc = LabelMeDocument(
+            shapes=[
+                LabelShape(
+                    label="p",
+                    points=[(0, 0), (1, 0), (1, 1)],
+                    shape_type="polygon",
+                    vertex_tags=["1", "2", "1"],
+                    segment_colors=[None, "#ff00ff", None],
+                )
+            ]
+        )
+        doc2 = store.loads(store.dumps(doc)).document
+        assert doc2.shapes[0].vertex_tags == ["1", "2", "1"]
+        assert doc2.shapes[0].segment_colors == [None, "#ff00ff", None]
+
+    def test_omitted_when_empty(self) -> None:
+        store = LabelMeStore()
+        doc = LabelMeDocument(
+            shapes=[
+                LabelShape(
+                    label="p",
+                    points=[(0, 0), (1, 0), (1, 1)],
+                    shape_type="polygon",
+                    vertex_tags=[None, None, None],
+                    segment_colors=[None, None, None],
+                )
+            ]
+        )
+        text = store.dumps(doc)
+        assert '"vertex_tags"' not in text
+        assert '"segment_colors"' not in text
+        doc2 = store.loads(text).document
+        assert doc2.shapes[0].vertex_tags is None
+        assert doc2.shapes[0].segment_colors is None
+
+    def test_malformed_metadata_warns_and_loads(self) -> None:
+        store = LabelMeStore()
+        result = store.loads(
+            json.dumps(
+                {
+                    "shapes": [
+                        {
+                            "label": "p",
+                            "points": [[0, 0], [1, 0], [1, 1]],
+                            "shape_type": "polygon",
+                            "vertex_tags": ["1"],
+                            "segment_colors": "not-a-list",
+                        }
+                    ]
+                }
+            )
+        )
+        assert result.errors == []
+        assert len(result.warnings) >= 2
+        assert result.document.shapes[0].vertex_tags is None
+        assert result.document.shapes[0].segment_colors is None
+
+    def test_iter_shapes_returns_label_shape(self) -> None:
+        store = LabelMeStore()
+        doc = LabelMeDocument(
+            shapes=[
+                LabelShape(
+                    label="p",
+                    points=[(0, 0), (1, 0), (1, 1)],
+                    shape_type="polygon",
+                    vertex_tags=["1", "2", "1"],
+                )
+            ]
+        )
+        pairs, errors = store.iter_shapes(doc)
+        assert errors == []
+        assert isinstance(pairs[0][1], LabelShape)
+        assert pairs[0][1].vertex_tags == ["1", "2", "1"]
+        objects, errors2 = store.iter_objects(doc)
+        assert errors2 == []
+        assert objects[0][1] == "p"
+
+    def test_shapes_from_objects_three_tuple(self) -> None:
+        store = LabelMeStore()
+        path = PointPath()
+        path.add((0.0, 0.0, 0.0))
+        path.add((1.0, 0.0, 0.0))
+        path.add((1.0, 1.0, 0.0))
+        path.add((0.0, 0.0, 0.0))  # closed
+        path.set_segment_colors([None, "#ff00ff", None])
+        shapes = store.shapes_from_objects([(path, "p", ["1", "2", "1"])])
+        assert shapes[0].shape_type == "polygon"
+        assert shapes[0].vertex_tags == ["1", "2", "1"]
+        assert shapes[0].segment_colors == [None, "#ff00ff", None]
+
+    def test_entity_from_shape_applies_segment_colors(self) -> None:
+        store = LabelMeStore()
+        doc = LabelMeDocument(
+            shapes=[
+                LabelShape(
+                    label="p",
+                    points=[(0, 0), (1, 0), (1, 1)],
+                    shape_type="polygon",
+                    segment_colors=[None, "#ff00ff", None],
+                )
+            ]
+        )
+        pairs, errors = store.iter_shapes(doc)
+        assert errors == []
+        path = pairs[0][0]
+        assert isinstance(path, PointPath)
+        assert path.segment_colors == [None, "#ff00ff", None]
+
+    def test_closing_duplicate_alignment(self) -> None:
+        store = LabelMeStore()
+        result = store.loads(
+            json.dumps(
+                {
+                    "shapes": [
+                        {
+                            "label": "p",
+                            "points": [[0, 0], [1, 0], [1, 1], [0, 0]],
+                            "shape_type": "polygon",
+                            "vertex_tags": ["1", "2", "1", "1"],
+                            "segment_colors": [None, "#ff00ff", None, None],
+                        }
+                    ]
+                }
+            )
+        )
+        assert result.warnings == []
+        shape = result.document.shapes[0]
+        assert shape.vertex_tags == ["1", "2", "1"]
+        assert shape.segment_colors == [None, "#ff00ff", None]
+        path = store._entity_from_shape(shape)  # noqa: SLF001
+        assert path.segment_colors == [None, "#ff00ff", None]

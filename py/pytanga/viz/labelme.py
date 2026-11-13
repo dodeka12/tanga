@@ -17,7 +17,7 @@ import json
 import math
 import os
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Sequence
 
 from pytanga.geometry import Circle, Direction, Ellipse, Line, Point, Rectangle2D
 
@@ -46,9 +46,12 @@ class LabelShape:
 
     ``mask`` / ``description`` are round-tripped verbatim from labelme JSON.
     ``radius_u`` / ``radius_v`` / ``angle`` carry the scalar ellipse parameters
-    (new canonical form; ``None`` for legacy shapes).  ``style`` / ``act`` are
-    in-memory back-references used by an editor (e.g. ``ImageLabeler``) and are
-    never (de)serialized — labelme has no such concept.
+    (new canonical form; ``None`` for legacy shapes).  ``vertex_tags`` /
+    ``segment_colors`` are non-standard per-vertex/per-segment metadata aligned
+    to the canonical vertices (a closing duplicate is dropped) and never stored
+    on the geometry entity.  ``style`` / ``act`` are in-memory back-references
+    used by an editor (e.g. ``ImageLabeler``) and are never (de)serialized —
+    labelme has no such concept.
     """
 
     label: str
@@ -61,6 +64,8 @@ class LabelShape:
     radius_u: float | None = None
     radius_v: float | None = None
     angle: float | None = None
+    vertex_tags: list[str | None] | None = None
+    segment_colors: list[str | None] | None = None
     style: ObjVizStyle | None = None
     act: Any = field(default=None, repr=False, compare=False)
 
@@ -80,10 +85,11 @@ class LabelMeDocument:
 
 @dataclass
 class LabelMeLoadResult:
-    """A parsed :class:`LabelMeDocument` plus the shapes that were skipped."""
+    """A parsed :class:`LabelMeDocument` plus skipped shapes and warnings."""
 
     document: LabelMeDocument
     errors: list[str]
+    warnings: list[str] = field(default_factory=list)
 
 
 class LabelMeStore:
@@ -118,11 +124,41 @@ class LabelMeStore:
         data = json.loads(text)
         shapes: list[LabelShape] = []
         errors: list[str] = []
+        warnings: list[str] = []
         for i, s in enumerate(data.get("shapes", [])):
+            label = s["label"]
+            points = [(float(x), float(y)) for x, y in s["points"]]
+            st = s["shape_type"]
+            closing_duplicate = len(points) > 1 and points[0] == points[-1]
+            if st == "polygon":
+                n = len(points) - 1 if closing_duplicate else len(points)
+                tag_count, seg_count = n, n
+            elif st == "linestrip":
+                tag_count, seg_count = len(points), max(0, len(points) - 1)
+            else:
+                tag_count, seg_count = 0, 0
+            vertex_tags = self._parse_optional_str_list(
+                s.get("vertex_tags"),
+                "vertex_tags",
+                tag_count,
+                closing_duplicate=closing_duplicate and st == "polygon",
+                warnings=warnings,
+                shape_index=i,
+                label=label,
+            )
+            segment_colors = self._parse_optional_str_list(
+                s.get("segment_colors"),
+                "segment_colors",
+                seg_count,
+                closing_duplicate=closing_duplicate and st == "polygon",
+                warnings=warnings,
+                shape_index=i,
+                label=label,
+            )
             shape = LabelShape(
-                label=s["label"],
-                points=[(float(x), float(y)) for x, y in s["points"]],
-                shape_type=s["shape_type"],
+                label=label,
+                points=points,
+                shape_type=st,
                 group_id=s.get("group_id"),
                 description=s.get("description"),
                 flags=dict(s.get("flags", {})),
@@ -130,6 +166,8 @@ class LabelMeStore:
                 radius_u=s.get("radius_u"),
                 radius_v=s.get("radius_v"),
                 angle=s.get("angle"),
+                vertex_tags=vertex_tags,
+                segment_colors=segment_colors,
             )
             err = self._validate_points(shape)
             if err is not None:
@@ -147,6 +185,7 @@ class LabelMeStore:
                 flags=dict(data.get("flags", {})),
             ),
             errors=errors,
+            warnings=warnings,
         )
 
     def save(self, doc: LabelMeDocument, path: str | os.PathLike[str]) -> None:
@@ -181,6 +220,18 @@ class LabelMeStore:
                         else {}
                     ),
                     **({"mask": s.mask} if s.mask is not None else {}),
+                    **(
+                        {"vertex_tags": s.vertex_tags}
+                        if s.vertex_tags is not None
+                        and any(t is not None for t in s.vertex_tags)
+                        else {}
+                    ),
+                    **(
+                        {"segment_colors": s.segment_colors}
+                        if s.segment_colors is not None
+                        and any(c is not None for c in s.segment_colors)
+                        else {}
+                    ),
                     **(
                         {"radius_u": _round(s.radius_u)}
                         if s.radius_u is not None
@@ -224,15 +275,16 @@ class LabelMeStore:
             added.append(obj)
         return added, errors
 
-    def iter_objects(
+    def iter_shapes(
         self, doc: LabelMeDocument
-    ) -> tuple[list[tuple[object, str]], list[str]]:
-        """Map each shape to an ``(entity, label)`` pair without adding it.
+    ) -> tuple[list[tuple[object, LabelShape]], list[str]]:
+        """Map each shape to an ``(entity, LabelShape)`` pair without adding it.
 
         Returns ``(pairs, errors)`` — the mapped pairs plus the shapes that were
-        skipped.
+        skipped.  Prefer this over :meth:`iter_objects` when the per-shape
+        metadata (tags, segment colors) is needed.
         """
-        pairs: list[tuple[object, str]] = []
+        pairs: list[tuple[object, LabelShape]] = []
         errors: list[str] = []
         for i, s in enumerate(doc.shapes):
             try:
@@ -240,19 +292,71 @@ class LabelMeStore:
             except ValueError as exc:
                 errors.append(f"shape {i} ({s.label!r}): {exc}")
                 continue
-            pairs.append((obj, s.label))
+            pairs.append((obj, s))
         return pairs, errors
 
+    def iter_objects(
+        self, doc: LabelMeDocument
+    ) -> tuple[list[tuple[object, str]], list[str]]:
+        """Map each shape to an ``(entity, label)`` pair without adding it."""
+        pairs, errors = self.iter_shapes(doc)
+        return [(obj, s.label) for obj, s in pairs], errors
+
     def shapes_from_objects(
-        self, objects: list[tuple[object, str]]
+        self,
+        objects: list[
+            tuple[object, str] | tuple[object, str, Sequence[str | None]]
+        ],
     ) -> list[LabelShape]:
-        """Map ``(entity, label)`` pairs to :class:`LabelShape` entries."""
+        """Map ``(entity, label)`` (or ``(entity, label, vertex_tags)``) pairs to
+        :class:`LabelShape` entries."""
         result: list[LabelShape] = []
-        for obj, label in objects:
-            shape = self._shape_from_object(obj, label)
+        for item in objects:
+            obj, label = item[0], item[1]
+            vertex_tags = item[2] if len(item) == 3 else None
+            shape = self._shape_from_object(obj, label, vertex_tags=vertex_tags)
             if shape is not None:
                 result.append(shape)
         return result
+
+    @staticmethod
+    def _parse_optional_str_list(
+        value: Any,
+        field: str,
+        count: int,
+        *,
+        closing_duplicate: bool,
+        warnings: list[str],
+        shape_index: int,
+        label: str,
+    ) -> list[str | None] | None:
+        """Validate an optional ``(str | None)`` list.
+
+        Returns ``None`` when the value is absent, malformed, or all-``None``.
+        """
+        if value is None:
+            return None
+        if not isinstance(value, list):
+            warnings.append(
+                f"shape {shape_index} ({label!r}): {field} ignored (not a list)"
+            )
+            return None
+        if closing_duplicate and len(value) == count + 1:
+            value = value[:-1]
+        if len(value) != count:
+            warnings.append(
+                f"shape {shape_index} ({label!r}): {field} ignored "
+                f"(length {len(value)}, expected {count})"
+            )
+            return None
+        for entry in value:
+            if entry is not None and not isinstance(entry, str):
+                warnings.append(
+                    f"shape {shape_index} ({label!r}): {field} ignored "
+                    f"(non-string entry)"
+                )
+                return None
+        return _normalize_none_list(value)
 
     # ── Entity builders ────────────────────────────────────
 
@@ -315,9 +419,15 @@ class LabelMeStore:
                 return self._ellipse_from_params(shape, pts[0])
             return self._ellipse_entity(pts[0], pts[1], pts[2])
         if st == "polygon":
-            return _path(pts, closed=True)
+            path = _path(pts, closed=True)
+            if shape.segment_colors is not None:
+                path.set_segment_colors(shape.segment_colors)
+            return path
         if st == "linestrip":
-            return _path(pts, closed=False)
+            path = _path(pts, closed=False)
+            if shape.segment_colors is not None:
+                path.set_segment_colors(shape.segment_colors)
+            return path
         if st == "line":
             return Line.from_points(pts[0], pts[1])
         if st == "point":
@@ -377,7 +487,12 @@ class LabelMeStore:
 
     # ── Inverse (object → shape) ───────────────────────────
 
-    def _shape_from_object(self, obj: Any, label: str) -> LabelShape | None:
+    def _shape_from_object(
+        self,
+        obj: Any,
+        label: str,
+        vertex_tags: Sequence[str | None] | None = None,
+    ) -> LabelShape | None:
         from ._point_path import PointPath
 
         if isinstance(obj, Rectangle2D):
@@ -406,10 +521,14 @@ class LabelMeStore:
             closed = len(pts) > 1 and pts[0] == pts[-1]
             if closed:
                 pts = pts[:-1]
+            if vertex_tags is not None and closed and len(vertex_tags) == len(pts) + 1:
+                vertex_tags = vertex_tags[:-1]
             return LabelShape(
                 label=label,
                 points=[self._mapper.to_pixel(Point(x, y, z)) for x, y, z in pts],
                 shape_type="polygon" if closed else "linestrip",
+                vertex_tags=_normalize_none_list(vertex_tags),
+                segment_colors=_normalize_none_list(obj.segment_colors),
             )
         if isinstance(obj, Line):
             line = obj
@@ -558,13 +677,20 @@ class LabelMeStore:
         return LabelShape(label=label, points=points, shape_type="polygon")
 
 
-def _path(pts: list[Point], *, closed: bool) -> object:
+def _normalize_none_list(values: Sequence[str | None] | None) -> list[str | None] | None:
+    """Return ``None`` for an empty or all-``None`` sequence, else a copy."""
+    if values is None or all(v is None for v in values):
+        return None
+    return list(values)
+
+
+def _path(pts: list[Point], *, closed: bool) -> Any:
     from ._point_path import PointPath
 
     path = PointPath()
     for p in pts:
         path.add((p.x, p.y, p.z))
-    if closed and pts:
+    if closed and pts and pts[0] != pts[-1]:
         path.add((pts[0].x, pts[0].y, pts[0].z))
     return path
 

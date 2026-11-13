@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generator_sha256": "b3c2661de4b79dfbc9265493cd4717920310beb63485766cb37554793dcf3926",
+  "generator_sha256": "0a0a77c2f39665f27e73257b6400e61f2276d47e8545effc772da1c502e8347c",
   "files": [
     {
       "path": "py/pytanga/viz/templates/renderers/style-diff.js",
@@ -12,7 +12,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/utils.js",
-      "sha256": "309cfc7c111e5d333d64ff63aa183371166df839f8ea3f2249520a8cc2e177fd"
+      "sha256": "7455c14601320ad92be90b25990203b21c917029a1da59bb8867bc675b68ae63"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/point.js",
@@ -167,8 +167,12 @@
       "sha256": "ebb57c0f59b806acca1e2c918ad7821a05e1a0b963f272f2dd16f24afb83bfcf"
     },
     {
+      "path": "py/pytanga/viz/templates/renderers/path-colors.js",
+      "sha256": "c6782b5ad5c8ce1605d82000e7282c9ce1170dd9c759202b3723befbb6f9d278"
+    },
+    {
       "path": "py/pytanga/viz/templates/renderers/point_path.js",
-      "sha256": "66960a7343c6fdccbb52b3594cb5134cbd3c3104761a6fbac2905b88c1d15e5f"
+      "sha256": "e51254b81f52ecf4430dbd5e65e13473c4515bdde2e0da675af8bdb2611ff63e"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/axis.js",
@@ -311,6 +315,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "b9d278038ed3be4fae6ff20a5703d4ddf5539e224247bdbdaddaf74fe4097275",
-  "bundle_sha256": "74562142dbab88fb422515bf8666020013f202cd33295032c9bfcf1858e698a7"
+  "fingerprint_sha256": "45d43aa9fa04c7eab1b522d61d5031b1a3d1b16c066a3ee6a159217ac4f47bed",
+  "bundle_sha256": "f327e09f430017f817987b1cf2a8e784272d58b60b4bd706170e89f903b3ab84"
 }

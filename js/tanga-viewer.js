@@ -446,7 +446,9 @@ function applyStyleUpdate(mesh, ent) {
     if (color) {
         const c = new THREE.Color(color);
         mesh.traverse((child) => {
-            if (child.material && child.material.color) {
+            // A material with vertexColors ignores its base color tint; writing
+            // it would clobber per-vertex/per-segment colors on colored paths.
+            if (child.material && child.material.color && !child.material.vertexColors) {
                 child.material.color.copy(c);
             }
         });
@@ -2548,17 +2550,44 @@ function createReflectionPoint(ent) {
     return mesh;
 }
 
+// Tanga Viewer — pure per-path color helpers (no THREE import).
+// Decides when a PointPath has explicit per-point or per-segment colors, and
+// whether a style-only color change must rewrite the vertex color attribute.
+
+/** True when `ent.colors` or `ent.segmentColors` has a real (non-null) entry. */
+function hasExplicitPathColors(ent) {
+    return (ent.colors || []).some((c) => c !== null && c !== undefined)
+        || (ent.segmentColors || []).some((c) => c !== null && c !== undefined);
+}
+
+/**
+ * True when a colored path's vertex-color attribute must be rewritten in place
+ * instead of going through the generic material-color path: the uniform
+ * fallback color changed, or the explicit color arrays changed while both
+ * entities stayed colored.
+ */
+function pathColorChangeNeedsColorUpdate(ent, prev) {
+    if (!ent || !prev) return false;
+    if (!hasExplicitPathColors(ent) || !hasExplicitPathColors(prev)) return false;
+    const newColor = ent.style ? ent.style.color : undefined;
+    const oldColor = prev.style ? prev.style.color : undefined;
+    if (newColor !== oldColor) return true;
+    if (JSON.stringify(ent.colors || []) !== JSON.stringify(prev.colors || [])) return true;
+    if (JSON.stringify(ent.segmentColors || []) !== JSON.stringify(prev.segmentColors || [])) return true;
+    return false;
+}
+
 // PointPath renderer — renders connected line segments from an ordered
 // list of 3D points with optional per-vertex colors.
 // Uses three.js Line2 (LineSegments2) fat lines so `line_thickness` is
 // honored as a screen-space pixel width.
 
 /**
- * Return true when any entry of ``ent.colors`` is a real colour (non-null).
- * A path with no real per-point colour is drawn uniform-coloured.
+ * Return true when any entry of ``ent.colors`` or ``ent.segmentColors`` is a
+ * real colour (non-null).  A path with no real color is drawn uniform-coloured.
  */
 function hasVertexColors(ent) {
-    return (ent.colors || []).some((c) => c !== null && c !== undefined);
+    return hasExplicitPathColors(ent);
 }
 
 /**
@@ -2569,10 +2598,11 @@ function hasVertexColors(ent) {
  * where ``vertexColors`` is null unless ``hasVertexColors`` was true; null
  * per-point colours fall back to ``uniformColor``.
  */
-function flattenPath(points, perPointColors, uniformColor) {
-    const hasAnyVertexColor = (perPointColors || []).some(
-        (c) => c !== null && c !== undefined
-    );
+function flattenPath(points, perPointColors, uniformColor, segmentColors = []) {
+    const hasAnyVertexColor = hasExplicitPathColors({
+        colors: perPointColors,
+        segmentColors,
+    });
 
     const n = points.length;
     const numVertices = Math.max(0, (n - 1) * 2);
@@ -2598,14 +2628,25 @@ function flattenPath(points, perPointColors, uniformColor) {
         positions[(vi + 1) * 3 + 2] = p1[2];
 
         if (hasAnyVertexColor) {
-            const c0 = _resolveColor(perPointColors[i], uniformColor);
-            const c1 = _resolveColor(perPointColors[i + 1], uniformColor);
-            vertexColors[vi * 3] = c0.r;
-            vertexColors[vi * 3 + 1] = c0.g;
-            vertexColors[vi * 3 + 2] = c0.b;
-            vertexColors[(vi + 1) * 3] = c1.r;
-            vertexColors[(vi + 1) * 3 + 1] = c1.g;
-            vertexColors[(vi + 1) * 3 + 2] = c1.b;
+            const segColor = segmentColors[i];
+            if (segColor !== null && segColor !== undefined) {
+                const c = new THREE.Color(segColor);
+                vertexColors[vi * 3] = c.r;
+                vertexColors[vi * 3 + 1] = c.g;
+                vertexColors[vi * 3 + 2] = c.b;
+                vertexColors[(vi + 1) * 3] = c.r;
+                vertexColors[(vi + 1) * 3 + 1] = c.g;
+                vertexColors[(vi + 1) * 3 + 2] = c.b;
+            } else {
+                const c0 = _resolveColor(perPointColors[i], uniformColor);
+                const c1 = _resolveColor(perPointColors[i + 1], uniformColor);
+                vertexColors[vi * 3] = c0.r;
+                vertexColors[vi * 3 + 1] = c0.g;
+                vertexColors[vi * 3 + 2] = c0.b;
+                vertexColors[(vi + 1) * 3] = c1.r;
+                vertexColors[(vi + 1) * 3 + 1] = c1.g;
+                vertexColors[(vi + 1) * 3 + 2] = c1.b;
+            }
         }
     }
 
@@ -2634,7 +2675,12 @@ function createPointPath(ent) {
     const lineWidth = styleParam(ent, 'line_thickness', 2);
 
     const hasAnyVertexColor = hasVertexColors(ent);
-    const { positions, vertexColors } = flattenPath(points, perPointColors, uniformColor);
+    const { positions, vertexColors } = flattenPath(
+        points,
+        perPointColors,
+        uniformColor,
+        ent.segmentColors || []
+    );
 
     const line = hasAnyVertexColor
         ? makeFatSegmentsColored(positions, vertexColors, opacity, lineWidth)
@@ -2657,7 +2703,8 @@ function updatePointPath(mesh, ent, prev) {
     const { positions, vertexColors } = flattenPath(
         points,
         ent.colors || [],
-        parseColor(ent, '#ffffff')
+        parseColor(ent, '#ffffff'),
+        ent.segmentColors || []
     );
     rewriteFatLinePositions(mesh.geometry, positions);
     if (colored && vertexColors) mesh.geometry.setColors(vertexColors);
@@ -2679,8 +2726,10 @@ function updatePointPath(mesh, ent, prev) {
  * If the color is null/undefined, returns the parsed uniform color.
  */
 function _resolveColor(colorHex, uniformColor) {
+    // `uniformColor` is a CSS string (from parseColor), so wrap it too — the
+    // caller reads `.r`/`.g`/`.b`, which are undefined on a bare string.
     if (colorHex === null || colorHex === undefined) {
-        return uniformColor;
+        return new THREE.Color(uniformColor);
     }
     return new THREE.Color(colorHex);
 }

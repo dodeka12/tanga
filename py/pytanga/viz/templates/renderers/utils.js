@@ -377,7 +377,9 @@ export function applyStyleUpdate(mesh, ent) {
     if (color) {
         const c = new THREE.Color(color);
         mesh.traverse((child) => {
-            if (child.material && child.material.color) {
+            // A material with vertexColors ignores its base color tint; writing
+            // it would clobber per-vertex/per-segment colors on colored paths.
+            if (child.material && child.material.color && !child.material.vertexColors) {
                 child.material.color.copy(c);
             }
         });

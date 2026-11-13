@@ -149,6 +149,23 @@ class TestNodeSerialization:
             assert "transform" in d
             json.dumps(d)  # must not raise
 
+    def test_point_path_segment_colors_serialize(self):  # noqa: ANN201
+        plain = PointPath()
+        plain.add((0.0, 0.0, 0.0))
+        plain.add((1.0, 0.0, 0.0))
+        s = Scene()
+        eid = s.add(plain)
+        d = s.get_node(eid).serialize()
+        assert "segmentColors" not in d
+
+        colored = PointPath()
+        colored.add((0.0, 0.0, 0.0))
+        colored.add((1.0, 0.0, 0.0))
+        colored.set_segment_colors(["#ff00ff"])
+        eid2 = s.add(colored)
+        d2 = s.get_node(eid2).serialize()
+        assert d2["segmentColors"] == ["#ff00ff"]
+
     def test_resolved_style_present(self):  # noqa: ANN201
         s = Scene()
         eid = s.add(Point(0, 0, 0), color="#00ff00")
