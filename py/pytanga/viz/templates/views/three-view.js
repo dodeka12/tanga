@@ -23,7 +23,7 @@ import { installShaderErrorHook } from '../renderers/shader-error.js';
 import { attachGroupView, detachGroup, detachAll, releaseAttachedGroups } from '../controls-attached.js';
 import { applyCameraLock, applyPinhole, createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
 import { updateLineResolutions, applyStyleUpdate, entityRequiresRebuild } from '../renderers/utils.js';
-import { pathColorChangeNeedsColorUpdate } from '../renderers/path-colors.js';
+import { pathColorChangeNeedsColorUpdate, mergeEntityContent } from '../renderers/path-colors.js';
 import { InteractionController } from '../interaction.js';
 import { AxesOverlay } from '../axes-overlay.js';
 import { GridUnderlay } from '../grid-underlay.js';
@@ -1570,13 +1570,14 @@ export class ThreeJsView extends View {
         const entry = this.sceneObjects.get(id);
         if (!entry || entry.layer !== 'scene' || !entry.mesh) return;
         const prev = entry.data || {};
+        const merged = mergeEntityContent(prev, content);
 
         if (updateEntityMesh(entry.mesh, content, prev)) {
-            entry.data = { ...prev, ...content };
+            entry.data = merged;
             return;
         }
 
-        const newMesh = await createEntityMesh({ ...prev, ...content }, { maxDim: this._imageScreenLongSide(prev.frame || content.frame) });
+        const newMesh = await createEntityMesh(merged, { maxDim: this._imageScreenLongSide(prev.frame || content.frame) });
         if (!newMesh) return;
 
         if (entry.obj === entry.mesh) {
@@ -1602,7 +1603,7 @@ export class ThreeJsView extends View {
             entry.obj.add(newMesh);
             entry.mesh = newMesh;
         }
-        entry.data = { ...prev, ...content };
+        entry.data = merged;
         this._applyVisibility(entry);
         if (prev.interaction) {
             this._interaction.registerInteractive(id, entry.obj, prev.interaction);
