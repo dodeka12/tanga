@@ -156,7 +156,7 @@ class TestNodeSerialization:
         s = Scene()
         eid = s.add(plain)
         d = s.get_node(eid).serialize()
-        assert "segmentColors" not in d
+        assert d["segmentColors"] == []
 
         colored = PointPath()
         colored.add((0.0, 0.0, 0.0))

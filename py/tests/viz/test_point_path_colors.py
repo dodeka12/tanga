@@ -65,13 +65,31 @@ def test_max_points_pop_shifts_segment_colors() -> None:
     assert path.segment_colors == ["#00ff00", None]
 
 
-def test_serialize_omits_segment_colors_when_empty() -> None:
+def test_serialize_emits_empty_segment_colors_when_uniform() -> None:
     path = PointPath()
     path.add((0.0, 0.0, 0.0))
     path.add((1.0, 0.0, 0.0))
     s = Scene()
     eid = s.add(path)
-    assert "segmentColors" not in s.get_node(eid).serialize()
+    assert s.get_node(eid).serialize()["segmentColors"] == []
+
+
+def test_serialize_clearing_the_last_segment_color_keeps_the_key() -> None:
+    # Regression: a path that goes coloured → uniform must still emit
+    # `segmentColors` (as `[]`) so the frontend merge can't hold on to the
+    # stale, previously-coloured list.
+    path = PointPath()
+    path.add((0.0, 0.0, 0.0))
+    path.add((1.0, 0.0, 0.0))
+    path.add((1.0, 1.0, 0.0))
+    s = Scene()
+    eid = s.add(path)
+
+    path.set_segment_colors(["#ff00ff", None])
+    assert s.get_node(eid).serialize()["segmentColors"] == ["#ff00ff", None]
+
+    path.set_segment_colors([None, None])
+    assert s.get_node(eid).serialize()["segmentColors"] == []
 
 
 def test_serialize_emits_segment_colors_when_set() -> None:

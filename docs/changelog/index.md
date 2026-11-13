@@ -3,6 +3,8 @@
 ## [Since 2.27.0 (2.28.0-rc2)] — 2026-11-13
 - Tagging a vertex keeps it selected in `calibrated_labeling_app.py` (re-tag without re-clicking)
 → [Details](2026/11/13_af3d7af5d.md)
+- PointPath segment colours clear in the browser (`segmentColors` serializes as an empty list when cleared, so the stale coloured list is not inherited)
+→ [Details](2026/11/13_8ecc667a3.md)
 
 ## [Since 2.27.0 (2.28.0-rc1)] — 2026-11-13
 - PointPath segment colours now clear in the browser (a cleared update resets the path to its uniform colour)
