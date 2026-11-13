@@ -23,10 +23,11 @@ panes:
   re-push).
 
 Polygons support backend-driven vertex tagging: select a vertex, then press
-``1`` or ``2`` to tag it (all vertices default to ``1``).  Tag ``2`` is magenta,
-and every segment from a ``2``-tagged run until the next ``2``-tagged run is
-drawn magenta — the range is computed on the backend, starting at the first
-vertex.
+``1`` or ``2`` to tag it (all vertices default to ``1``).  A vertex's tag labels
+its **outgoing** segment (the segment to the next vertex in polygon order; the
+last vertex of a closed polygon labels the closing segment) — tag ``2`` colours
+it magenta, any other tag leaves it at the default colour.  The tagged vertex
+stays selected so it can be re-tagged without clicking again.
 
 Pixel↔world mapping is a :class:`~pytanga.viz.CalibratedPlaneMapper` handed to
 :class:`~pytanga.viz.LabelMeStore`, so the labelme JSON round-trips through 3D.
@@ -466,9 +467,9 @@ class _CalibratedLabeler:
         act.set_segment_colors(
             _tag_two_segment_colors(act.vertex_tags, closed=act.closed)
         )
-        # The selected style always wins over the tag color, so clear the vertex
-        # selection to reveal the newly-applied tag; the polygon stays selected.
-        act.set_selected_vertex(None)
+        # Keep the vertex selected so the user can re-tag it without clicking
+        # again.  The selected style still wins over the tag color while it is
+        # selected; the tag color shows once the vertex is deselected.
         self._world.flush()
 
     async def _on_delete(self, _event: Any) -> None:

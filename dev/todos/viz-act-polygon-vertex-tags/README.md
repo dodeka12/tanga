@@ -114,8 +114,9 @@ metadata warns and is ignored while the shape still loads.  `iter_shapes(doc)
 **Calibrated app.** Every polygon vertex defaults to tag `"1"`; tag `"1"` uses
 the red handle color, tag `"2"` uses `#ff00ff`.  `world.on_key("1"|"2", ...)`
 handlers read `labeler.selected` + `act.selected_vertex`, set the tag, recompute
-segment colors from the tags, and clear the selected vertex so the tag color is
-visible (the polygon stays selected).  Segment ranges are computed **on the
+segment colors from the tags, and keep the vertex selected so it can be
+re-tagged without clicking again (the selected style still wins over the tag
+color while it is selected).  Segment ranges are computed **on the
 backend** by `_tag_two_segment_colors(tags, *, closed, color="#ff00ff")`: scan
 vertices in index order from `v0`; each vertex's tag labels its **outgoing**
 segment (the segment from that vertex to the next vertex in polygon order; for
@@ -131,8 +132,8 @@ multiple separate magenta segments.
 - Per-segment colors are keyed by stable vertex identity, not raw indices.
 - Tag colors are deterministic via `TAG_PALETTE`; explicit `set_tag_color`
   wins.
-- Selected style always wins over tag color; the calibrated app clears the
-  vertex selection after tagging so the tag color is visible.
+- Selected style always wins over tag color; the calibrated app keeps the
+  tagged vertex selected so it can be re-tagged.
 - Magenta segments use the "each vertex labels its outgoing segment" scan from
   `v0` described above; the last vertex of a closed polygon labels the closing
   segment.
