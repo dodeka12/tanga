@@ -462,8 +462,12 @@ def _serialize_point_path(
         "points": [list(p) for p in ent.points],
         "colors": ent.colors,
     }
-    if any(c is not None for c in ent.segment_colors):
-        result["segmentColors"] = ent.segment_colors
+    # Always emit the key so a cleared path can't inherit a stale list through
+    # the frontend's `{ ...prev, ...content }` merge.  An empty list is the
+    # "uniform again" signal; a coloured path carries its padded list.
+    result["segmentColors"] = (
+        ent.segment_colors if any(c is not None for c in ent.segment_colors) else []
+    )
     return result
 
 
