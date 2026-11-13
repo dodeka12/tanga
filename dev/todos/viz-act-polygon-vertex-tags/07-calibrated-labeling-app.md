@@ -71,9 +71,9 @@ key handler.
     3. `act.set_vertex_tag(index, tag)`;
     4. `act.set_segment_colors(_tag_two_segment_colors(act.vertex_tags,
        closed=act.closed))`;
-    5. `act.set_selected_vertex(None)` — the selected style always wins, so
-       clearing the vertex makes the new tag color visible; keep the polygon
-       selected so the next vertex click still belongs to it;
+    5. keep the vertex selected (do **not** clear it) so it can be re-tagged
+       without clicking again; the selected style still wins over the tag
+       colour while selected;
     6. `self._world.flush()`.
   - Pressing `1` on a `2`-tagged vertex reverts it to red and recomputes the
     magenta ranges.
@@ -140,8 +140,8 @@ key handler.
 ## Notes
 
 - The range decision is backend-only; no frontend color rule is added.
-- The selected style always wins, hence the explicit
-  `set_selected_vertex(None)` after tagging.
+- The selected style always wins over the tag colour, so a selected vertex shows
+  the selection marker; it stays selected after tagging so it can be re-tagged.
 - A `2`-tagged vertex colors its outgoing segment only; independent `2` vertices
   therefore produce independent magenta segments.
 - `world.on_key` lowercases keys, but `"1"`/`"2"` are unaffected.

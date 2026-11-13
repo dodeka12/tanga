@@ -262,25 +262,26 @@ def test_tag_two_handler_updates_tag_and_segment_colors() -> None:
     labeler._add_shape(act, module._style_for("polygon", "#ff4444"))  # noqa: SLF001
     labeler._select(act)  # noqa: SLF001
 
-    # Tagging vertex 1 colors its outgoing segment (1 → 2).
+    # Tagging vertex 1 colors its outgoing segment (1 → 2) and keeps it selected.
     act.set_selected_vertex(1)
     asyncio.run(labeler._on_tag_two(None))  # noqa: SLF001
     assert act.vertex_tags == ["1", "2", "1"]
     assert act.segment_colors == [None, "#ff00ff", None]
     assert act.tag_colors["2"] == "#ff00ff"
-    assert act.selected_vertex is None
+    assert act.selected_vertex == 1
 
-    # Tagging vertex 2 colors its outgoing segment too (2 → 0).
+    # Tagging vertex 2 colors its outgoing segment too (2 → 0); still selected.
     act.set_selected_vertex(2)
     asyncio.run(labeler._on_tag_two(None))  # noqa: SLF001
     assert act.vertex_tags == ["1", "2", "2"]
     assert act.segment_colors == [None, "#ff00ff", "#ff00ff"]
+    assert act.selected_vertex == 2
 
-    # Reverting vertex 2 clears only its outgoing segment.
-    act.set_selected_vertex(2)
+    # Reverting vertex 2 clears only its outgoing segment; still selected.
     asyncio.run(labeler._on_tag_one(None))  # noqa: SLF001
     assert act.vertex_tags == ["1", "2", "1"]
     assert act.segment_colors == [None, "#ff00ff", None]
+    assert act.selected_vertex == 2
 
 
 def test_polygon_defaults_to_tag_one_and_tag_colors() -> None:
