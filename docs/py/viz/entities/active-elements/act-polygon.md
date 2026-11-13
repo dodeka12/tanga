@@ -89,6 +89,45 @@ ActPolygon(
 
 `remove()` / `clear()` remove the body and all handle entities.
 
+## Vertex tags, selection, and segment colors
+
+Each vertex has a stable identity, so its tag, selection, and segment colors
+survive insert/prepend/delete/fuse edits (the public API works with indices,
+which remap automatically).
+
+| Member | Description |
+|--------|-------------|
+| `vertex_tags` | `list[str \| None]` of per-vertex tags (`None` = untagged) |
+| `set_vertex_tag(i, tag)` / `set_vertex_tags(tags)` | Set one / all tags |
+| `default_vertex_tag` | Constructor kwarg; tag assigned to vertices created later by Ctrl+drag insertion |
+| `tagging` / `set_tagging(bool)` | Show tag colors on the vertex handles (default `False`) |
+| `set_tag_color(tag, color)` | Explicit tag→color override; otherwise a deterministic `TAG_PALETTE` fallback |
+| `selected_vertex` / `set_selected_vertex(i)` | The selected vertex index (`None` clears it) |
+| `selected_handle_style` / `set_selected_handle_style(style)` | Custom marker for the selected vertex (default a yellow copy of the base handle style) |
+| `select_on_click` | Select a vertex when its handle is clicked (default `True`) |
+| `on_vertex_click(i, event, act)` | Async callback fired after a vertex click |
+| `segment_count` | `n` for a closed polygon, `n-1` for an open one |
+| `segment_colors` | `list[str \| None]` of per-segment overrides (segment `i` = vertex `i` → `i+1`) |
+| `set_segment_colors(colors)` / `set_segment_color(i, color)` / `clear_segment_color(i)` | Set / clear segment colors |
+
+Handle style precedence: endpoint style (unless tagging) → tag color (only in
+tagging mode) → the selected style (which always wins).  Tag, selection, and
+segment-color changes are visual only — they never fire `on_change`.
+
+```python
+poly = ActPolygon(
+    [Point(0, 0, 0), Point(1, 0, 0), Point(1, 1, 0)],
+    default_vertex_tag="1",
+    tagging=True,
+)
+poly.set_tag_color("1", "#ff4444")
+poly.set_tag_color("2", "#ff00ff")
+
+poly.set_vertex_tag(1, "2")          # tag the middle vertex
+poly.set_selected_vertex(1)          # select it (yellow marker)
+poly.set_segment_color(0, "#ff00ff") # color segment 0 magenta
+```
+
 ## See Also
 
 - [Active Elements Overview](index.md)

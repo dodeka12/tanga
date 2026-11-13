@@ -18,6 +18,8 @@ class LabelShape:
     radius_u: float | None = None       # ellipse scalar params (new form)
     radius_v: float | None = None
     angle: float | None = None
+    vertex_tags: list[str | None] | None = None      # per-vertex tags
+    segment_colors: list[str | None] | None = None   # per-segment colors
 
 @dataclass
 class LabelMeDocument:
@@ -43,6 +45,27 @@ objs = store.add_shapes(handle, doc, active=True)      # add as act composites
 pairs = store.iter_objects(doc, active=False)          # (entity, label) without adding
 shapes = store.shapes_from_objects([(act, "car"), ...])  # inverse (save direction)
 ```
+
+## Per-vertex tags and segment colors
+
+`LabelShape.vertex_tags` and `LabelShape.segment_colors` are non-standard shape
+keys (`"vertex_tags"` and `"segment_colors"`) that round-trip per-vertex and
+per-segment metadata for polygons/linestrips:
+
+- `vertex_tags` aligns to the canonical vertices (a closing duplicate point is
+  dropped), one `str | None` entry per vertex.
+- `segment_colors` has one entry per segment (`n` for a closed polygon, `n-1`
+  for a linestrip); `None` means "no override".
+- Both keys are omitted from the JSON when empty or all-`None`.
+
+`LabelMeLoadResult` also carries `warnings`: malformed metadata (wrong type or
+length) is ignored with a warning while the shape still loads, whereas `errors`
+lists shapes that were skipped entirely.
+
+Use `iter_shapes(doc)` to get `(entity, LabelShape)` pairs (so the metadata is
+available), and `shapes_from_objects` accepts 2-tuples `(entity, label)` or
+3-tuples `(entity, label, vertex_tags)` — segment colors are read back from the
+`PointPath` itself.
 
 ## Shape-type mapping
 

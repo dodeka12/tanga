@@ -490,6 +490,8 @@ uv run python py/examples/<path>.py
 
 - **KaTeX** — [Demo: Texture labels on spheres using plain text and KaTeX formulas](viz/labels/texture_sphere.md), [Title overlay and Markdown + LaTeX annotation](viz/labels/title_annotation.md), [Settable label and markdown panes in a vertical split](viz/ui/static/display_views.md)
 
+- **keyboard** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md)
+
 - **keyboard navigation** — [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md)
 
 - **keyframe** — [Keyframe timeline with fade-in and move](viz/animation/timeline.md)
@@ -812,6 +814,8 @@ uv run python py/examples/<path>.py
 
 - **SdfGroup** — [Combine multiple SdfGroups (nesting + merging)](viz/sdf/combine_groups.md)
 
+- **segment colors** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [Label images in the labelme JSON format](apps/image_labeling_app.md)
+
 - **segmentation** — [A 2.5D depth surface from phase-shifted 2D sines](viz/image/depth_surface.md), [Mix multiple image layers (image, depth, segmentation)](viz/image/image_layers.md)
 
 - **separator** — [Four toolbars, one per alignment, stacked in a vertical split](viz/ui/controls/toolbar.md)
@@ -916,6 +920,8 @@ uv run python py/examples/<path>.py
 
 - **tabular data** — [An editable tabular-data control driven by the backend](viz/ui/controls/table_data.md), [Editable table: column types, keyboard nav, undo/redo](viz/ui/controls/table_editing.md), [A TableView with a column-fed enum and a backend-fed enum](viz/ui/controls/table_enum_columns.md), [Table auto-save: JSON load/save + CSV export](viz/ui/controls/table_file.md), [An editable data table beside a 3D scene](viz/ui/controls/table_split.md)
 
+- **tagging** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [Label images in the labelme JSON format](apps/image_labeling_app.md)
+
 - **tensor** — [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/basics_02.md), [Recover a rotor from point ↔ projection-ray matches](ga/tensor/rotor-point-on-ray_01.md), [Product tensor basics — compute the geometric product *via* tensor contraction](ga/tensor/rotor_01.md)
 
 - **texture labels** — [Demo: Texture labels on planes with different align modes](viz/labels/texture_plane.md), [Demo: Texture labels on spheres using plain text and KaTeX formulas](viz/labels/texture_sphere.md)
@@ -991,6 +997,8 @@ uv run python py/examples/<path>.py
 - **Variable** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md), [Named GA product functions over variables](ga/expression/named_products.md), [Project an N3 expression onto the Euclidean basis](ga/expression/project_onto_euclidean_n3.md), [Re-key variables so independent expressions merge](ga/expression/rename_unify_variables.md), [Apply a fixed rotor to points with a Variable-backed expression](ga/expression/variable_rotor.md), [Rotate a list of points with a variable rotor and variable points](ga/expression/variable_rotor_entity.md)
 
 - **variables** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md)
+
+- **vertex tags** — [label a calibrated image in 3D](apps/calibrated_labeling_app.md), [Label images in the labelme JSON format](apps/image_labeling_app.md)
 
 - **View2DConfig** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md)
 

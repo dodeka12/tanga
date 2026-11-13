@@ -453,7 +453,7 @@ def _serialize_point_path(
     kind: str,
     styles_map: StylesMap | None = None,
 ) -> Dict[str, Any]:
-    return _apply_defaults(
+    result = _apply_defaults(
         props,
         kind,
         {"line_thickness": 0.03},
@@ -462,6 +462,9 @@ def _serialize_point_path(
         "points": [list(p) for p in ent.points],
         "colors": ent.colors,
     }
+    if any(c is not None for c in ent.segment_colors):
+        result["segmentColors"] = ent.segment_colors
+    return result
 
 
 def _serialize_axis(

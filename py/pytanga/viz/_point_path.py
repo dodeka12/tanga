@@ -62,6 +62,7 @@ class PointPath:
             raise ValueError(f"max_points must be >= 1 or None, got {self.max_points}")
         self._points: list[tuple[float, float, float]] = []
         self._colors: list[str | None] = []
+        self._segment_colors: list[str | None] = []
 
     # ── Public API ──────────────────────────────────────────
 
@@ -93,10 +94,13 @@ class PointPath:
                 # Colors stay anchored; trim colors to not exceed max_points
                 if len(self._colors) > self.max_points:
                     self._colors[:] = self._colors[: self.max_points]
+            if self._segment_colors:
+                self._segment_colors.pop(0)
 
         # Determine the new point's index *after* potential pop
         new_index = len(self._points)
         self._points.append(xyz)
+        self._segment_colors.append(None)
 
         if color is not None:
             # Pad colors to match points length if needed
@@ -118,11 +122,16 @@ class PointPath:
             idx = index if index >= 0 else len(self._colors) + index
             if 0 <= idx < len(self._colors):
                 self._colors.pop(idx)
+        if self._segment_colors:
+            idx = index if index >= 0 else len(self._segment_colors) + index
+            if 0 <= idx < len(self._segment_colors):
+                self._segment_colors.pop(idx)
 
     def clear(self) -> None:
         """Remove all points and colors."""
         self._points.clear()
         self._colors.clear()
+        self._segment_colors.clear()
 
     def set_colors(self, colors: Sequence[str | None]) -> None:
         """Replace the entire color list."""
@@ -131,6 +140,26 @@ class PointPath:
     def set_default_colors(self, colors: Sequence[str | None]) -> None:
         """Replace the default color template."""
         self.default_colors = list(colors)
+
+    def set_segment_colors(self, colors: Sequence[str | None]) -> None:
+        """Replace the per-segment color list (one entry per segment)."""
+        count = max(0, len(self._points) - 1)
+        if len(colors) != count:
+            raise ValueError(
+                f"segment_colors must have {count} entries, got {len(colors)}"
+            )
+        self._segment_colors = list(colors)
+
+    def set_segment_color(self, index: int, color: str | None) -> None:
+        """Set the color of the segment connecting point *index* to *index+1*."""
+        count = max(0, len(self._points) - 1)
+        if not 0 <= index < count:
+            raise IndexError(
+                f"segment index {index} out of range for {count} segments"
+            )
+        while len(self._segment_colors) < count:
+            self._segment_colors.append(None)
+        self._segment_colors[index] = color
 
     # ── Properties ──────────────────────────────────────────
 
@@ -143,6 +172,19 @@ class PointPath:
     def colors(self) -> list[str | None]:
         """A copy of the current color list (parallel to ``points``)."""
         return list(self._colors)
+
+    @property
+    def segment_colors(self) -> list[str | None]:
+        """A copy of the per-segment colors (length ``max(0, len(points)-1)``).
+
+        Segment ``i`` connects point ``i`` to point ``i+1``.  An explicit
+        segment color overrides both endpoints' per-point colors.
+        """
+        count = max(0, len(self._points) - 1)
+        colors = list(self._segment_colors[:count])
+        while len(colors) < count:
+            colors.append(None)
+        return colors
 
     @property
     def dim(self) -> int:

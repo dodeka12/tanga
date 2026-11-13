@@ -23,8 +23,9 @@ from __future__ import annotations
 
 import math
 import sys
-from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+import zlib
+from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from pytanga.geometry import Circle, Direction, Ellipse, Line, Point, Rectangle2D
@@ -46,6 +47,34 @@ from .camera import CoordinateMapper, PlanarMapper
 #: Floating-point floor used when a size/radius limit is left at ``None`` —
 #: effectively "no practical minimum", guarding only against degenerate zero.
 _FLOAT_EPS = sys.float_info.epsilon
+
+#: Deterministic fallback colors for vertex tags.  Explicit ``set_tag_color``
+#: overrides always win.  ``#ffff44`` (the selected marker) is deliberately
+#: absent so a selected vertex stays distinguishable from tagged vertices.
+TAG_PALETTE: tuple[str, ...] = (
+    "#44aaff",  # blue
+    "#44dd88",  # green
+    "#ff8844",  # orange
+    "#cc66ff",  # purple
+    "#ff66aa",  # pink
+    "#66dddd",  # cyan
+    "#aaaa44",  # olive
+    "#8888ff",  # indigo
+)
+
+
+def resolve_tag_color(
+    tag: str | None, overrides: dict[str, str] | None = None
+) -> str | None:
+    """Return the color for *tag* (explicit override, else the palette).
+
+    ``None`` tags have no color.
+    """
+    if tag is None:
+        return None
+    if overrides is not None and tag in overrides:
+        return overrides[tag]
+    return TAG_PALETTE[zlib.crc32(tag.encode("utf-8")) % len(TAG_PALETTE)]
 
 if TYPE_CHECKING:
     from ._image_view import ImageView
@@ -2280,6 +2309,18 @@ class ActPolygon(ActiveObject):
         on_removed: Optional sync callback fired when the whole polygon is
             removed (vertex deletion down to one vertex).
         on_click: Optional async callback invoked when the body is clicked.
+        vertex_tags: Optional per-vertex tags aligned to ``points`` (``None``
+            entries mean untagged).
+        default_vertex_tag: Tag assigned to vertices created later by
+            Ctrl+drag insertion, and to every vertex when ``vertex_tags`` is
+            ``None``.
+        tagging: Show tag colors on the vertex handles (default ``False``).
+        selected_handle_style: Custom marker style for the selected vertex
+            (default a yellow copy of the base handle style).
+        select_on_click: Select a vertex when its handle is clicked (default
+            ``True``).
+        on_vertex_click: Optional async callback fired when a vertex handle is
+            clicked, after selection.
     """
 
     def __init__(
@@ -2302,6 +2343,13 @@ class ActPolygon(ActiveObject):
         on_change: Callable[[list[Point]], None] | None = None,
         on_removed: Callable[[], None] | None = None,
         on_click: ActClickHandler | None = None,
+        vertex_tags: Sequence[str | None] | None = None,
+        default_vertex_tag: str | None = None,
+        tagging: bool = False,
+        selected_handle_style: PointStyle | None = None,
+        select_on_click: bool = True,
+        on_vertex_click: Callable[[int, ClickEvent, "ActPolygon"], Awaitable[None]]
+        | None = None,
     ) -> None:
         super().__init__(
             on_click=on_click,
@@ -2311,6 +2359,24 @@ class ActPolygon(ActiveObject):
             style=style,
         )
         self._points = [Point(p.x, p.y, p.z) for p in points]
+        # Stable, monotonic, never-reused vertex IDs, kept exactly parallel to
+        # ``_points`` so tags/selection/segment colors can outlive index shifts.
+        self._vertex_ids = list(range(len(self._points)))
+        self._next_vertex_id = len(self._points)
+        self._default_vertex_tag = default_vertex_tag
+        self._vertex_tags: dict[int, str | None] = {}
+        if vertex_tags is None:
+            for vid in self._vertex_ids:
+                self._vertex_tags[vid] = default_vertex_tag
+        else:
+            if len(vertex_tags) != len(self._points):
+                raise ValueError(
+                    f"vertex_tags must match the vertex count "
+                    f"({len(self._points)}), got {len(vertex_tags)}"
+                )
+            for vid, tag in zip(self._vertex_ids, vertex_tags):
+                self._vertex_tags[vid] = tag
+        self._segment_colors: dict[int, str] = {}
         self._closed = closed
         self._show_translate_handle = show_translate_handle
         self._end_handle_style = end_handle_style
@@ -2324,6 +2390,12 @@ class ActPolygon(ActiveObject):
         self._translate_handle: ActPoint | None = None
         # Index of the endpoint inserted by the in-flight Ctrl+drag, if any.
         self._insert_drag_index: int | None = None
+        self._selected_vertex_id: int | None = None
+        self._tag_colors: dict[str, str] = {}
+        self._tagging = tagging
+        self._selected_handle_style = selected_handle_style
+        self._select_on_click = select_on_click
+        self._on_vertex_click = on_vertex_click
 
     # ── Init (called by Visualizer) ────────────────────────
 
@@ -2339,9 +2411,132 @@ class ActPolygon(ActiveObject):
         return list(self._points)
 
     @property
+    def vertex_count(self) -> int:
+        """The current number of vertices."""
+        return len(self._points)
+
+    @property
     def closed(self) -> bool:
         """Whether the polygon is closed."""
         return self._closed
+
+    @property
+    def vertex_tags(self) -> list[str | None]:
+        """Per-vertex tags in current index order (``None`` = untagged)."""
+        return [self._vertex_tags[vid] for vid in self._vertex_ids]
+
+    def set_vertex_tags(self, tags: Sequence[str | None]) -> None:
+        """Replace every vertex tag (must match the current vertex count)."""
+        if len(tags) != len(self._points):
+            raise ValueError(
+                f"vertex_tags must match the vertex count "
+                f"({len(self._points)}), got {len(tags)}"
+            )
+        self._vertex_tags = {vid: tag for vid, tag in zip(self._vertex_ids, tags)}
+        self._restyle_handles()
+
+    def set_vertex_tag(self, index: int, tag: str | None) -> None:
+        """Set the tag of the vertex at *index*."""
+        self._vertex_tags[self._vertex_ids[index]] = tag
+        self._restyle_handles()
+
+    @property
+    def tagging(self) -> bool:
+        """Whether tag colors are shown on the vertex handles."""
+        return self._tagging
+
+    def set_tagging(self, tagging: bool) -> None:
+        """Enable/disable tag-colored vertex handles."""
+        self._tagging = tagging
+        self._restyle_handles()
+
+    @property
+    def tag_colors(self) -> dict[str, str]:
+        """A copy of the explicit tag→color overrides."""
+        return dict(self._tag_colors)
+
+    def set_tag_color(self, tag: str, color: str) -> None:
+        """Set the color used for *tag* in tagging mode (restyles handles)."""
+        self._tag_colors[tag] = color
+        self._restyle_handles()
+
+    @property
+    def selected_handle_style(self) -> PointStyle | None:
+        """The custom style for the selected vertex (``None`` = default)."""
+        return self._selected_handle_style
+
+    def set_selected_handle_style(self, style: PointStyle | None) -> None:
+        """Set the selected-vertex style (``None`` restores the default)."""
+        self._selected_handle_style = style
+        self._restyle_handles()
+
+    @property
+    def selected_vertex(self) -> int | None:
+        """The currently selected vertex index, or ``None``."""
+        if self._selected_vertex_id is None:
+            return None
+        index = self._vertex_index(self._selected_vertex_id)
+        return None if index < 0 else index
+
+    def set_selected_vertex(self, index: int | None) -> None:
+        """Select the vertex at *index* (``None`` clears the selection)."""
+        if index is None:
+            self._selected_vertex_id = None
+        else:
+            self._selected_vertex_id = self._vertex_ids[index]
+        self._restyle_handles()
+
+    def set_on_change(self, handler: Callable[[list[Point]], None] | None) -> None:
+        """Replace the geometry-change callback (``None`` clears it)."""
+        self._on_change = handler
+
+    @property
+    def segment_count(self) -> int:
+        """The number of rendered segments (``n`` closed / ``n-1`` open)."""
+        n = len(self._points)
+        if self._closed and n > 1:
+            return n
+        return max(0, n - 1)
+
+    @property
+    def segment_colors(self) -> list[str | None]:
+        """Per-segment colors in segment order (``None`` = no override)."""
+        return [
+            self._segment_colors.get(self._vertex_ids[i])
+            for i in range(self.segment_count)
+        ]
+
+    def set_segment_colors(self, colors: Sequence[str | None]) -> None:
+        """Replace every segment color (must match :attr:`segment_count`)."""
+        count = self.segment_count
+        if len(colors) != count:
+            raise ValueError(
+                f"segment_colors must have {count} entries, got {len(colors)}"
+            )
+        self._segment_colors = {}
+        for i, color in enumerate(colors):
+            if color is not None:
+                self._segment_colors[self._vertex_ids[i]] = color
+        self.update()
+        self.flush()
+
+    def set_segment_color(self, index: int, color: str | None) -> None:
+        """Set the color of segment *index* (``None`` clears it)."""
+        if not 0 <= index < self.segment_count:
+            raise IndexError(
+                f"segment index {index} out of range for {self.segment_count} segments"
+            )
+        vid = self._vertex_ids[index]
+        if color is None:
+            self._segment_colors.pop(vid, None)
+        else:
+            self._segment_colors[vid] = color
+        self.update()
+        self.flush()
+
+    def clear_segment_color(self, index: int) -> None:
+        """Clear the color of segment *index*."""
+        self.set_segment_color(index, None)
 
     @property
     def entity(self) -> PointPath:
@@ -2372,6 +2567,7 @@ class ActPolygon(ActiveObject):
         if self._closed and len(self._points) > 1:
             first = self._points[0]
             path.add((first.x, first.y, first.z))
+        path.set_segment_colors(self.segment_colors)
         return path
 
     def _centroid(self) -> Point:
@@ -2388,6 +2584,13 @@ class ActPolygon(ActiveObject):
         if self._closed:
             return False  # a closed polygon has no endpoints
         return index == 0 or index == len(self._points) - 1
+
+    def _vertex_index(self, vertex_id: int) -> int:
+        """Return the current index of *vertex_id*, or ``-1`` when it is gone."""
+        try:
+            return self._vertex_ids.index(vertex_id)
+        except ValueError:
+            return -1
 
     def _maybe_auto_close(self, index: int) -> bool:
         """Fuse the endpoints and close the path when they overlap.
@@ -2412,7 +2615,13 @@ class ActPolygon(ActiveObject):
 
     def _fuse_endpoints(self) -> None:
         """Merge the two endpoints into one and close the polygon."""
+        removed_id = self._vertex_ids[-1]
         self._points.pop(-1)  # the start vertex becomes the joint
+        self._vertex_ids.pop(-1)
+        self._vertex_tags.pop(removed_id, None)
+        self._segment_colors.pop(removed_id, None)
+        if self._selected_vertex_id == removed_id:
+            self._selected_vertex_id = None
         self._closed = True
         self._auto_close = False
         self._rebuild_handles()
@@ -2431,9 +2640,7 @@ class ActPolygon(ActiveObject):
     def _spawn_handles(self) -> None:
         if self._viz_handle is None:
             return
-        style = self._resolve_handle_style()
         translate_style = self._resolve_translate_handle_style()
-        end_style = self._end_handle_style or style
         for i, p in enumerate(self._points):
             handle = ActPoint(
                 p,
@@ -2446,12 +2653,10 @@ class ActPolygon(ActiveObject):
                     )
                 ],
                 act_style=self._act_style,
-                on_click=self._handle_click_handler(),
+                on_click=self._make_vertex_click_handler(i),
                 click_bindings=self._make_delete_bindings(i),
             )
-            self._spawn_handle(
-                handle, style=end_style if self._is_endpoint(i) else style
-            )
+            self._spawn_handle(handle, style=self._vertex_style(i))
             self._vertex_handles.append(handle)
         if self._show_translate_handle:
             handle = ActPoint(
@@ -2471,11 +2676,60 @@ class ActPolygon(ActiveObject):
         self._translate_handle = None
         self._spawn_handles()
 
+    # ── Vertex handle styling ──────────────────────────────
+
+    def _default_selected_style(self) -> PointStyle:
+        """The default selected-vertex style (base handle style, yellow)."""
+        return replace(self._resolve_handle_style(), color="#ffff44")
+
+    def _vertex_base_style(self, index: int) -> PointStyle:
+        """The untagged/endpoint base style for the vertex at *index*."""
+        if self._is_endpoint(index) and not self._tagging:
+            base = self._end_handle_style or self._resolve_handle_style()
+        else:
+            base = self._resolve_handle_style()
+        if self._tagging and index < len(self._vertex_ids):
+            tag = self._vertex_tags.get(self._vertex_ids[index])
+            color = resolve_tag_color(tag, self._tag_colors)
+            if color is not None:
+                base = replace(base, color=color)
+        if base.color is None:
+            base = replace(base, color="#ff4444")
+        return base
+
+    def _vertex_style(self, index: int) -> PointStyle:
+        """The effective style for the vertex handle at *index*."""
+        if self._selected_vertex_id is not None:
+            selected_index = self._vertex_index(self._selected_vertex_id)
+            if selected_index == index:
+                return self._selected_handle_style or self._default_selected_style()
+        return self._vertex_base_style(index)
+
+    def _restyle_handles(self) -> None:
+        """Re-apply the current tag/selection styles to every vertex handle."""
+        if self._viz_handle is None:
+            return
+        for i, handle in enumerate(self._vertex_handles):
+            if i < len(self._vertex_ids):
+                self._viz_handle.update_style(handle.entity_id, self._vertex_style(i))
+        self.flush()
+
     # ── Handler closures ───────────────────────────────────
 
     def _make_vertex_handler(self, index: int) -> ActHandler:
         async def handler(event: DragEvent, _handle: ActSceneObject) -> bool:
             return await self._dispatch_vertex_drag(index, event)
+
+        return handler
+
+    def _make_vertex_click_handler(self, index: int) -> ActClickHandler:
+        async def handler(event: ClickEvent, _handle: ActSceneObject) -> None:
+            if self._select_on_click:
+                self.set_selected_vertex(index)
+            if self._on_vertex_click is not None:
+                await self._on_vertex_click(index, event, self)
+            if self._on_click is not None:
+                await self._on_click(event, self)
 
         return handler
 
@@ -2555,6 +2809,10 @@ class ActPolygon(ActiveObject):
         # Ctrl+drag on it prepends so the new point becomes the new start.
         new_index = 0 if index == 0 else index + 1
         self._points.insert(new_index, p)
+        new_id = self._next_vertex_id
+        self._next_vertex_id += 1
+        self._vertex_ids.insert(new_index, new_id)
+        self._vertex_tags[new_id] = self._default_vertex_tag
         self._update_body()
         return new_index
 
@@ -2577,7 +2835,13 @@ class ActPolygon(ActiveObject):
             if self._on_removed is not None:
                 self._on_removed()
             return
+        removed_id = self._vertex_ids[index]
         self._points.pop(index)
+        self._vertex_ids.pop(index)
+        self._vertex_tags.pop(removed_id, None)
+        self._segment_colors.pop(removed_id, None)
+        if self._selected_vertex_id == removed_id:
+            self._selected_vertex_id = None
         if open:
             self._closed = False
             self._auto_close = True  # re-enable so the endpoints can be re-fused

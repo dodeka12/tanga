@@ -23,6 +23,7 @@ import { installShaderErrorHook } from '../renderers/shader-error.js';
 import { attachGroupView, detachGroup, detachAll, releaseAttachedGroups } from '../controls-attached.js';
 import { applyCameraLock, applyPinhole, createCamera, configureControls, fitCamera, handleResize, switchToCamera } from '../view_mode.js';
 import { updateLineResolutions, applyStyleUpdate, entityRequiresRebuild } from '../renderers/utils.js';
+import { pathColorChangeNeedsColorUpdate } from '../renderers/path-colors.js';
 import { InteractionController } from '../interaction.js';
 import { AxesOverlay } from '../axes-overlay.js';
 import { GridUnderlay } from '../grid-underlay.js';
@@ -1547,6 +1548,13 @@ export class ThreeJsView extends View {
                 }
                 if (merged.style && merged.style.opacity !== undefined) {
                     merged.opacity = merged.style.opacity;
+                }
+                // A colored path's uniform fallback color feeds its vertex-color
+                // attribute, so route it through the in-place path updater rather
+                // than the generic material-color write (which vertexColors skips).
+                if (pathColorChangeNeedsColorUpdate(merged, prev)) {
+                    await this._updateEntityContent(id, merged);
+                    return;
                 }
                 if (entityRequiresRebuild(merged, prev)) {
                     await this._updateEntityContent(id, merged);

@@ -19,6 +19,7 @@ from pytanga.viz import (
     CameraCalibration,
     DragEvent,
     LabelMeStore,
+    LabelShape,
     ModifierKey,
     PlanarMapper,
     Visualizer,
@@ -121,6 +122,13 @@ def _make_labeler(module: Any) -> Any:
     return module._CalibratedLabeler(world, _calibration(), 0.6)  # noqa: SLF001
 
 
+def _make_labeler_with_viz(module: Any) -> tuple[Any, Any]:
+    viz = Visualizer(add_default_axes=False, add_default_grid=False, space_dim=3)
+    world = viz.scene("world")
+    labeler = module._CalibratedLabeler(world, _calibration(), 0.6)  # noqa: SLF001
+    return viz, labeler
+
+
 def test_selection_is_exclusive() -> None:
     module = _load_example()
     labeler = _make_labeler(module)
@@ -217,3 +225,92 @@ def test_ctrl_drag_does_not_create_shape() -> None:
     asyncio.run(labeler._on_drag_end(end, None))  # noqa: SLF001
 
     assert labeler.shapes == []
+
+
+def _polygon_points(module: Any) -> list[Any]:
+    return [module.Point(0.0, 0.0, 0.0), module.Point(1.0, 0.0, 0.0), module.Point(1.0, 1.0, 0.0)]
+
+
+def test_tag_two_segment_colors_table() -> None:
+    module = _load_example()
+    fn = module._tag_two_segment_colors  # noqa: SLF001
+    assert fn(["1", "1", "1", "1"], closed=True) == [None, None, None, None]
+    # Each vertex labels its outgoing segment.
+    assert fn(["1", "2", "1", "1"], closed=True) == [None, "#ff00ff", None, None]
+    assert fn(["1", "2", "1", "2"], closed=True) == [None, "#ff00ff", None, "#ff00ff"]
+    assert fn(["1", "2", "2", "1"], closed=True) == [None, "#ff00ff", "#ff00ff", None]
+    assert fn(["2", "1", "2", "1"], closed=True) == ["#ff00ff", None, "#ff00ff", None]
+    # The last vertex labels the closing segment back to the first.
+    assert fn(["1", "1", "1", "2"], closed=True) == [None, None, None, "#ff00ff"]
+    assert fn(["2", "2", "2", "2"], closed=True) == ["#ff00ff", "#ff00ff", "#ff00ff", "#ff00ff"]
+    assert fn(["1", "2", "1"], closed=False) == [None, "#ff00ff"]
+
+
+def test_tag_keys_registered() -> None:
+    module = _load_example()
+    viz, _ = _make_labeler_with_viz(module)
+    keyboard = viz._layout.scene("world").config.keyboard  # noqa: SLF001
+    keys = [entry["key"] for entry in keyboard]
+    assert "1" in keys
+    assert "2" in keys
+
+
+def test_tag_two_handler_updates_tag_and_segment_colors() -> None:
+    module = _load_example()
+    labeler = _make_labeler(module)
+    act = module.ActPolygon(_polygon_points(module), default_vertex_tag="1")
+    labeler._add_shape(act, module._style_for("polygon", "#ff4444"))  # noqa: SLF001
+    labeler._select(act)  # noqa: SLF001
+
+    # Tagging vertex 1 colors its outgoing segment (1 → 2).
+    act.set_selected_vertex(1)
+    asyncio.run(labeler._on_tag_two(None))  # noqa: SLF001
+    assert act.vertex_tags == ["1", "2", "1"]
+    assert act.segment_colors == [None, "#ff00ff", None]
+    assert act.tag_colors["2"] == "#ff00ff"
+    assert act.selected_vertex is None
+
+    # Tagging vertex 2 colors its outgoing segment too (2 → 0).
+    act.set_selected_vertex(2)
+    asyncio.run(labeler._on_tag_two(None))  # noqa: SLF001
+    assert act.vertex_tags == ["1", "2", "2"]
+    assert act.segment_colors == [None, "#ff00ff", "#ff00ff"]
+
+    # Reverting vertex 2 clears only its outgoing segment.
+    act.set_selected_vertex(2)
+    asyncio.run(labeler._on_tag_one(None))  # noqa: SLF001
+    assert act.vertex_tags == ["1", "2", "1"]
+    assert act.segment_colors == [None, "#ff00ff", None]
+
+
+def test_polygon_defaults_to_tag_one_and_tag_colors() -> None:
+    module = _load_example()
+    labeler = _make_labeler(module)
+    act = module.ActPolygon(_polygon_points(module), default_vertex_tag="1")
+    labeler._add_shape(act, module._style_for("polygon", "#ff4444"))  # noqa: SLF001
+    assert act.vertex_tags == ["1", "1", "1"]
+    assert act.tagging is True
+    assert act.tag_colors["1"] == "#ff4444"
+    assert act.tag_colors["2"] == "#ff00ff"
+    assert act.segment_colors == [None, None, None]
+
+
+def test_load_applies_tags_and_segment_colors() -> None:
+    module = _load_example()
+    labeler = _make_labeler(module)
+    path = module.PointPath()
+    path.add((0.0, 0.0, 0.0))
+    path.add((1.0, 0.0, 0.0))
+    path.add((1.0, 1.0, 0.0))
+    path.add((0.0, 0.0, 0.0))
+    shape = LabelShape(
+        label="p",
+        points=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
+        shape_type="polygon",
+        vertex_tags=["1", "2", "1"],
+        segment_colors=[None, "#ff00ff", None],
+    )
+    labeler.add_loaded_shape(path, shape)
+    act = labeler.shapes[-1][0]
+    assert act.vertex_tags == ["1", "2", "1"]
+    assert act.segment_colors == [None, "#ff00ff", None]

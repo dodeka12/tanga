@@ -22,13 +22,19 @@ panes:
   button swaps the two panes (exercising the background image surviving a layout
   re-push).
 
+Polygons support backend-driven vertex tagging: select a vertex, then press
+``1`` or ``2`` to tag it (all vertices default to ``1``).  Tag ``2`` is magenta,
+and every segment from a ``2``-tagged run until the next ``2``-tagged run is
+drawn magenta — the range is computed on the backend, starting at the first
+vertex.
+
 Pixel↔world mapping is a :class:`~pytanga.viz.CalibratedPlaneMapper` handed to
 :class:`~pytanga.viz.LabelMeStore`, so the labelme JSON round-trips through 3D.
 Attribution: T-LESS, Hodan et al., WACV 2017, CC BY 4.0.
 
 Run with:  uv run python py/examples/apps/calibrated_labeling_app.py
 
-Keywords: camera, pinhole, calibration, labelme, image labeling, CalibratedPlaneMapper, frustum, split view, InteractionSurface, checkbox, ImageData.update, background image
+Keywords: camera, pinhole, calibration, labelme, image labeling, tagging, vertex tags, segment colors, keyboard, CalibratedPlaneMapper, frustum, split view, InteractionSurface, checkbox, ImageData.update, background image
 """
 
 from __future__ import annotations
@@ -100,6 +106,15 @@ _LABELS_PATH = _DATA_DIR / "labels.json"
 
 #: Annotation plane distance (metres) in front of the camera.
 _DEPTH = 0.6
+
+#: Vertex tag used by default for every polygon vertex.
+_TAG_DEFAULT = "1"
+#: Vertex tag that opens a magenta segment range.
+_TAG_MAGENTA = "2"
+#: Handle color for the default ``1`` tag (matches the existing red vertex marker).
+_TAG_ONE_COLOR = "#ff4444"
+#: Handle + segment color for the ``2`` tag.
+_TAG_TWO_COLOR = "#ff00ff"
 
 _ATTRIBUTION = (
     "Image & data: T-LESS (Hodan et al., WACV 2017), BOP benchmark — License: CC BY 4.0"
@@ -194,6 +209,32 @@ def _loaded_style(obj: Any) -> Any:
     return LineStyle(thickness=2)
 
 
+def _tag_two_segment_colors(
+    tags: list[str | None], *, closed: bool, color: str = _TAG_TWO_COLOR
+) -> list[str | None]:
+    """Derive per-segment overrides from the vertex tags (backend-side).
+
+    A vertex's tag labels its **outgoing** segment — the segment from that
+    vertex to the next vertex in polygon order (for a closed polygon the last
+    vertex labels the closing segment back to the first).  A ``"1"`` (or any
+    non-``"2"``) tag leaves the segment at the default color; a ``"2"`` tag
+    colors it magenta.  Multiple separate ``"2"`` vertices therefore produce
+    multiple separate magenta segments.
+
+    Examples
+    --------
+    ``["1", "2", "1", "2"]`` (closed) → segments 1 and 3 magenta.
+    ``["1", "2", "2", "1"]`` (closed) → segments 1 and 2 magenta.
+    """
+    n = len(tags)
+    seg_count = n if closed and n > 1 else max(0, n - 1)
+    colors: list[str | None] = [None] * seg_count
+    for i in range(seg_count):
+        if tags[i] == _TAG_MAGENTA:
+            colors[i] = color
+    return colors
+
+
 class _CalibratedLabeler:
     """Draw/select shapes on the calibrated plane, adding them to the world scene."""
 
@@ -242,6 +283,7 @@ class _CalibratedLabeler:
             if mode == "polygon":
                 kwargs["handle_style"] = vertex_style
                 kwargs["end_handle_style"] = end_style
+                kwargs["default_vertex_tag"] = _TAG_DEFAULT
             self._previews[mode] = DragPreview(
                 world,
                 factory=factory,
@@ -268,6 +310,8 @@ class _CalibratedLabeler:
         world.on_key("Delete", self._on_delete)
         world.on_key("Backspace", self._on_delete)
         world.on_key("Escape", self._on_escape)
+        world.on_key("1", self._on_tag_one)
+        world.on_key("2", self._on_tag_two)
 
     def set_mode(self, mode: str | None) -> None:
         self._mode = mode
@@ -374,6 +418,8 @@ class _CalibratedLabeler:
     def _deselect(self) -> None:
         if self.selected is None:
             return
+        if isinstance(self.selected, ActPolygon):
+            self.selected.set_selected_vertex(None)
         self._set_selected_style(self.selected, False)
         self.selected = None
 
@@ -389,6 +435,40 @@ class _CalibratedLabeler:
                 color = self.selected_color if selected else (style.color or "#ffffff")
                 self._world.update(shape_act.entity_id, color=color, opacity=1.0)
                 break
+        self._world.flush()
+
+    def _configure_polygon(self, act: ActPolygon) -> None:
+        """Apply the app's tag colors and derive magenta segment ranges."""
+        act.set_tagging(True)
+        act.set_tag_color(_TAG_DEFAULT, _TAG_ONE_COLOR)
+        act.set_tag_color(_TAG_MAGENTA, _TAG_TWO_COLOR)
+        tags: list[str | None] = [
+            tag if tag is not None else _TAG_DEFAULT for tag in act.vertex_tags
+        ]
+        act.set_vertex_tags(tags)
+        if not any(c is not None for c in act.segment_colors):
+            act.set_segment_colors(_tag_two_segment_colors(tags, closed=act.closed))
+
+    async def _on_tag_one(self, _event: Any) -> None:
+        await self._tag_selected(_TAG_DEFAULT)
+
+    async def _on_tag_two(self, _event: Any) -> None:
+        await self._tag_selected(_TAG_MAGENTA)
+
+    async def _tag_selected(self, tag: str) -> None:
+        act = self.selected
+        if not isinstance(act, ActPolygon):
+            return
+        index = act.selected_vertex
+        if index is None:
+            return
+        act.set_vertex_tag(index, tag)
+        act.set_segment_colors(
+            _tag_two_segment_colors(act.vertex_tags, closed=act.closed)
+        )
+        # The selected style always wins over the tag color, so clear the vertex
+        # selection to reveal the newly-applied tag; the polygon stays selected.
+        act.set_selected_vertex(None)
         self._world.flush()
 
     async def _on_delete(self, _event: Any) -> None:
@@ -431,6 +511,8 @@ class _CalibratedLabeler:
     def _add_shape(self, act: Any, style: Any) -> None:
         self._apply_size_limits(act)
         self._world.add(act, style=style)
+        if isinstance(act, ActPolygon):
+            self._configure_polygon(act)
         self.shapes.append((act, style))
         self._sync_handles()
         self._world.flush()
@@ -453,12 +535,23 @@ class _CalibratedLabeler:
             closed = len(pts) > 1 and pts[0] == pts[-1]
             if closed:
                 pts = pts[:-1]
-            return ActPolygon(pts, closed=closed, on_click=select)
+            return ActPolygon(
+                pts,
+                closed=closed,
+                on_click=select,
+                default_vertex_tag=_TAG_DEFAULT,
+            )
         raise TypeError(f"unsupported labelme entity: {type(entity).__name__}")
 
-    def add_loaded_shape(self, entity: Any) -> None:
+    def add_loaded_shape(self, entity: Any, shape: Any = None) -> None:
         """Add a loaded labelme entity: wrap it in an act, style it, wire select."""
-        self._add_shape(self._act_from_entity(entity), _loaded_style(entity))
+        act = self._act_from_entity(entity)
+        if isinstance(act, ActPolygon) and shape is not None:
+            if shape.vertex_tags is not None:
+                act.set_vertex_tags(shape.vertex_tags)
+            if shape.segment_colors is not None:
+                act.set_segment_colors(shape.segment_colors)
+        self._add_shape(act, _loaded_style(entity))
 
 
 def main() -> None:
@@ -489,11 +582,13 @@ def main() -> None:
     result = store.load(_LABELS_PATH)
     for message in result.errors:
         print(f"labelme: skipped {message}")
-    pairs, errors = store.iter_objects(result.document)
+    for message in result.warnings:
+        print(f"labelme: warning {message}")
+    pairs, errors = store.iter_shapes(result.document)
     for message in errors:
         print(f"labelme: skipped {message}")
-    for entity, _label in pairs:
-        labeler.add_loaded_shape(entity)
+    for entity, shape in pairs:
+        labeler.add_loaded_shape(entity, shape)
 
     frustum = Frustum.from_camera(cam, near=0.05, far=0.7)
     frustum_ref = world.new(frustum, color="#ffcc44")
@@ -509,6 +604,19 @@ def main() -> None:
             background_image=background,
         ),
         surface=labeler.surface,
+        overlay=[
+            GroupView(
+                "Tagging",
+                [
+                    LabelView(
+                        "tag_hint",
+                        value="Click a vertex, then press 1 or 2 to tag it",
+                        font_size=12,
+                    )
+                ],
+                position="top-left",
+            )
+        ],
     )
     left.set_visible(frustum_ref.id, False)
     right = SceneView(

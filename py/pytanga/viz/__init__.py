@@ -38,6 +38,8 @@ from ._active import (
     ActSceneObject,
     ClickBinding,
     DragBinding,
+    TAG_PALETTE,
+    resolve_tag_color,
 )
 from ._anchor import EAnchor
 from ._app import VisualizerApp
@@ -528,6 +530,7 @@ __all__ = [
     "SurfaceMaterial",
     "SurfaceShader",
     "SurfaceTexture",
+    "TAG_PALETTE",
     "Table",
     "TableCellChange",
     "TableCellSelect",
@@ -585,6 +588,7 @@ __all__ = [
     "list_themes",
     "param_ui",
     "register_theme",
+    "resolve_tag_color",
     "theme_css_files",
     "theme_label",
 ]

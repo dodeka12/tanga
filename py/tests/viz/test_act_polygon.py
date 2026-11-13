@@ -46,6 +46,7 @@ class _FakeHandle:
         self.scene = _FakeScene(space_dim)
         self.added: list[tuple[str, object]] = []
         self.updates: list[tuple[str, object]] = []
+        self.style_updates: list[tuple[str, object]] = []
         self.removed: list[str] = []
         self.visibility: list[tuple[str, bool]] = []
         self.flushes = 0
@@ -68,6 +69,12 @@ class _FakeHandle:
 
     def update_entity(self, object_id: str, entity: object) -> None:
         self.updates.append((object_id, entity))
+
+    def update(self, object_id: str, **properties: Any) -> None:
+        self.style_updates.append((object_id, properties))
+
+    def update_style(self, entity_id: str, style: object) -> None:
+        self.style_updates.append((entity_id, style))
 
     def flush(self) -> None:
         self.flushes += 1

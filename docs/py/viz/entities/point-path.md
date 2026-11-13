@@ -113,6 +113,29 @@ path.add((3,0,0))
 # points: [(1,0,0), (2,0,0), (3,0,0)]      (shifted)
 ```
 
+## Segment colors
+
+A `PointPath` can also carry a **per-segment** color override, separate from the
+per-point `colors` list.  Segment `i` connects point `i` to point `i+1`, so a
+path with `n` points has `max(0, n - 1)` segment entries.
+
+```python
+path = PointPath()
+path.add((0, 0, 0))
+path.add((1, 0, 0))
+path.add((1, 1, 0))
+path.set_segment_colors(["#ff00ff", None])   # length must match the segment count
+path.set_segment_color(0, "#ff00ff")          # single-segment set
+print(path.segment_colors)                    # ['#ff00ff', None]
+```
+
+- An explicit segment color overrides **both** endpoints' per-point colors for
+  that segment; a `None` entry falls back to the per-point colors.
+- The list is serialized as the `segmentColors` JSON key (camelCase) and is
+  emitted only when at least one entry is non-`None`.
+- `set_segment_colors(colors)` requires exactly the current segment count;
+  `set_segment_color(i, color)` validates the index and pads with `None`.
+
 ## Color Utilities
 
 ### `gradient_colors(start, end, steps)`
