@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.26.1 (2.27.0-rc3)] — 2026-11-13
+- Pick precedence via `InteractionConfig.hit_priority` — control points beat the body they edit · icon points keep their texture alpha · `visible=False` hides whole panes and Parameters rows (title included) · group ids work in `set_control_visible`/`set_control_enabled`
+→ [Details](2026/11/13_4a5524a.md)
+
 ## [Since 2.26.1 (2.27.0-rc2)] — 2026-11-12
 - Growing `PointPath` renders every appended segment in animated/exported scenes (stale three.js instance bound reset) · unit and exported-animation smoke coverage
 → [Details](2026/11/12_6b31b5ccc.md)
