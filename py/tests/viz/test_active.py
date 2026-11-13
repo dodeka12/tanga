@@ -331,6 +331,21 @@ class TestDragModifiers:
         )
 
 
+class TestHitPriority:
+    def test_act_point_defaults_to_ten(self):  # noqa: ANN201
+        ap, _ = _init_point()
+        assert ap.interaction_config.hit_priority == 10
+
+    def test_act_point_hit_priority_override(self):  # noqa: ANN201
+        ap, _ = _init_point(hit_priority=0)
+        assert ap.interaction_config.hit_priority == 0
+
+    def test_hit_priority_reaches_the_wire(self):  # noqa: ANN201
+        _, handle = _init_point(hit_priority=3)
+        config = handle.configs[-1][1]
+        assert config.to_dict()["hit_priority"] == 3
+
+
 class TestActPointLabel:
     def test_add_with_label(self):  # noqa: ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)

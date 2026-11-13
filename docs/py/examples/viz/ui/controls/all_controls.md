@@ -1,6 +1,6 @@
 # Showcase every interactive control in one app
 
-**Keywords:** params view · nested group · theme · variant · header · tooltip
+**Keywords:** params view · nested group · hide · show · visible · theme · tooltip
 
 Creates one of each control kind — slider, dropdown, button (with icon and
 icon-only variants), text field, text area, color picker, checkbox, and file
@@ -16,6 +16,12 @@ bar on top holds a **Help → Show tooltips** option that calls
 page-wide (the label stays visible, so the option can always be found again),
 plus a **Theme** menu that switches the whole UI between the `dark` and
 `compact` themes.
+
+A **Visibility** menu hides and shows things at runtime without re-pushing the
+layout: a whole `GroupView` pane (title included), a single control inside a
+group, one `ParamsView` row (label + control), and the nested `Shape`
+sub-panel of the `ParamsView`.  A hidden pane disappears from the surrounding
+stack and a hidden row takes neither height nor gap, so the layout closes up.
 
 A `ParamsView` in the bottom-left panel demonstrates nested field groups and
 the group variants: its `Shape` sub-group is explicitly `tiny`, while the
@@ -55,6 +61,12 @@ page-wide (the label stays visible, so the option can always be found again),
 plus a **Theme** menu that switches the whole UI between the ``dark`` and
 ``compact`` themes.
 
+A **Visibility** menu hides and shows things at runtime without re-pushing the
+layout: a whole ``GroupView`` pane (title included), a single control inside a
+group, one ``ParamsView`` row (label + control), and the nested ``Shape``
+sub-panel of the ``ParamsView``.  A hidden pane disappears from the surrounding
+stack and a hidden row takes neither height nor gap, so the layout closes up.
+
 A ``ParamsView`` in the bottom-left panel demonstrates nested field groups and
 the group variants: its ``Shape`` sub-group is explicitly ``tiny``, while the
 other field groups would default to ``small``.  Hovering a value row's label
@@ -62,7 +74,7 @@ shows the control's tooltip, and clicking any group header folds it.
 
 Run with:  uv run python py/examples/viz/ui/controls/all_controls.py
 
-Keywords: params view, nested group, theme, variant, header, tooltip
+Keywords: params view, nested group, hide, show, visible, theme, tooltip
 """
 
 from __future__ import annotations
@@ -187,6 +199,33 @@ class AllControlsApp(VisualizerApp):
         self.viz.set_tooltips_enabled(bool(value))
         state = "on" if value else "off"
         self._set_annotation(f"Tooltips {state} — reopen **Help** to switch them back.")
+
+    async def on_visibility_appearance(self, value: bool, _event: ControlEvent) -> None:
+        """Hide/show a whole ``GroupView`` pane (title included)."""
+        self.viz.set_control_visible(self._appearance_group.id, bool(value))
+        self._set_annotation(f"Appearance panel {'shown' if value else 'hidden'}.")
+
+    async def on_visibility_wireframe(self, value: bool, _event: ControlEvent) -> None:
+        """Hide/show one control: the group's other rows close up the gap."""
+        self.viz.set_control_visible("wireframe", bool(value))
+        self._set_annotation(
+            f"Wireframe control {'shown' if value else 'hidden'} "
+            "(the Appearance rows close up)."
+        )
+
+    async def on_visibility_params_radius(
+        self, value: bool, _event: ControlEvent
+    ) -> None:
+        """Hide/show one ``ParamsView`` row — its key label goes with it."""
+        self._params_view.set_visible("radius", bool(value))
+        self._set_annotation(f"Params row 'radius' {'shown' if value else 'hidden'}.")
+
+    async def on_visibility_params_shape(
+        self, value: bool, _event: ControlEvent
+    ) -> None:
+        """Hide/show the nested ``Shape`` sub-panel of the ``ParamsView``."""
+        self._params_view.set_visible("shape", bool(value))
+        self._set_annotation(f"Params group 'Shape' {'shown' if value else 'hidden'}.")
 
     async def on_poke(self, _value: None, _event: ControlEvent) -> None:
         self._set_annotation("Poke!")
@@ -383,8 +422,71 @@ class AllControlsApp(VisualizerApp):
                     trigger_icon=EIconMaterial.PALETTE,
                     tooltip="Switch the whole UI theme",
                 ),
+                MenuView(
+                    "Visibility",
+                    [
+                        CheckboxView(
+                            "vision_appearance",
+                            label="Appearance panel",
+                            value=True,
+                            tooltip="Hide the whole group pane, title included",
+                            on_change=self.on_visibility_appearance,
+                        ),
+                        CheckboxView(
+                            "vision_wireframe",
+                            label="Wireframe control",
+                            value=True,
+                            tooltip="Hide one control inside the Appearance group",
+                            on_change=self.on_visibility_wireframe,
+                        ),
+                        CheckboxView(
+                            "vision_params_radius",
+                            label="Params: Radius row",
+                            value=True,
+                            tooltip="Hide one Parameters row (key label + control)",
+                            on_change=self.on_visibility_params_radius,
+                        ),
+                        CheckboxView(
+                            "vision_params_shape",
+                            label="Params: Shape group",
+                            value=True,
+                            tooltip="Hide the nested Shape sub-panel",
+                            on_change=self.on_visibility_params_shape,
+                        ),
+                    ],
+                    trigger_icon=EIconMaterial.VISIBILITY,
+                    tooltip="Hide/show panels, controls and Parameters rows",
+                ),
             ],
         )
+        # Named locals for the two overlay panes: the Visibility menu toggles the
+        # Appearance group by view id (`set_control_visible` resolves a control id
+        # first and then a view/group id), so no layout re-push is needed.
+        appearance_group = GroupView(
+            "Appearance",
+            [
+                self._radius_view,
+                self._radius2_view,
+                self._radius_value_view,
+                self._radius_display_view,
+                self._mode_view,
+                self._color_view,
+                self._wireframe_view,
+                name_view,
+            ],
+            icon=EIconUC.GEAR,
+            tooltip="Shape and material",
+            position="bottom-right",
+        )
+        text_group = GroupView(
+            "Text & files",
+            [notes_view, data_file_view],
+            icon="material:edit",  # raw-string icon (same as the enum form)
+            tooltip="Free-form notes and a file picker",
+            position="top-right",
+        )
+        self._appearance_group = appearance_group
+        self._params_view = params_view
         self.viz.set_layout(
             StackView(
                 "vertical",
@@ -393,29 +495,8 @@ class AllControlsApp(VisualizerApp):
                     SceneView(
                         "",
                         overlay=[
-                            GroupView(
-                                "Appearance",
-                                [
-                                    self._radius_view,
-                                    self._radius2_view,
-                                    self._radius_value_view,
-                                    self._radius_display_view,
-                                    self._mode_view,
-                                    self._color_view,
-                                    self._wireframe_view,
-                                    name_view,
-                                ],
-                                icon=EIconUC.GEAR,
-                                tooltip="Shape and material",
-                                position="bottom-right",
-                            ),
-                            GroupView(
-                                "Text & files",
-                                [notes_view, data_file_view],
-                                icon="material:edit",  # raw-string icon (same as the enum form)
-                                tooltip="Free-form notes and a file picker",
-                                position="top-right",
-                            ),
+                            appearance_group,
+                            text_group,
                             GroupView(
                                 "Actions",
                                 [

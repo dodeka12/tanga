@@ -7,6 +7,7 @@ window.__tanga_ready = true;
 
 import { applyOverlayAnchor } from './views/three-view.js';
 import { buildViewTree, collectSceneRoutes, collectViewByIds } from './views/build.js';
+import { applyViewState, getStatefulView, unregisterStatefulTree } from './views/view-state.js';
 import { collectNodeTypes, planReconciliation } from './views/reconcile.js';
 import { getOverlay } from './overlay.js';
 import {
@@ -696,31 +697,11 @@ async function handleMessage(msg) {
 
     if (msg.type === 'control_state') {
         applyControlState(msg.id, msg);
-        if (msg.visible !== undefined) {
-            const host = _viewRegistry.get(msg.id);
-            if (host && typeof host.setHidden === 'function') host.setHidden(!msg.visible);
-        }
-        if (msg.collapsed !== undefined) {
-            const group = _viewRegistry.get(msg.id);
-            if (group && typeof group.setCollapsed === 'function') group.setCollapsed(!!msg.collapsed);
-        }
-        if (msg.enabled !== undefined) {
-            const host = _viewRegistry.get(msg.id);
-            if (host && typeof host.setEnabled === 'function') host.setEnabled(!!msg.enabled);
-        }
-        if (msg.tooltip !== undefined) {
-            const host = _viewRegistry.get(msg.id);
-            if (host && typeof host.setTooltip === 'function') host.setTooltip(msg.tooltip);
-        }
-        if (msg.row !== undefined && msg.title !== undefined) {
-            const paramsView = _viewRegistry.get(msg.id);
-            if (paramsView && typeof paramsView.setRowTitle === 'function') {
-                paramsView.setRowTitle(msg.row, msg.title);
-            }
-        } else if (msg.title !== undefined) {
-            const host = _viewRegistry.get(msg.id);
-            if (host && typeof host.setTitle === 'function') host.setTitle(msg.title);
-        }
+        // Layout state belongs to the *view*, not the control widget: a hidden
+        // group collapses its whole pane (title included), and a control hidden
+        // from Python also hides its Parameters row title.  `getStatefulView`
+        // covers every built view — controls, containers and dialog subtrees.
+        applyViewState(getStatefulView(msg.id), msg);
         return;
     }
 
@@ -848,6 +829,7 @@ function _buildLayout(msg) {
     const overlay = getOverlay();
     for (const view of _globalOverlayViews) {
         overlay.removeChild(view);
+        unregisterStatefulTree(view);
         if (typeof view.destroy === 'function') view.destroy();
     }
     _globalOverlayViews = [];

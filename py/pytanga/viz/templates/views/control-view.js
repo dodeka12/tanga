@@ -22,9 +22,8 @@ export class ControlView extends View {
      * Reading the computed style keeps StackView/GroupView/SplitView able to size
      * to their controls while letting a theme change the density.
      */
-    minSizePx(axis, available) {
-        if (this._hidden) return 0;
-        const explicit = super.minSizePx(axis, available);
+    _minSizePx(axis, available) {
+        const explicit = super._minSizePx(axis, available);
         if (explicit > 0) return explicit;
         if (typeof getComputedStyle !== 'function') return 0;
         const prop = axis === 'x' ? 'minWidth' : 'minHeight';

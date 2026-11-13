@@ -4,6 +4,7 @@
 
 import { Size } from './size.js';
 import { ViewEvent } from './view-event.js';
+import { unregisterStatefulView } from './view-state.js';
 
 /**
  * Base for every pane/container in a layout.  Knows nothing about splits —
@@ -13,6 +14,7 @@ import { ViewEvent } from './view-event.js';
  * - `extentchange`     `{ prev, width, height }`
  * - `constraintschange` `{ fields: [...] }`   (min/max changed)
  * - `preferredchange`   `{ fields: [...] }`   (preferred changed)
+ * - `visibilitychange`  `{ hidden }`          (`setHidden` changed the state)
  * - `destroy`
  */
 export class View extends EventTarget {
@@ -30,6 +32,10 @@ export class View extends EventTarget {
         this._prefWidth = null;
         this._prefHeight = null;
         this._hidden = false;
+        // Inline `display` to restore when the view is shown again (see
+        // `_applyHiddenCss`): containers like `StackView` lay out via inline
+        // style, so restoring `''` would drop e.g. a group's flex shell.
+        this._displayBeforeHide = null;
 
         // Measured extent (authoritative: read back from the ResizeObserver).
         this._width = 0;
@@ -107,15 +113,34 @@ export class View extends EventTarget {
 
     minSizePx(axis, available) {
         if (this._hidden) return 0;
+        return this._minSizePx(axis, available);
+    }
+
+    maxSizePx(axis, available) {
+        if (this._hidden) return 0;
+        return this._maxSizePx(axis, available);
+    }
+
+    preferredPx(axis, available) {
+        if (this._hidden) return null;
+        return this._preferredPx(axis, available);
+    }
+
+    // Subclass hooks.  A subclass overrides these (never the public methods) so
+    // the `_hidden` collapse cannot be bypassed: a hidden view reports no
+    // minimum, no maximum and no preferred size on either axis, which makes an
+    // enclosing Stack/Split re-layout as if the view were absent.
+    _minSizePx(axis, available) {
         const s = axis === 'x' ? this._minWidth : this._minHeight;
         return s ? s.resolve(available, 0) : 0;
     }
-    maxSizePx(axis, available) {
+
+    _maxSizePx(axis, available) {
         const s = axis === 'x' ? this._maxWidth : this._maxHeight;
         return s ? s.resolve(available, null) : null;
     }
-    preferredPx(axis, available) {
-        if (this._hidden) return null;
+
+    _preferredPx(axis, available) {
         const s = axis === 'x' ? this._prefWidth : this._prefHeight;
         return s ? s.resolve(available, null) : null;
     }
@@ -126,14 +151,29 @@ export class View extends EventTarget {
      * When hidden, the view is removed from flow (`display: none`) and reports a
      * zero minimum / no preferred size, so enclosing Stack/Split views re-layout
      * as if it were absent — while keeping its original size constraints intact
-     * for when it is shown again.
+     * for when it is shown again.  The view's own inline `display` is restored
+     * verbatim on show, so containers that lay out via inline style (e.g. a
+     * `GroupView`'s `display:flex` shell) keep working across a hide/show
+     * round trip.
      */
     setHidden(hidden) {
         if (this._hidden === hidden) return;
         this._hidden = hidden;
-        this.el.style.display = hidden ? 'none' : '';
+        this._applyHiddenCss(hidden);
+        this.emit('visibilitychange', { hidden });
         this.emit('constraintschange', { fields: ['minWidth', 'minHeight', 'maxWidth', 'maxHeight'] });
         this.emit('preferredchange', { fields: ['preferredWidth', 'preferredHeight'] });
+    }
+
+    _applyHiddenCss(hidden) {
+        if (!this.el || !this.el.style) return;
+        if (hidden) {
+            this._displayBeforeHide = this.el.style.display || '';
+            this.el.style.display = 'none';
+        } else {
+            this.el.style.display = this._displayBeforeHide || '';
+            this._displayBeforeHide = null;
+        }
     }
 
     get hidden() {
@@ -160,6 +200,7 @@ export class View extends EventTarget {
 
     destroy() {
         this._resizeObserver.disconnect();
+        unregisterStatefulView(this);
         this.emit('destroy');
     }
 

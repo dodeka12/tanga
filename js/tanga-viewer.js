@@ -423,9 +423,10 @@ function applyOpacityUpdate(mesh, ent) {
                 if (isFill && fillOpacity === undefined) return;
                 const target = isFill ? fillOpacity : opacity;
                 if (target !== undefined) {
+                    const alphaTex = !!(material.userData && material.userData._alphaTexture);
                     material.opacity = target;
-                    material.transparent = target < 1.0;
-                    material.depthWrite = target >= 0.99;
+                    material.transparent = target < 1.0 || alphaTex;
+                    material.depthWrite = target >= 0.99 && !alphaTex;
                     material.needsUpdate = true;
                 }
             }
@@ -1100,6 +1101,10 @@ function createIconPoint(ent) {
             material.map = texture;
             material.transparent = true;
             material.depthWrite = false;
+            // This material's alpha comes from the glyph texture, not from
+            // `material.opacity`; tag it so opacity writers keep `transparent`
+            // set and `depthWrite` off (see `applyOpacityUpdate`).
+            material.userData = { ...(material.userData || {}), _alphaTexture: true };
         }
     }
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size * 2, size * 2), material);

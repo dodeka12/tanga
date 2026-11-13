@@ -3,6 +3,7 @@
 // per-control DOM factories in controls/*.js and by the layout views.
 
 import { sendEvent } from './events.js';
+import { getStatefulView } from './views/view-state.js';
 
 // ── Module state ─────────────────────────────────────────────
 let _controlRegistry = {};      // control id → { kind, apply(value) }
@@ -98,6 +99,10 @@ export function applyControlStateToElement(wrapper, state) {
 /**
  * Apply a server-driven `control_state` change to a rendered control by id.
  * No-ops for unknown/unrendered ids.
+ *
+ * Visibility is deliberately left to the hosting view when there is one (every
+ * built control has one): the view hides itself and its enclosing Parameters
+ * row, so toggling `display` on the bare widget here would fight the layout.
  */
 export function applyControlState(id, state) {
     const entry = _controlRegistry[id];
@@ -105,10 +110,13 @@ export function applyControlState(id, state) {
         console.debug('[tanga] control_state for unknown id:', id);
         return;
     }
+    const widgetState = (getStatefulView(id) && state.visible !== undefined)
+        ? { ...state, visible: undefined }
+        : state;
     if (typeof entry.applyState === 'function') {
-        entry.applyState(state);
+        entry.applyState(widgetState);
     } else {
-        applyControlStateToElement(entry.el, state);
+        applyControlStateToElement(entry.el, widgetState);
     }
 }
 

@@ -773,6 +773,10 @@ class ActPoint(ActiveObject):
             :class:`~pytanga.viz.ActImagePlane`).
         click_bindings: Optional list of :class:`ClickBinding` entries firing
             for a specific button + modifier combination.
+        hit_priority: Pick precedence against other interactive entities
+            (default ``10``).  Control points sit on top of the geometry they
+            edit, so the default makes them win over the body (bodies default
+            to ``0``).  Pass ``0`` to make the point pick like a plain body.
     """
 
     def __init__(
@@ -792,6 +796,7 @@ class ActPoint(ActiveObject):
         cursor: str | None = None,
         drag_bindings: list[DragBinding[ActSceneObject]] | None = None,
         click_bindings: list[ClickBinding[ActSceneObject]] | None = None,
+        hit_priority: int = 10,
     ) -> None:
         super().__init__(
             handler=handler,
@@ -810,6 +815,7 @@ class ActPoint(ActiveObject):
         else:
             self._point = Point(float(x), float(y), float(z))
         self._drag_mode = drag_mode
+        self._hit_priority: int = int(hit_priority)
         self._resolved_style: ActPointStyle | None = None
         self._required_drag_modifiers: frozenset[ModifierKey] = frozenset()
 
@@ -899,6 +905,7 @@ class ActPoint(ActiveObject):
             enabled=True,
             triggers=triggers,
             throttle_ms=40,
+            hit_priority=self._hit_priority,
             hover_emissive=s.hover_emissive,
             hover_scale=s.hover_scale,
             hover_cursor=self._cursor,

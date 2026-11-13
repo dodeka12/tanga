@@ -41,6 +41,7 @@ ActPoint(
     on_drag_start: ActEventHandler | None = None,
     on_drag_end: ActEventHandler | None = None,
     on_click: ActClickHandler | None = None,
+    hit_priority: int = 10,
 )
 ```
 
@@ -55,6 +56,7 @@ ActPoint(
 | `on_drag_start` | `ActEventHandler \| None` | `None` | Callback invoked when a drag starts |
 | `on_drag_end` | `ActEventHandler \| None` | `None` | Callback invoked when a drag ends |
 | `on_click` | `ActClickHandler \| None` | `None` | Callback invoked when the point is clicked |
+| `hit_priority` | `int` | `10` | Pick precedence against other interactive entities; lower it to let the body underneath win |
 
 The point's visual style (colour, size, opacity) and an optional text `label`
 are set via `viz.add(ap, color=..., style=..., label=...)`, not on the
@@ -188,7 +190,7 @@ return value is ignored.
 | `entity` | `Point` | Same as `point` — the geometry entity rendered in the scene |
 | `entity_id` | `str` | The scene entity ID assigned by the visualizer |
 | `viz_handle` | `VizSceneHandle \| None` | Handle for scene operations (update, flush, etc.) |
-| `interaction_config` | `InteractionConfig` | Drag triggers (standard four, or a single `drag_mode`-constrained trigger) with `throttle_ms=40` |
+| `interaction_config` | `InteractionConfig` | Drag triggers (standard four, or a single `drag_mode`-constrained trigger) with `throttle_ms=40` and `hit_priority=10` |
 
 ## Interaction Configuration
 
@@ -209,6 +211,7 @@ InteractionConfig(
                           modifiers={CTRL, SHIFT}, drag_mode=YZ_PLANE),
     ],
     throttle_ms=40,
+    hit_priority=10,
 )
 ```
 
@@ -223,8 +226,15 @@ InteractionConfig(
                           drag_mode=XY_PLANE),
     ],
     throttle_ms=40,
+    hit_priority=10,
 )
 ```
+
+`hit_priority=10` makes the point win over a coplanar interactive body it sits
+on — an `ActLine`, `ActPolygon` or `PointPath` (whose bodies keep the default
+`0`), so dragging the point does not grab the geometry underneath.  Pass
+`hit_priority=0` to `ActPoint(...)` to opt out and pick like a plain body; see
+[pick precedence](../../interaction/object-interaction.md#interactionconfig).
 
 To customise the triggers further (e.g., use right button instead, or
 different modifier keys), subclass `ActPoint` and override

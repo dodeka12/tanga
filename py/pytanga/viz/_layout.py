@@ -1169,26 +1169,36 @@ class LayoutHostImpl:
         )
 
     def set_control_enabled(self, cid: str, enabled: bool) -> None:
-        """Set a control's enabled state and push ``control_state``.
+        """Set a control's (or group's) enabled state and push ``control_state``.
 
-        No-ops when *cid* is not a mounted control.
+        No-ops when *cid* is not a mounted control or group.
         """
         ctrl = self.resolve_control(cid)
-        if ctrl is None:
+        if ctrl is not None:
+            ctrl.enabled = bool(enabled)
+            self._push_control_state(cid, {"enabled": ctrl.enabled})
             return
-        ctrl.enabled = bool(enabled)
-        self._push_control_state(cid, {"enabled": ctrl.enabled})
+        group = self.resolve_group(cid)
+        if group is not None:
+            group.set_enabled(bool(enabled))
 
     def set_control_visible(self, cid: str, visible: bool) -> None:
-        """Set a control's visibility and push ``control_state``.
+        """Set a control's (or group's) visibility and push ``control_state``.
 
-        No-ops when *cid* is not a mounted control.
+        A hidden control collapses in its layout container; a hidden group
+        collapses its whole pane (title included), because visibility is a
+        property of the view rather than of the control widget.
+
+        No-ops when *cid* is not a mounted control or group.
         """
         ctrl = self.resolve_control(cid)
-        if ctrl is None:
+        if ctrl is not None:
+            ctrl.visible = bool(visible)
+            self._push_control_state(cid, {"visible": ctrl.visible})
             return
-        ctrl.visible = bool(visible)
-        self._push_control_state(cid, {"visible": ctrl.visible})
+        group = self.resolve_group(cid)
+        if group is not None:
+            group.set_visible(bool(visible))
 
     def set_control_tooltip(self, cid: str, tooltip: str) -> None:
         """Set a control view's tooltip text and push ``control_state``.

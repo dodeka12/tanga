@@ -452,6 +452,65 @@ This lets a host (e.g. a labeling app) gate editing by type: show the control
 points of every entity of the active tool's type, and keep a bare point visible
 but inert outside point mode.
 
+### Pick precedence
+
+`InteractionController._getInteractiveHits()` collects one candidate per
+interactive entity (the best intersect per entity) and hands them to
+`orderHitCandidates()` (`hit-resolution.js`), which always sorts them in this
+order:
+
+1. `interaction.hit_priority` **descending** — an explicit "I own this pixel"
+   claim that overrides geometry distance.
+2. **Screen-space marker before world-space body** — a screen-space marker
+   (`_screenSpaceLeaf`) is layered above coplanar bodies via `polygonOffset` /
+   `renderOrder`, and picking must agree with what the user sees, so the marker
+   tier wins a same-priority tie.
+3. `intersect.distance` **ascending** — nearest hit first (the previous
+   behaviour).
+4. **Input order** — the `intersectObjects` order, i.e. registration order,
+   with image planes raycast last (see `_getInteractiveHits`).
+
+`resolveHitTarget()` then walks the ordered candidates and returns the first one
+whose `interaction.triggers` match the gesture (event type + button +
+modifiers, matched exactly), so an entity that does not own the gesture never
+blocks the one underneath; when no candidate matches, the pane's surface is
+tried last.  A missing or non-numeric `hit_priority` is treated as `0`, so an
+older payload keeps the distance-only behaviour.
+
+`ActPoint` registers `hit_priority=10` — both for a bare point and for a
+composite's control points — while bodies, composites and the surface stay at
+the `0` default: a control point must win over the `ActLine` / `ActPolygon` /
+`PointPath` body it sits on, otherwise dragging a handle grabs the body
+instead.  A host can override the value per entity with
+`viz.set_interaction(id, InteractionConfig(..., hit_priority=…))`.
+
+### Texture alpha in style and hover updates
+
+A material whose alpha comes from a texture — not from `material.opacity` —
+**must** tag itself with `material.userData._alphaTexture = true`.
+`icon_point.js` does this for the glyph quad (`IconPointStyle`, hence any
+`PointPath` drawing icons); the SDF surface sets the same flag when its shader
+samples an alpha map.
+
+Every opacity writer **must** derive the two blend/depth flags from both the
+requested opacity and the tag:
+
+- `applyOpacityUpdate()` (`renderers/utils.js`) — both the uniform branch
+  (`uniforms.uOpacity`) and the generic `material.opacity` branch:
+  `transparent = opacity < 1 || alphaTexture`, and
+  `depthWrite = opacity >= 0.99 && !alphaTexture`.
+- `_applyHover()` (`interaction.js`) — the generic branch applies the same rule
+  (`translucent || alphaTex`, `!translucent && !alphaTex`); the uniform branch
+  deliberately keeps `depthWrite` for SDF depth.
+
+Why this is a contract rather than a detail: the canonical style payload always
+carries `opacity: 1.0`, so any style or selection update re-runs
+`applyOpacityUpdate()`.  Deriving `transparent` / `depthWrite` from that number
+alone silently made a glyph quad opaque (a filled square instead of a cut-out
+icon).  The tag keeps the glyph transparent while the opacity value may still
+animate.  See `viz-architecture.md` § "Surface material (extension recipe)" for
+how renderers build their materials.
+
 ## Interaction surface
 
 Pointer/drag interaction for images (and any flat plane in a pane) is provided
@@ -570,14 +629,50 @@ changed fields), pushed by `LayoutHost._push_control_state` and handled in
 `viewer.js` next to `control_update`.  `applyControlState(id, msg)` looks up the
 rendered control in `_controlRegistry` (each factory stores `el: wrapper`) and
 `applyControlStateToElement` toggles the `.tanga-control-disabled` class, the
-native `disabled` attribute on `input/select/textarea/button`, and
-`display:none`.  For a layout `ControlView`, `visible=false` also collapses the
-hosting view: `viewer.js` looks it up in `_viewRegistry` (the control id doubles
-as the `ControlView`'s stable view id) and calls `View.setHidden(true)`, which
-removes it from flow and reports zero minimum / no preferred size so the
-enclosing Stack/Split views re-layout; the initial `visible:false` is applied the
-same way in `build.js`.  Disabled grey-out uses the theme tokens
-`--tanga-disabled-opacity` / `--tanga-disabled-fg` (overridable per theme).
+native `disabled` attribute on `input/select/textarea/button`, and — as a
+fallback for a widget with no hosting view — `display:none`.  Disabled grey-out
+uses the theme tokens `--tanga-disabled-opacity` / `--tanga-disabled-fg`
+(overridable per theme).
+
+### Visibility is a view property
+
+`visible` describes a **view**, not a control widget, so one implementation
+covers every node type (`visible:false` on a group, stack, toolbar, params pane
+or control):
+
+- A node serializes `visible:false` only when hidden; **absence means visible**,
+  so the wire stays unchanged for every existing layout.
+- `build.js` funnels *every* `node.type` branch through `applyNodeState` →
+  `views/node-state.js:applyNodeVisibility`, which calls `View.setHidden`;
+  containers therefore honour `visible:false` exactly like controls (before,
+  each container branch returned before the shared tail and only leaves were
+  honoured).
+- `View.setHidden(true)` sets `display:none` and reports zero minimum / zero
+  maximum / no preferred size on both axes.  Subclasses override the protected
+  `_minSizePx` / `_maxSizePx` / `_preferredPx` hooks, never the public methods,
+  so the collapse cannot be bypassed.  `stack-size.js` skips hidden children
+  entirely (no size and no gap), and `StackView`/`GroupView`/`ToolbarView`/
+  `ParamsView`/`SplitView` all inherit the same guard.  Showing a view restores
+  its own inline `display` (e.g. a `GroupView`'s `display:flex` shell), which
+  `display:''` used to destroy.
+- `views/view-state.js` keeps a global `id → view` registry (built in
+  `build.js:registerView`, dropped by `View.destroy`), so `control_state` finds
+  **any** built view — controls, containers and dialog subtrees, which build
+  without the layout-reconciliation registry.  `applyViewState(view, msg)` routes
+  `visible` / `collapsed` / `enabled` / `tooltip` / `title` / `row`+`title` to
+  the view methods that exist.
+- When a view hosts the control, `applyControlState` strips `visible` from the
+  widget state so the DOM no longer fights the layout; a control's
+  `visibilitychange` hides its whole `ParamsView` row (title included), and
+  hidden rows no longer contribute height or row gaps.
+- Runtime Python symmetry: `GroupView.set_visible` / `set_enabled`, and
+  `Visualizer.set_control_visible` / `set_control_enabled` fall back to
+  `resolve_group`, so a group id works exactly like a control id.
+  `GroupUI(visible=…, enabled=…)` reaches a nested dataclass sub-panel.
+
+`SplitView` treats a hidden child as a zero-size pane (its splitter slot stays);
+the last *visible* size is remembered, so showing it again restores its width
+instead of leaving it collapsed.
 
 A numeric **range** can also change at runtime through the same `control_state`
 seam.  `SliderView` / `ValueEditView` expose `set_min` / `set_max` / `set_step` /

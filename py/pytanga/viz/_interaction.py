@@ -161,6 +161,10 @@ class InteractionConfig:
         throttle_ms: Minimum interval in milliseconds between consecutive
             events of the same type for the same object.  ``0`` disables
             throttling entirely.
+        hit_priority: Pick precedence when several interactive entities are
+            hit at the pointer; higher wins.  ``0`` = default body precedence;
+            :class:`~pytanga.viz.ActPoint` handles use ``10`` so a control point
+            beats the geometry it sits on.
         hover_emissive: CSS colour string for emissive glow on hover
             (e.g. ``"#ffff44"``).  ``None`` = no hover highlight.
         hover_scale: Uniform scale multiplier on hover
@@ -177,6 +181,7 @@ class InteractionConfig:
     enabled: bool = False
     triggers: list[InteractionTrigger] = field(default_factory=list)
     throttle_ms: int = 50
+    hit_priority: int = 0
     hover_emissive: str | None = None
     hover_scale: float | None = None
     hover_opacity: float | None = None
@@ -189,6 +194,7 @@ class InteractionConfig:
             "enabled": self.enabled,
             "triggers": [t.to_dict() for t in self.triggers],
             "throttle_ms": self.throttle_ms,
+            "hit_priority": self.hit_priority,
         }
         if self.hover_emissive is not None:
             result["hover_emissive"] = self.hover_emissive

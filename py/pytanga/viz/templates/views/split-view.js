@@ -65,8 +65,8 @@ export class SplitView extends View {
     // A container's minimum is at least what its children need: along the split
     // axis they stack, along the cross axis the container must fit its largest
     // child.  This lets nested scene panes' own minimums propagate upward.
-    minSizePx(axis, available) {
-        const explicit = super.minSizePx(axis, available);
+    _minSizePx(axis, available) {
+        const explicit = super._minSizePx(axis, available);
         const derived = deriveMinSize(axis, this.axis, this.children, available);
         return Math.max(explicit, derived);
     }
@@ -87,7 +87,17 @@ export class SplitView extends View {
         if (this.movable === false) {
             plan.splitters.forEach((s) => { s.movable = false; });
         }
-        this._sizes = plan.items.map((it) => it.size / available);
+        // Remember the resolved sizes, but keep the last *visible* size of a
+        // hidden pane: a hidden child resolves to 0px, and stashing that would
+        // leave the pane collapsed after it is shown again.
+        const nextSizes = plan.items.map((it) => it.size / available);
+        if (this._sizes && this._sizes.length === nextSizes.length) {
+            nextSizes.forEach((size, i) => {
+                if (!this.children[i].hidden) this._sizes[i] = size;
+            });
+        } else {
+            this._sizes = nextSizes;
+        }
 
         const sizeKey = this.axis === 'x' ? 'width' : 'height';
         const posKey = this.axis === 'x' ? 'left' : 'top';
