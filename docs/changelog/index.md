@@ -1,5 +1,9 @@
 # Changelog
 
+## [Since 2.27.0] — 2026-11-13
+- `ActPolygon` per-vertex tags, tag→color palette, and selected-vertex style · per-segment `PointPath`/`ActPolygon` colors (`segmentColors`) · labelme `vertex_tags`/`segment_colors` round-trip with `iter_shapes` · tagged-labeling examples (`1`/`2` keys, magenta segments)
+→ [Details](2026/11/13_056e7dc68.md)
+
 ## [Since 2.26.1 (2.27.0-rc3)] — 2026-11-13
 - Pick precedence via `InteractionConfig.hit_priority` — control points beat the body they edit · icon points keep their texture alpha · `visible=False` hides whole panes and Parameters rows (title included) · group ids work in `set_control_visible`/`set_control_enabled`
 → [Details](2026/11/13_4a5524a.md)
