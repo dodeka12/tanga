@@ -79,16 +79,16 @@ export class ToolbarView extends StackView {
     // so it is returned unchanged; otherwise the derived content size is bumped
     // by the border/padding on both axes.  The cross axis uses the measured
     // content height so the toolbar hugs its tallest control.
-    minSizePx(axis, available) {
-        const explicit = View.prototype.minSizePx.call(this, axis, available);
+    _minSizePx(axis, available) {
+        const explicit = View.prototype._minSizePx.call(this, axis, available);
         const contentMin = axis === stackCrossAxis(this.direction)
             ? this._contentHeight(available)
             : stackMinSize(axis, this.direction, this.children, available);
         return Math.max(explicit, contentMin + this._chrome()[axis]);
     }
 
-    preferredPx(axis, available) {
-        const explicit = View.prototype.preferredPx.call(this, axis, available);
+    _preferredPx(axis, available) {
+        const explicit = View.prototype._preferredPx.call(this, axis, available);
         if (explicit !== null && explicit !== undefined) return explicit;
         const contentPref = axis === stackCrossAxis(this.direction)
             ? this._contentHeight(available)
@@ -103,11 +103,11 @@ export class ToolbarView extends StackView {
     // fixed-height pane, so a vertical split collapses it to the toolbar's
     // height instead of stretching it.  The main axis stays unbounded so the
     // toolbar can still fill its pane horizontally.
-    maxSizePx(axis, available) {
-        const explicit = View.prototype.maxSizePx.call(this, axis, available);
+    _maxSizePx(axis, available) {
+        const explicit = View.prototype._maxSizePx.call(this, axis, available);
         if (explicit !== null && explicit !== undefined) return explicit;
         if (axis === stackCrossAxis(this.direction)) {
-            return this.minSizePx(axis, available);
+            return this._minSizePx(axis, available);
         }
         return null;
     }

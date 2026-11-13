@@ -19,7 +19,7 @@
 
 import * as THREE from 'three';
 import { screenWorldScale } from '../camera-fit.js';
-import { matchTriggers, resolveHitTarget } from './hit-resolution.js';
+import { matchTriggers, orderHitCandidates, resolveHitTarget } from './hit-resolution.js';
 
 // Double-click timeout (ms)
 const DBLCLICK_TIMEOUT = 300;
@@ -279,8 +279,9 @@ export class InteractionController {
                     // keep depthWrite: SDF depth is written for correct occlusion.
                 } else if (m.opacity !== undefined) {
                     m.opacity = opacity;
-                    m.transparent = translucent;
-                    m.depthWrite = !translucent;
+                    const alphaTex = !!(m.userData && m.userData._alphaTexture);
+                    m.transparent = translucent || alphaTex;
+                    m.depthWrite = !translucent && !alphaTex;
                 }
             }
         }
@@ -547,10 +548,14 @@ export class InteractionController {
             const objectId = this._objectIdForMesh(intersect.object);
             if (objectId && !seen.has(objectId)) {
                 seen.add(objectId);
-                hits.push({ objectId, intersect });
+                hits.push({
+                    objectId,
+                    intersect,
+                    screenSpace: !!this._screenSpaceLeaf(intersect.object),
+                });
             }
         }
-        return hits;
+        return orderHitCandidates(hits, (id) => this._getObjectConfig(id));
     }
 
     _objectIdForMesh(mesh) {

@@ -83,6 +83,10 @@ export function createIconPoint(ent) {
             material.map = texture;
             material.transparent = true;
             material.depthWrite = false;
+            // This material's alpha comes from the glyph texture, not from
+            // `material.opacity`; tag it so opacity writers keep `transparent`
+            // set and `depthWrite` off (see `applyOpacityUpdate`).
+            material.userData = { ...(material.userData || {}), _alphaTexture: true };
         }
     }
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size * 2, size * 2), material);

@@ -202,6 +202,16 @@ class TestHandleControls:
             for h in circle._all_handles()
         )
 
+    def test_body_keeps_default_hit_priority(self) -> None:
+        circle, _ = _circle()
+        assert circle.interaction_config.hit_priority == 0
+
+    def test_handles_are_prioritised(self) -> None:
+        circle, _ = _circle()
+        handles = circle._all_handles()
+        assert handles
+        assert all(h.interaction_config.hit_priority == 10 for h in handles)
+
 
 class TestTiltedPlane:
     """An explicit non-+z normal keeps the circle on its plane."""

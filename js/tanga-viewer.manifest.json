@@ -12,7 +12,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/utils.js",
-      "sha256": "4d03fb57ed013fa21f75588111325cffe832daf0ef8704f457e9d15de471f7e1"
+      "sha256": "309cfc7c111e5d333d64ff63aa183371166df839f8ea3f2249520a8cc2e177fd"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/point.js",
@@ -32,7 +32,7 @@
     },
     {
       "path": "py/pytanga/viz/templates/renderers/icon_point.js",
-      "sha256": "a8864d6a3bcf8a2d95995936526b1942fe698f5c765da938fbb0531d1cdb0fe6"
+      "sha256": "b653c30c3e367858acbeb20c5151c408695dfc88ce72bd1bbd59db77b482a38b"
     },
     {
       "path": "py/pytanga/viz/templates/renderers/direction.js",
@@ -311,6 +311,6 @@
       "sha256": "e4578cda076ac237d9f23d9d776ef48cdb8c584b1f49c819e86927f92a8258ab"
     }
   ],
-  "fingerprint_sha256": "01a0f39f0eb72b5b0a75e16b84c8b562cf21b69d073ed1726b944df39cf0731e",
-  "bundle_sha256": "4e74a1588beeae97c974828937c9542d59d391a67072e023bb60b0d03c7935f3"
+  "fingerprint_sha256": "b9d278038ed3be4fae6ff20a5703d4ddf5539e224247bdbdaddaf74fe4097275",
+  "bundle_sha256": "74562142dbab88fb422515bf8666020013f202cd33295032c9bfcf1858e698a7"
 }

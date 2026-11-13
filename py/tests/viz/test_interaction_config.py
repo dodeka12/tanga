@@ -73,6 +73,15 @@ class TestInteractionConfig:
         assert d["triggers"] == []
         assert d["throttle_ms"] == 50
 
+    def test_to_dict_hit_priority_default_zero(self):  # noqa: ANN201
+        d = InteractionConfig(enabled=True).to_dict()
+        assert "hit_priority" in d
+        assert d["hit_priority"] == 0
+
+    def test_to_dict_hit_priority_custom(self):  # noqa: ANN201
+        d = InteractionConfig(enabled=True, hit_priority=7).to_dict()
+        assert d["hit_priority"] == 7
+
     def test_to_dict_hover_fields(self):  # noqa: ANN201
         ic = InteractionConfig(
             enabled=True,

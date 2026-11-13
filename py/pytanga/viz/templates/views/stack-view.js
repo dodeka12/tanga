@@ -141,8 +141,8 @@ export class StackView extends View {
     // A stack's minimum is at least what its children need (content sizing).
     // A scrollable stack instead decouples from content along its main axis so
     // an enclosing SplitView may shrink it and the content scrolls.
-    minSizePx(axis, available) {
-        const explicit = super.minSizePx(axis, available);
+    _minSizePx(axis, available) {
+        const explicit = super._minSizePx(axis, available);
         if (this.scrollable && axis === stackMainAxis(this.direction)) {
             return explicit;
         }
@@ -152,8 +152,8 @@ export class StackView extends View {
         );
     }
 
-    preferredPx(axis, available) {
-        const explicit = super.preferredPx(axis, available);
+    _preferredPx(axis, available) {
+        const explicit = super._preferredPx(axis, available);
         if (explicit !== null && explicit !== undefined) return explicit;
         if (this.scrollable && axis === stackMainAxis(this.direction)) {
             return null;

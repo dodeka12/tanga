@@ -261,6 +261,23 @@ class TestControlStatePush:
         viz.set_control_enabled("nope", False)
         assert server.captured == []
 
+    def test_set_control_visible_and_enabled_resolve_groups(self, monkeypatch):  # noqa: ANN001, ANN201
+        """A group id is a view id: visibility/enabled target the whole pane."""
+        viz = Visualizer(add_default_axes=False, add_default_grid=False)
+        group = GroupView("Controls", [SliderView("radius", value=1.0)])
+        viz.set_layout(group)
+        server = self._mount(viz, monkeypatch)
+
+        viz.set_control_visible(group.id, False)
+        viz.set_control_enabled(group.id, False)
+
+        assert group.visible is False
+        assert group.enabled is False
+        assert [json.loads(m) for m in server.captured] == [
+            {"type": "control_state", "id": group.id, "visible": False},
+            {"type": "control_state", "id": group.id, "enabled": False},
+        ]
+
     def test_visualizer_set_control_tooltip(self, monkeypatch):  # noqa: ANN001, ANN201
         viz = Visualizer(add_default_axes=False, add_default_grid=False)
         view = SliderView("radius", value=1.0, tooltip="old")

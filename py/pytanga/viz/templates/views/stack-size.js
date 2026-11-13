@@ -28,35 +28,45 @@ export function stackCrossAxis(direction) {
  * Vertical/horizontal stacks derive a min from their children (sum along the
  * main axis, max along the cross axis).  `wrap` stacks are measured from the
  * rendered DOM, so their derived min is 0 here.
+ *
+ * Hidden children are skipped entirely: `View.setHidden` removes them from flow
+ * (`display: none`), so they contribute neither size nor a gap.
  */
 export function stackMinSize(axis, direction, children, available, gap = GAP) {
-    if (!children || children.length === 0) return 0;
+    const kids = visibleChildren(children);
+    if (kids.length === 0) return 0;
     if (direction === 'wrap') return 0;
     if (axis === stackMainAxis(direction)) {
-        return children.reduce((s, c) => s + c.minSizePx(axis, available), 0)
-            + (children.length - 1) * gap;
+        return kids.reduce((s, c) => s + c.minSizePx(axis, available), 0)
+            + (kids.length - 1) * gap;
     }
-    return children.reduce((m, c) => Math.max(m, c.minSizePx(axis, available)), 0);
+    return kids.reduce((m, c) => Math.max(m, c.minSizePx(axis, available)), 0);
 }
 
 /**
  * Preferred content size of a stack along `axis`, or `null` if not derivable
- * (empty children, or `wrap` direction whose size depends on the rendered DOM).
+ * (no visible children, or `wrap` direction whose size depends on the DOM).
  */
 export function stackPreferredSize(axis, direction, children, available, gap = GAP) {
-    if (!children || children.length === 0) return null;
+    const kids = visibleChildren(children);
+    if (kids.length === 0) return null;
     if (direction === 'wrap') return null;
     const main = stackMainAxis(direction);
     if (axis === main) {
-        return children.reduce((s, c) => {
+        return kids.reduce((s, c) => {
             const p = c.preferredPx(axis, available);
             return s + (p !== null && p !== undefined ? p : c.minSizePx(axis, available));
-        }, 0) + (children.length - 1) * gap;
+        }, 0) + (kids.length - 1) * gap;
     }
     let m = 0;
-    for (const c of children) {
+    for (const c of kids) {
         const p = c.preferredPx(axis, available);
         m = Math.max(m, p !== null && p !== undefined ? p : c.minSizePx(axis, available));
     }
     return m;
+}
+
+/** The children that participate in layout (`View.hidden === false`). */
+export function visibleChildren(children) {
+    return (children || []).filter((c) => !c.hidden);
 }

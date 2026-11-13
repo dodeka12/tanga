@@ -313,6 +313,25 @@ def test_nested_group_ui_tooltip() -> None:
     assert pv._control_views["inner"].tooltip == "Inner settings"
 
 
+def test_nested_group_ui_visible_and_enabled() -> None:
+    """``GroupUI(visible/enabled)`` reaches the created sub-panel."""
+    pv = ParamsView(
+        _Outer(),
+        styles={"inner": GroupUI(title="Sub", visible=False, enabled=False)},
+    )
+    control = pv._serialize()["rows"][1]["control"]
+    assert control["type"] == "group"
+    assert control["visible"] is False
+    assert control["enabled"] is False
+
+
+def test_nested_group_default_is_visible_and_enabled() -> None:
+    control = ParamsView(_Outer())._serialize()["rows"][1]["control"]
+    assert control["type"] == "group"
+    assert "visible" not in control
+    assert "enabled" not in control
+
+
 def test_nested_controls_register() -> None:
     pv = ParamsView(_Outer())
     ids = [v.id for v in iter_control_views(pv)]

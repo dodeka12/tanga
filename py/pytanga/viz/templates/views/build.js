@@ -26,6 +26,8 @@ import { ValueEditView } from './value-edit-view.js';
 import { TableView } from './table-view.js';
 import { SpacerView } from './spacer-view.js';
 import { SeparatorView } from './separator-view.js';
+import { registerStatefulView } from './view-state.js';
+import { applyNodeVisibility } from './node-state.js';
 
 function applySizeSpecs(view, node) {
     // Assign unconditionally so a `null` from Python clears any JS default
@@ -43,7 +45,26 @@ function registerView(registry, view, node) {
     view.viewId = node.id || null;
     view.typeTag = node.type || null;
     if (registry) registry.set(node.id, view);
+    // The reconciliation registry is layout-build only; `view-state.js` is the
+    // global id → view lookup that `control_state` messages use for *any* built
+    // view (including dialogs, which build without a registry).
+    registerStatefulView(view);
     return view;
+}
+
+/**
+ * The single tail every node type goes through: apply the serialized node state
+ * (`hide_label`, size specs, visibility), then register the view.
+ *
+ * Keeping this in one place is what makes `visible: false` work for containers
+ * too — each `node.type` branch used to return straight from `registerView`, so
+ * only the generic control path ever consulted `node.visible`.
+ */
+function applyNodeState(registry, view, node) {
+    if (node.hide_label !== undefined) view.hide_label = !!node.hide_label;
+    applySizeSpecs(view, node);
+    applyNodeVisibility(view, node);
+    return registerView(registry, view, node);
 }
 
 /**
@@ -60,7 +81,6 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
 
     if (node.type === 'split') {
         const split = new SplitView({ orientation: node.orientation, movable: node.movable });
-        applySizeSpecs(split, node);
         const children = node.children || [];
         const sizes = node.sizes || [];
         children.forEach((childNode, i) => {
@@ -74,7 +94,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             }
             split.addChild(child);
         });
-        return registerView(registry, split, node);
+        return applyNodeState(registry, split, node);
     }
 
     if (node.type === 'stack') {
@@ -85,11 +105,10 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             align: node.align,
             justify: node.justify,
         });
-        applySizeSpecs(stack, node);
         for (const childNode of node.children || []) {
             stack.addChild(buildViewTree(childNode, ws, reuse, registry, newScenes));
         }
-        return registerView(registry, stack, node);
+        return applyNodeState(registry, stack, node);
     }
 
     if (node.type === 'group') {
@@ -121,11 +140,10 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
                 id: node.id,
             });
         }
-        applySizeSpecs(group, node);
         for (const childNode of node.children || []) {
             group.addChild(buildViewTree(childNode, ws, reuse, registry, newScenes));
         }
-        return registerView(registry, group, node);
+        return applyNodeState(registry, group, node);
     }
 
     if (node.type === 'toolbar') {
@@ -136,11 +154,10 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             align: node.align,
             justify: node.justify,
         });
-        applySizeSpecs(toolbar, node);
         for (const childNode of node.children || []) {
             toolbar.addChild(buildViewTree(childNode, ws, reuse, registry, newScenes));
         }
-        return registerView(registry, toolbar, node);
+        return applyNodeState(registry, toolbar, node);
     }
 
     if (node.type === 'menu') {
@@ -152,11 +169,10 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             position: node.position,
             tooltip: node.tooltip || '',
         });
-        applySizeSpecs(menu, node);
         for (const childNode of node.children || []) {
             menu.addChild(buildViewTree(childNode, ws, reuse, registry, newScenes));
         }
-        return registerView(registry, menu, node);
+        return applyNodeState(registry, menu, node);
     }
 
     if (node.type === 'params_view') {
@@ -169,7 +185,6 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
         } else {
             paramsView = new ParamsView({ title: node.title, dense: node.dense });
         }
-        applySizeSpecs(paramsView, node);
         for (const row of node.rows || []) {
             const child = buildViewTree(row.control, ws, reuse, registry, newScenes);
             paramsView.addRow({
@@ -180,7 +195,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
                 tooltip: child.tooltip,
             });
         }
-        return registerView(registry, paramsView, node);
+        return applyNodeState(registry, paramsView, node);
     }
 
     if (node.type === 'scene_view') {
@@ -206,11 +221,10 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             view.setReadOnly(!!node.read_only);
             if (newScenes) newScenes.push(sceneName);
         }
-        applySizeSpecs(view, node);
         for (const childNode of node.children || []) {
             view.addOverlay(buildViewTree(childNode, ws, reuse, registry, newScenes));
         }
-        return registerView(registry, view, node);
+        return applyNodeState(registry, view, node);
     }
 
     if (node.type === 'log_view') {
@@ -230,8 +244,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
             });
             registerMessageView(view.messageId, view);
         }
-        applySizeSpecs(view, node);
-        return registerView(registry, view, node);
+        return applyNodeState(registry, view, node);
     }
 
     let view;
@@ -397,15 +410,7 @@ export function buildViewTree(node, ws, reuse, registry, newScenes) {
     } else {
         view = new View();
     }
-    if (node.hide_label !== undefined) view.hide_label = !!node.hide_label;
-    applySizeSpecs(view, node);
-    // A control serialized with `visible: false` starts collapsed (the same
-    // `View.setHidden` the runtime `control_state` path uses); non-control nodes
-    // never carry a `visible` field, so this is a no-op for them.
-    if (node.visible !== undefined && typeof view.setHidden === 'function') {
-        view.setHidden(!node.visible);
-    }
-    return registerView(registry, view, node);
+    return applyNodeState(registry, view, node);
 }
 
 /** Walk a built tree and return scene → {sceneViews} (only scenes are routed). */

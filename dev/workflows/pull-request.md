@@ -144,3 +144,18 @@ Remove-Item $body
   and is never published.
 - `--body-file` reads the PR text from the temp file, which is the most stable
   way to pass multi-line text to `gh`.
+
+## Stacked branches
+
+When the work is spread over stacked branches (branch B cut from branch A, both
+ultimately on `main`), the PR still covers **one** branch:
+
+- Squash the whole stack onto `main` inside the top branch. Step 3 already does
+  this, because the stack shares `git merge-base HEAD main`, so the squashed
+  commit contains every commit of the branches underneath.
+- Merge the branch changelogs into the PR's single `DD_<hash>.md` (one file per
+  PR; delete the per-branch files) instead of just renaming one of them, and
+  keep the sections in the usual order (New Features, Breaking Changes, Bug
+  Fixes, Refactor).
+- Keep one local `backup/<branch-name>` per squashed branch, and push only the
+  top branch — it carries the whole stack.

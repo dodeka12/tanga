@@ -418,13 +418,11 @@ uv run python py/examples/<path>.py
 
 - **HDR** — [Open an image from disk via a File → Open… menu](viz/image/load_image_from_disk.md)
 
-- **header** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md)
-
 - **heavy work** — [Slider that triggers a blocking computation on release](viz/ui/banners/heavy_work.md)
 
 - **help** — [Tooltips on controls, groups, and menus, plus a global switch](viz/ui/controls/tooltips.md)
 
-- **hide** — [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
+- **hide** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
 
 - **hierarchy** — [Demonstrate nested VizGroup hierarchies](viz/scenes/nested_groups.md)
 
@@ -826,7 +824,7 @@ uv run python py/examples/<path>.py
 
 - **shader error** — [Capture a shader compile error and show it in a banner](viz/surface/shader_errors.md)
 
-- **show** — [Interactive Visualizer](viz/jupyter/interactive.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
+- **show** — [Interactive Visualizer](viz/jupyter/interactive.md), [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
 
 - **show_dialog** — [A titled dialog whose body holds view-based controls](viz/ui/dialogs/dialog_demo.md), [A file-selection view, embedded and in a dialog box](viz/ui/dialogs/file_chooser_dialog.md)
 
@@ -994,13 +992,11 @@ uv run python py/examples/<path>.py
 
 - **variables** — [Multi-variable linear equations with Variables](ga/expression/equation_demo.md)
 
-- **variant** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md)
-
 - **View2DConfig** — [2D orthographic view via View2DConfig](viz/camera/2d_view.md), [2D camera, axes, and grid basics](viz/camera/axes_grid_2d.md)
 
 - **View3dConfig** — [3D projective camera via View3dConfig](viz/camera/3d_plane.md)
 
-- **visible** — [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
+- **visible** — [Showcase every interactive control in one app](viz/ui/controls/all_controls.md), [Hide/show a sphere and its controls from a split layout](viz/ui/controls/hide_sphere.md)
 
 - **visualization** — [Least-squares line fitting in P3 with visualization](ga/expression/line_fitting_p3.md)
 

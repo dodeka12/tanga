@@ -69,14 +69,17 @@ export class ParamsView extends View {
         this.el.appendChild(row);
         control.mount(cell);
 
-        // Track the child's visibility so a server-driven `control_state
-        // {visible}` (which hides the control view) also hides the row's title.
+        // A hidden control hides its whole row — the key label too, not just
+        // the control.  `visibilitychange` covers both the initial state (a
+        // control built with `visible: false` is already hidden here) and a
+        // server-driven `control_state {visible}`.
         const syncVisibility = () => this._syncRowVisibility(key);
-        control.on('constraintschange', syncVisibility);
-        control.on('preferredchange', syncVisibility);
+        control.on('visibilitychange', syncVisibility);
 
-        this._rows.push({ key, title, control, row, keyEl, tooltip, syncVisibility });
+        const entry = { key, title, control, row, keyEl, tooltip, syncVisibility };
+        this._rows.push(entry);
         this.children.push(control);
+        this._syncRowVisibility(key);
         this._invalidateContent();
         return control;
     }
@@ -84,7 +87,7 @@ export class ParamsView extends View {
     _syncRowVisibility(key) {
         const entry = this._rows.find((r) => r.key === key);
         if (!entry) return;
-        const hidden = entry.control.hidden;
+        const hidden = !!entry.control.hidden;
         entry.row.style.display = hidden ? 'none' : '';
         this._invalidateContent();
     }
@@ -106,8 +109,7 @@ export class ParamsView extends View {
         this.children.splice(idx, 1);
         const entry = this._rows[idx];
         this._rows.splice(idx, 1);
-        view.off('constraintschange', entry.syncVisibility);
-        view.off('preferredchange', entry.syncVisibility);
+        view.off('visibilitychange', entry.syncVisibility);
         view.unmount();
         if (entry.row && entry.row.parentNode) entry.row.remove();
         this._invalidateContent();
@@ -124,18 +126,23 @@ export class ParamsView extends View {
     _measureHeight() {
         let height = 0;
         let measurable = false;
+        let counted = 0;
         for (const entry of this._rows) {
+            // A hidden control hides its whole row, so the row takes no space
+            // and no row gap is reserved for it.
+            if (entry.control.hidden) continue;
             const rect = typeof entry.row.getBoundingClientRect === 'function'
                 ? entry.row.getBoundingClientRect()
                 : null;
             if (rect && rect.height > 0) {
                 measurable = true;
                 height += rect.height;
+                counted += 1;
             }
         }
         if (!measurable) return null;
-        if (this._rows.length > 1) {
-            height += (this._rows.length - 1) * this._cssPx('rowGap');
+        if (counted > 1) {
+            height += (counted - 1) * this._cssPx('rowGap');
         }
         height += this._titleHeight();
         return Math.round(height);
@@ -169,8 +176,8 @@ export class ParamsView extends View {
 
     // ── sizing ────────────────────────────────────────────────
 
-    minSizePx(axis, available) {
-        const explicit = super.minSizePx(axis, available);
+    _minSizePx(axis, available) {
+        const explicit = super._minSizePx(axis, available);
         if (explicit > 0) return explicit;
         if (axis === 'x') {
             // The params view stretches to fill its container, so its width is
@@ -184,8 +191,8 @@ export class ParamsView extends View {
         return stackMinSize('y', 'vertical', this.children, available);
     }
 
-    preferredPx(axis, available) {
-        const explicit = super.preferredPx(axis, available);
+    _preferredPx(axis, available) {
+        const explicit = super._preferredPx(axis, available);
         if (explicit !== null && explicit !== undefined) return explicit;
         if (axis === 'x') return null;  // stretches to fill; no natural width
         const height = this._contentHeight();

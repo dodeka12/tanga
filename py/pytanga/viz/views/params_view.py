@@ -242,6 +242,8 @@ class ParamsView(View):
             collapsed=ui.collapsed,
             tooltip=ui.tooltip or "",
             variant=variant,
+            visible=True if ui.visible is None else bool(ui.visible),
+            enabled=True if ui.enabled is None else bool(ui.enabled),
         )
 
     def _make_group_handler(self) -> ControlHandler:

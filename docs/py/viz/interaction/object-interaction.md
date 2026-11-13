@@ -52,6 +52,7 @@ config = InteractionConfig(
     enabled=True,
     triggers=[...],
     throttle_ms=40,   # max rate for drag_move / scroll events
+    hit_priority=0,   # pick precedence; higher wins (ActPoint handles use 10)
     hover_emissive="#ffff44",  # optional glow color on hover
     hover_opacity=0.5,         # optional opacity override on hover
 )
@@ -60,6 +61,15 @@ config = InteractionConfig(
 Optional hover feedback fields (`hover_emissive` glow color, `hover_scale`
 uniform scale multiplier, `hover_opacity` opacity override) default to no
 change when unset.
+
+**Pick precedence.** When several interactive entities are under the pointer,
+the one with the highest `hit_priority` wins; ties break toward a screen-space
+marker, then toward the nearest hit, then registration order.  `ActPoint` —
+both a bare point and a composite's control points — uses `10`, so a handle
+beats the geometry it sits on; bodies, composites and the pane surface keep
+the `0` default.  An entity that does not claim the gesture (its `triggers` do
+not match the held modifiers) never blocks one that does, so an unowned gesture
+falls through to the body underneath.
 
 ### Registering on a Specific Entity
 

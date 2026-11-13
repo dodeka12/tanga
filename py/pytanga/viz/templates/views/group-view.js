@@ -429,34 +429,34 @@ export class GroupView extends StackView {
     // chrome would push the derived min above the explicit max).  When
     // collapsed, the content is hidden, so the folded pane is just the chrome up
     // to the title bar's bottom border.
-    minSizePx(axis, available) {
+    _minSizePx(axis, available) {
         if (this.direction === 'wrap' || axis !== stackMainAxis(this.direction)) {
-            return super.minSizePx(axis, available);
+            return super._minSizePx(axis, available);
         }
         const { folded, chrome } = this._chromeY();
         if (this.collapsed) return folded;
-        const explicit = View.prototype.minSizePx.call(this, axis, available);
+        const explicit = View.prototype._minSizePx.call(this, axis, available);
         const contentMin = this.scrollable
             ? 0
             : stackMinSize(axis, this.direction, this.children, available, this._gapPx());
         return Math.max(explicit, contentMin + chrome);
     }
 
-    maxSizePx(axis, available) {
+    _maxSizePx(axis, available) {
         if (this.collapsed && this.direction !== 'wrap'
             && axis === stackMainAxis(this.direction)) {
             return this._chromeY().folded;
         }
-        return super.maxSizePx(axis, available);
+        return super._maxSizePx(axis, available);
     }
 
-    preferredPx(axis, available) {
+    _preferredPx(axis, available) {
         if (this.direction === 'wrap' || axis !== stackMainAxis(this.direction)) {
-            return super.preferredPx(axis, available);
+            return super._preferredPx(axis, available);
         }
         const { folded, chrome } = this._chromeY();
         if (this.collapsed) return folded;
-        const explicit = View.prototype.preferredPx.call(this, axis, available);
+        const explicit = View.prototype._preferredPx.call(this, axis, available);
         if (explicit !== null && explicit !== undefined) return explicit;
         if (this.scrollable) return null;
         const contentPref = stackPreferredSize(

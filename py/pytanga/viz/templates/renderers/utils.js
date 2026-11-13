@@ -354,9 +354,10 @@ export function applyOpacityUpdate(mesh, ent) {
                 if (isFill && fillOpacity === undefined) return;
                 const target = isFill ? fillOpacity : opacity;
                 if (target !== undefined) {
+                    const alphaTex = !!(material.userData && material.userData._alphaTexture);
                     material.opacity = target;
-                    material.transparent = target < 1.0;
-                    material.depthWrite = target >= 0.99;
+                    material.transparent = target < 1.0 || alphaTex;
+                    material.depthWrite = target >= 0.99 && !alphaTex;
                     material.needsUpdate = true;
                 }
             }

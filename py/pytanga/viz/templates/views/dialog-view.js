@@ -8,6 +8,7 @@ import { buildViewTree } from './build.js';
 import { sendEvent } from '../events.js';
 import { applyTooltip, forgetControl } from '../controls-panel.js';
 import { unregisterFileBrowser } from '../file-browser.js';
+import { unregisterStatefulTree } from './view-state.js';
 
 export class DialogView extends View {
     constructor({
@@ -182,6 +183,10 @@ export class DialogView extends View {
                 forgetControl(id);
                 unregisterFileBrowser(id);
             }
+            // The subtree is not destroyed view-by-view (a control only tears
+            // down its own widget), so drop its `control_state` registrations
+            // here: a closed dialog must not keep answering for its ids.
+            unregisterStatefulTree(this._contentView);
             this._contentView.destroy();
             this._contentView = null;
         }
